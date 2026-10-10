@@ -17,6 +17,7 @@ lesson:
     - Check that the total momentum is conserved to round-off
     - Model a collision as a brief strong force and compare it with the hard-sphere outcome
   related: [particles-in-a-box, collision-momentum-proved]
+  format: 2
   prerequisites:
     lessons: [energy-conservation]
     outside:
@@ -30,26 +31,27 @@ from pbc.authoring import lesson_header
 lesson_header()
 ```
 
-Every lesson so far simulated one particle under forces that came from
-outside it: gravity, drag, a spring fixed to a wall. Two particles that act
-on each other are a different problem. The force on one depends on where
-the other is, the other feels the opposite force, and the pair has a
-property that no single particle has: a total momentum that no force
-between them can change. This lesson puts several particles on the
-stepping interface of the Newton's laws lesson, with the forces between
-them given once per pair, and shows that the conservation of the total
-momentum is then not an approximation of the simulation but an identity
-of it, exact to round-off for every method of the course.
+When a cue ball hits a rack, where does each ball go, and what does a
+program have to do to get it right? The question has two halves. The first
+is about conservation: the balls push on one another, each push has an equal
+and opposite partner, and so the total momentum of the balls cannot change
+whatever the pushes are. The second is about the contact: a collision lasts
+a few milliseconds, during which the force is enormous and changes quickly,
+and a simulation that steps through it too coarsely gets the outgoing speeds
+wrong. The same two questions return in every gas, every granular flow, and
+every molecular simulation.
 
-Collisions are the second half. A collision is not a new kind of
-interaction but a brief, strong force that acts while two bodies touch,
-and the simulation treats it as one: a stiff spring that pushes only while
-the bodies overlap. The outcome of an elastic collision between hard
-spheres can be written down from momentum and energy alone, and the lesson
-measures how, and how fast, the simulated soft spheres approach it as the
-spring stiffens. The step that resolves a collision is set by the duration
-of the contact, not by the motion between collisions, and the lesson
-derives that duration. The many-particle gas of the agent-based modelling
+Every lesson so far simulated one particle under forces that came from
+outside it. This lesson puts several particles on the stepping interface of
+the Newton's laws lesson, with the forces between them given once per pair,
+and shows that the conservation of the total momentum is then not an
+approximation of the simulation but an identity of it, exact to round-off
+for every method of the course. A collision is then not a new kind of
+interaction but a brief, strong force: a stiff spring that pushes only while
+two bodies overlap. The outcome of an elastic collision between hard spheres
+is derived from momentum and energy alone, and the lesson measures how, and
+how fast, the simulated soft spheres approach it as the spring stiffens and
+the step shrinks with it. The many-particle gas of the agent-based modelling
 strand is built from these pieces.
 
 ## Assumptions
@@ -80,19 +82,20 @@ goes wrong when it does not hold.
    which is how a real collision loses energy, is not modelled; every
    collision here is elastic.
 4. **A collision is a Hookean contact: the repulsion grows in proportion
-   to the overlap.** This is a model, not a law. Real spheres follow the
-   stiffer Hertz law, and real contacts dissipate. The hard-sphere result
-   does not depend on the contact model, and the lesson measures the
-   distance to it, which does.
+   to the overlap.** This is a model, not a law. [Real contacts follow
+   stiffer, nonlinear laws and dissipate energy]{.not-verified}; the lesson
+   models neither and has no source for them. The hard-sphere result does
+   not depend on the contact model, and the lesson measures the distance to
+   it, which does.
 5. **The step resolves the contact.** The duration of a contact is
    $\pi\sqrt{\mu/k}$, derived below, and the step is a small fraction of
-   it. A step comparable with the contact time lets a sphere pass through
-   its partner or bounce with the wrong speed, and the force has a kink
-   where the spheres touch, so the error does not shrink smoothly with the
-   step.
-6. **Round-off is negligible.** The momentum is conserved to about
-   $10^{-15}$ of its size, the resolution of double precision; everything
-   else on this page is far above it.
+   it. A step comparable with the contact time gives outgoing speeds that
+   are wrong by a large factor, as the table of the head-on collision shows,
+   and the force has a kink where the spheres touch, so the error does not
+   shrink smoothly with the step.
+6. **Round-off is negligible.** The conservation checks below are bounds far
+   above the resolution of double precision and far below every other
+   quantity on the page; no result is displayed at the level of round-off.
 
 ## Pairs, momentum, and the centre of mass {#explanation}
 
@@ -133,33 +136,59 @@ gravity into one body about a fixed centre by the same step.
 ### The discrete third law
 
 The simulation conserves the total momentum exactly, not approximately,
-and the reason is worth one paragraph because it holds for every method of
-the course. Each integrator changes the velocities by a sum of
-acceleration evaluations times weights: explicit and symplectic Euler by
-$\Delta t\,\mathbf a(\cdot)$, velocity Verlet by
-$\tfrac{1}{2}\Delta t\,(\mathbf a_n + \mathbf a_{n+1})$, Runge-Kutta 4 by
-the weighted average of four. In every evaluation the acceleration of
-particle $i$ is $\mathbf F_i / m_i$ with the forces of that one evaluation,
-which obey the third law, so $\sum_i m_i \mathbf a_i = \sum_i \mathbf F_i =
-\mathbf 0$ for each evaluation separately. Hence $\sum_i m_i \mathbf v_i$
-is the same after the step as before it, up to round-off, for any step
-size and any state. The same argument on the position updates shows that
-the simulated centre of mass moves in an exact straight line. The first
-worked example checks both to $10^{-15}$. These are the discrete
-counterparts of the conservation law, and they follow from the structure
-of the methods, not from their accuracy: explicit Euler, which cannot hold
-the energy of an oscillator for a single period, holds the total momentum
-forever.
+and the reason holds for every method of the course. Each integrator
+changes the velocities by a sum of acceleration evaluations times weights:
+explicit and symplectic Euler by $\Delta t\,\mathbf a(\cdot)$, velocity
+Verlet by $\tfrac{1}{2}\Delta t\,(\mathbf a_n + \mathbf a_{n+1})$, the
+classical Runge-Kutta method by the weighted average of four. In every
+evaluation the acceleration of particle $i$ is $\mathbf F_i / m_i$ with the
+forces of that one evaluation, which obey the third law, so
+$\sum_i m_i \mathbf a_i = \sum_i \mathbf F_i = \mathbf 0$ for each
+evaluation separately. A weighted sum of such evaluations has a zero
+mass-weighted sum too, hence $\sum_i m_i \mathbf v_i$ is the same after the
+step as before it, up to round-off, for any step size and any state.
+
+The position updates follow. Every method moves particle $i$ by a
+combination of its velocities, $\Delta\mathbf x_i = \Delta t\,\mathbf w_i +
+\tfrac12\Delta t^2\,\mathbf b_i$, where $\mathbf w_i$ is a weighted average
+of velocities of the step and $\mathbf b_i$ is either zero or a weighted
+acceleration of the step (velocity Verlet has the second term). The
+mass-weighted sum of the weighted accelerations is zero, as above. The
+mass-weighted sum of the weighted velocities is the total momentum
+$\mathbf P$, because the momentum is the same in every stage of the step.
+Therefore $\mathbf X_{n+1} = \mathbf X_n + \Delta t\,\mathbf P/M$: the
+simulated centre of mass moves in an exact straight line. These are the
+discrete counterparts of the conservation law, and they follow from the
+structure of the methods, not from their accuracy: explicit Euler, which
+cannot hold the energy of an oscillator for a single period, holds the
+total momentum forever.
 
 ### Elastic collisions
 
 Two hard spheres of masses $m_1$ and $m_2$ collide. The contact force acts
 along the line of centres, with the unit vector $\mathbf n$ from the second
-sphere to the first, so each velocity changes by a multiple of
-$\mathbf n$ and the components across it are untouched. Momentum fixes the
-ratio of the two changes; for an **elastic** collision the kinetic energy
-is conserved as well, and the two conditions together say that the
-component of the relative velocity along $\mathbf n$ reverses:
+sphere to the first, so the collision changes the velocities by an impulse
+$j\,\mathbf n$ with a number $j$ to be found, and the components across
+$\mathbf n$ are untouched:
+
+$$
+\mathbf v_1' = \mathbf v_1 - \frac{j}{m_1}\,\mathbf n,
+\qquad
+\mathbf v_2' = \mathbf v_2 + \frac{j}{m_2}\,\mathbf n .
+$$
+
+Any $j$ conserves the momentum; the equal and opposite impulses are the
+third law. The component of the relative velocity along $\mathbf n$ is
+$w = (\mathbf v_1 - \mathbf v_2)\cdot\mathbf n$, and after the collision it
+is $w' = w - j/\mu$. The change of the kinetic energy of the pair is
+
+$$
+\Delta T = -j\,w + \frac{j^2}{2\mu},
+$$
+
+which is zero, for an **elastic** collision, at $j = 0$ (no collision) and at
+$j = 2\mu\,w$. The second root is the collision: it gives $w' = -w$, the
+component of the relative velocity along $\mathbf n$ reverses, and
 
 $$
 \mathbf v_1' = \mathbf v_1 - \frac{2 m_2}{m_1 + m_2}\,\bigl[(\mathbf v_1 - \mathbf v_2)\cdot\mathbf n\bigr]\,\mathbf n,
@@ -167,12 +196,16 @@ $$
 \mathbf v_2' = \mathbf v_2 + \frac{2 m_1}{m_1 + m_2}\,\bigl[(\mathbf v_1 - \mathbf v_2)\cdot\mathbf n\bigr]\,\mathbf n.
 $$
 
-Head on with equal masses the spheres exchange velocities; a light sphere
-hitting a heavy one at rest bounces back with nearly its speed; equal
-spheres that collide off centre, one of them at rest, leave at a right
-angle to each other. The result does not depend on what the contact force
-is, only on its direction and on the energy being conserved. It is the
-reference the simulation is measured against.
+Three consequences. Head on with equal masses the spheres exchange
+velocities. A light sphere hitting a heavy one at rest has
+$\mathbf v_1' = \frac{m_1 - m_2}{m_1 + m_2}\mathbf v_1$, which tends to
+$-\mathbf v_1$ as $m_2$ grows. And equal spheres with one at rest give
+$\mathbf v_2' = (\mathbf v_1\cdot\mathbf n)\mathbf n$ and
+$\mathbf v_1' = \mathbf v_1 - (\mathbf v_1\cdot\mathbf n)\mathbf n$, along
+and across the line of centres, so they leave at a right angle. The result
+does not depend on what the contact force is, only on its direction and on
+the energy being conserved. It is the reference the simulation is measured
+against.
 
 ### The soft-sphere model
 
@@ -188,26 +221,31 @@ k\,(D - r)\,\dfrac{\mathbf r}{r} & r < D, \\[1ex]
 \end{cases}
 $$
 
-During the contact the overlap $\delta = D - r$ of a head-on collision
-obeys $\mu\,\ddot\delta = -k\,\delta$: half a period of a harmonic
-oscillator with the reduced mass, from first touch to separation, so the
-**contact time** is
+In a head-on collision the overlap is $\delta = D - r$, and the relative
+motion obeys $\ddot r = F_{12}/\mu$ with $F_{12} = k\delta$, so
+$\mu\,\ddot\delta = -k\,\delta$. At first touch $\delta = 0$ and
+$\dot\delta = u$, the speed of approach, so $\delta(t) = (u/\omega)\sin\omega t$
+with $\omega = \sqrt{k/\mu}$. The overlap returns to zero at $\omega t = \pi$,
+where $\dot\delta = -u$: the contact is half a period of a harmonic
+oscillator with the reduced mass, it ends with the relative speed exactly
+reversed, as for hard spheres, and its duration, the **contact time**, is
 
 $$
 \tau = \pi\sqrt{\frac{\mu}{k}} ,
 $$
 
-independent of the speed. The relative speed along the line of centres
-comes out exactly reversed, as for hard spheres. Off centre, the line of
-centres turns during the contact, and the soft spheres leave in a
-direction that differs from the hard-sphere one by an angle that shrinks
-with $\tau$, about as $1/\sqrt k$. A stiffer spring is a shorter contact
-and a closer approach to the hard-sphere result, and it needs a
-proportionally smaller step: the cost of the limit is the number of steps,
-and the third worked example pays it. The potential energy of the contact
-is $\tfrac{1}{2} k\,\delta^2$ while the spheres overlap, so the total
-energy of the pair is conserved through the collision, and its drift is
-the diagnostic of the previous lesson on a force with a kink.
+independent of the speed. The largest overlap is $u/\omega$, which must be
+smaller than $D$ for the spheres to turn before their centres meet; the
+first exercise tests that bound. Off centre, the line of centres turns
+during the contact, and the soft spheres leave in a direction that differs
+from the hard-sphere one; the worked example below measures how that
+difference depends on $\tau$. A stiffer spring is a shorter contact and a
+closer approach to the hard-sphere result, and it needs a proportionally
+smaller step: the cost of the limit is the number of steps. The potential
+energy of the contact is $\tfrac{1}{2} k\,\delta^2$ while the spheres
+overlap, so the total energy of the pair is conserved through the
+collision, and its drift is the diagnostic of the previous lesson on a force
+with a kink.
 
 ## The program {#code}
 
@@ -233,12 +271,33 @@ excerpt(particles.stack)
 excerpt(particles.unstack)
 ```
 
-The acceleration of the system from the masses and one pairwise force,
-with the third law built in:
+The acceleration of the system from the masses and one pairwise force. The
+order of the two updates inside the double loop is where the third law, and
+with it the conservation of the momentum, is built in:
 
 ```{python}
 #| echo: false
-excerpt(particles.interacting)
+excerpt(
+    particles.interacting,
+    notes={
+        "force = pairwise(positions[i] - positions[j])": (
+            "The force on the first particle of the pair, from its position"
+            " relative to the second. It is computed once per pair."
+        ),
+        "forces[i] += force": "The first particle receives the force.",
+        "forces[j] -= force": (
+            "The second particle receives exactly the opposite force, the same"
+            " array with its sign changed. Every force added to one particle is"
+            " subtracted from another, so the forces sum to zero in every"
+            " evaluation."
+        ),
+        "return (forces / m[:, np.newaxis]).reshape(-1)": (
+            "Only now are the forces divided by the masses, in newtons per"
+            " kilogram, so the mass-weighted sum of the accelerations is the sum"
+            " of the forces, which is zero."
+        ),
+    },
+)
 ```
 
 The quantities of the whole system, with the masses of the particles:
@@ -291,7 +350,24 @@ first contact for two spheres on straight paths:
 
 ```{python}
 #| echo: false
-excerpt(particles.hard_sphere_collision)
+excerpt(
+    particles.hard_sphere_collision,
+    notes={
+        "approach = (v1 - v2) @ n": (
+            "The component of the relative velocity along the line of centres,"
+            " the number called w in the derivation. Only this component"
+            " changes."
+        ),
+        "v1 - 2.0 * m[1] / m.sum() * approach * n,": (
+            "The first sphere loses a share of the approach speed that is"
+            " larger when the other sphere is heavier."
+        ),
+        "v2 + 2.0 * m[0] / m.sum() * approach * n,": (
+            "The second sphere gains the opposite impulse divided by its own"
+            " mass, so the total momentum is unchanged."
+        ),
+    },
+)
 ```
 
 ```{python}
@@ -303,17 +379,15 @@ excerpt(particles.first_contact)
 
 ### Two masses on a spring
 
-A mass of 1 kg and a mass of 3 kg are joined by a spring of 12 N/m with a
-rest length of 1 m, so the reduced mass is 0.75 kg and the relative motion
-oscillates with $\omega = 4$ rad/s. The spring starts stretched by 0.2 m,
-the pair drifts across the plane, and the relative velocity is along the
-spring, so the pair does not rotate. The cell runs four seconds with every
-method at a step of 0.01 s and prints how far the total momentum and the
-centre of mass stray from a constant and a straight line.
+Two masses joined by a spring, drifting across the plane, are the simplest
+system with an internal force and a total momentum. The setup is given in
+the cell: the spring starts stretched, and the relative velocity is along the
+spring, so the pair does not rotate.
 
 ```{python}
 import numpy as np
 
+from pbc.authoring import table
 from pbc.mechanics.dynamics import State, simulate
 from pbc.mechanics.integrators import INTEGRATORS
 from pbc.mechanics.oscillator import harmonic_motion
@@ -338,52 +412,93 @@ euler, symplectic_euler, verlet, rk4 = INTEGRATORS
 masses = [1.0, 3.0]  # kg
 k = 12.0  # N/m
 rest_length = 1.0  # m
+stretch0 = 0.2  # m, how far the spring starts stretched
+dt = 0.01  # s
+duration = 4.0  # s
+tolerance = 1e-12  # the bound the conservation checks are compared with
 mu = reduced_mass(*masses)
+omega = np.sqrt(k / mu)
 pair = interacting(masses, spring_pair(k, rest_length))
 start = State(
     t=0.0,
-    x=stack([[0.0, 0.0], [1.2, 0.0]]),  # the spring stretched by 0.2 m
+    x=stack([[0.0, 0.0], [rest_length + stretch0, 0.0]]),
     v=stack([[1.0, 0.5], [0.6, 0.5]]),  # relative velocity along the spring
 )
+```
 
-print(f"reduced mass {mu} kg, omega = {np.sqrt(k / mu):.1f} rad/s, period {2 * np.pi / np.sqrt(k / mu):.4f} s\n")
-print(" method              total momentum (kg m/s)   largest change   centre of mass off its line (m)")
+The two masses are `{python} f"{masses[0]:g}"` kg and `{python} f"{masses[1]:g}"` kg,
+joined by a spring of `{python} f"{k:g}"` N/m and rest length
+`{python} f"{rest_length:g}"` m, stretched by `{python} f"{stretch0:g}"` m at the start.
+The reduced mass is `{python} f"{mu:g}"` kg, so the relative motion
+oscillates with $\omega =$ `{python} f"{omega:.1f}"` rad/s, a period of
+`{python} f"{2 * np.pi / omega:.4f}"` s. The next cell runs
+`{python} f"{duration:g}"` s with every method at a step of `{python} f"{dt:g}"` s
+and checks the total momentum and the centre of mass against a bound of
+`{python} f"{tolerance:.0e}"`, relative to the size of the momentum and in metres
+for the centre of mass: the values themselves are at the level of round-off,
+which differs from machine to machine and is not displayed.
+
+```{python}
+#| label: result-pair-conservation
+rows = []
 for integrator in INTEGRATORS:
-    trajectory = simulate(start, pair, 0.01, 400, step=integrator.step)
+    trajectory = simulate(start, pair, dt, round(duration / dt), step=integrator.step)
     positions, velocities = unstack(trajectory.x, 2), unstack(trajectory.v, 2)
     momentum = total_momentum(masses, velocities)
     centre = centre_of_mass(masses, positions)
     on_the_line = centre[0] + trajectory.t[:, np.newaxis] * momentum[0] / sum(masses)
-    print(f" {integrator.name:18}        ({momentum[0, 0]:.1f}, {momentum[0, 1]:.1f})"
-          f"{np.max(np.abs(momentum - momentum[0])):17.1e}"
-          f"{np.max(np.abs(centre - on_the_line)):26.1e}")
+    kept = np.max(np.abs(momentum - momentum[0])) < tolerance * np.linalg.norm(momentum[0])
+    straight = np.max(np.abs(centre - on_the_line)) < tolerance
+    rows.append((integrator.name, momentum[0, 0], momentum[0, 1],
+                 "yes" if kept else "no", "yes" if straight else "no"))
+
+table(
+    rows,
+    columns=[
+        ("method", "", ""),
+        ("total momentum, x", "kg m/s", ".1f"),
+        ("total momentum, y", "kg m/s", ".1f"),
+        ("constant within the bound", "", ""),
+        ("centre of mass on its line within the bound", "", ""),
+    ],
+    caption="The total momentum of the pair and the two conservation checks, for each method, over the whole run.",
+)
 ```
 
-Every method conserves the total momentum and keeps the centre of mass on
-its line to round-off, explicit Euler included, as the discrete third law
-says. The relative motion is the harmonic oscillator of the reduced mass:
-the cell compares the stretch of the spring with the exact motion of a
-0.75 kg mass on a 12 N/m spring released from 0.2 m with the relative
-velocity of the pair.
+[Every method conserves the total momentum and keeps the centre of mass on
+its straight line within the bound, explicit Euler
+included.]{.claim type="numerically-verified" scope="two particles, a spring, the step shown" evidence="result-pair-conservation"}
+This is the discrete third law at work: the table checks it for four
+methods whose accuracy differs by orders of magnitude, and it does not use
+the accuracy at all. The relative motion is the harmonic oscillator of the
+reduced mass; the next cell compares the stretch of the spring with the
+exact motion of that oscillator, released from the same stretch with the
+relative velocity of the pair.
 
 ```{python}
-trajectory = simulate(start, pair, 0.01, 400, step=rk4.step)
+trajectory = simulate(start, pair, dt, round(duration / dt), step=rk4.step)
 positions = unstack(trajectory.x, 2)
 stretch = np.linalg.norm(positions[:, 1] - positions[:, 0], axis=1) - rest_length
-relative = harmonic_motion(State(t=0.0, x=[0.2], v=[-0.4]), mu, k, trajectory.t)
-
-print(f"largest difference between the stretch and the oscillator: {np.max(np.abs(stretch - relative.x[:, 0])):.1e} m")
+relative_velocity = (unstack(start.v, 2)[1] - unstack(start.v, 2)[0])[0]
+relative = harmonic_motion(State(t=0.0, x=[stretch0], v=[relative_velocity]), mu, k, trajectory.t)
+oscillator_error = np.max(np.abs(stretch - relative.x[:, 0]))
 ```
+
+The largest difference between the stretch and the oscillator is
+`{python} f"{oscillator_error:.1e}"` m for the fourth-order method at this
+step, [which shows that the two-particle simulation reproduces the one-particle
+problem of the reduced mass]{.claim type="numerically-verified" scope="spring pair, fourth-order method" evidence="fig-pair-on-a-spring"}.
 
 ```{python}
 #| label: fig-pair-on-a-spring
-#| fig-cap: "Two masses on a spring crossing the plane: the paths of the two masses and the straight line of the centre of mass, with the positions after every half second marked."
-#| fig-alt: "Plot of y against x in metres. Two wavy paths run from left to right, one for the 1 kg mass and one for the 3 kg mass, oscillating towards and away from each other about a straight dotted line, the centre of mass, which lies three times closer to the heavier path than to the lighter one. Dots along each path mark equal time intervals."
+#| fig-cap: "The centre of mass moves in a straight line while the lighter mass swings through a larger path than the heavier one around it, in the ratio of the masses; the positions are marked at equal time intervals."
+#| fig-alt: "Plot of y against x in metres. Two wavy paths run from left to right, one for each mass, oscillating towards and away from each other about a straight dotted line, the centre of mass, which lies closer to the heavier path than to the lighter one. Dots along each path mark equal time intervals."
+#| fig-status: simulated
 import matplotlib.pyplot as plt
 
 centre = centre_of_mass(masses, positions)
 fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for i, (label, style) in enumerate((("1 kg", "-"), ("3 kg", "--"))):
+for i, (label, style) in enumerate(((f"{masses[0]:g} kg", "-"), (f"{masses[1]:g} kg", "--"))):
     ax.plot(positions[:, i, 0], positions[:, i, 1], color="#93003a", linestyle=style, label=label)
     ax.plot(positions[::50, i, 0], positions[::50, i, 1], color="#93003a", marker="o", markersize=3, linestyle="none")
 ax.plot(centre[:, 0], centre[:, 1], color="#00429d", linestyle=":", label="centre of mass")
@@ -394,21 +509,28 @@ ax.legend(loc="upper left")
 plt.show()
 ```
 
+The paths are the fourth-order simulation of the cell above. Seen from the
+centre of mass, each mass swings about it by an amount inversely
+proportional to its mass: the centre lies `{python} f"{masses[1] / masses[0]:g}"`
+times closer to the heavier mass than to the lighter one, as
+$\mathbf X = \sum m_i \mathbf x_i / M$ says. The dotted line is straight, as
+the table checked.
+
 ### A head-on collision
 
-A 1 kg sphere moving at 1 m/s meets a 2 kg sphere moving towards it at
-0.5 m/s. The spheres have a combined diameter of 0.2 m and a contact
-stiffness of 1000 N/m. The cell prints the contact time and the
-hard-sphere outcome, runs the collision with velocity Verlet at 40 steps
-per contact, and compares.
+A sphere meets a heavier one moving towards it; the numbers are set in the
+cell, and the paragraph after it states them. The table the cell builds
+shows the outcome for hard spheres and for soft spheres run with velocity
+Verlet at a fixed number of steps per contact.
 
 ```{python}
 m1, m2 = 1.0, 2.0  # kg
 v1, v2 = 1.0, -0.5  # m/s, head on along a line
 diameter = 0.2  # m, the sum of the radii
 stiffness = 1000.0  # N/m
+fine = 40  # steps per contact for the main run
 contact_time = np.pi * np.sqrt(reduced_mass(m1, m2) / stiffness)
-expected = hard_sphere_collision(m1, [v1], m2, [v2], [-1.0])  # the 2 kg sphere is ahead
+expected = hard_sphere_collision(m1, [v1], m2, [v2], [-1.0])  # the heavier sphere is ahead
 collision = interacting([m1, m2], soft_sphere(stiffness, diameter))
 contact = soft_sphere_potential(stiffness, diameter)
 approaching = State(t=0.0, x=stack([[0.0], [1.0]]), v=stack([[v1], [v2]]))
@@ -416,30 +538,47 @@ approaching = State(t=0.0, x=stack([[0.0], [1.0]]), v=stack([[v1], [v2]]))
 
 def collide(steps_per_contact, duration=1.2):
     """The collision, resolved with that many steps per contact time."""
-    dt = contact_time / steps_per_contact
-    return simulate(approaching, collision, dt, round(duration / dt), step=verlet.step)
+    step = contact_time / steps_per_contact
+    return simulate(approaching, collision, step, round(duration / step), step=verlet.step)
 
 
-trajectory = collide(40)
+trajectory = collide(fine)
 positions, velocities = unstack(trajectory.x, 2), unstack(trajectory.v, 2)
 overlapping = positions[:, 1, 0] - positions[:, 0, 0] < diameter
+first, last = trajectory.t[overlapping][0], trajectory.t[overlapping][-1]
 
-print(f"contact time pi sqrt(mu / k) = {contact_time:.4f} s; the spheres overlap from"
-      f" {trajectory.t[overlapping][0]:.3f} s to {trajectory.t[overlapping][-1]:.3f} s")
-print(f"hard spheres:  v1' = {expected[0][0]:+.4f} m/s, v2' = {expected[1][0]:+.4f} m/s")
-print(f"soft spheres:  v1' = {velocities[-1, 0, 0]:+.4f} m/s, v2' = {velocities[-1, 1, 0]:+.4f} m/s")
+table(
+    [
+        ("hard spheres", expected[0][0], expected[1][0]),
+        ("soft spheres", velocities[-1, 0, 0], velocities[-1, 1, 0]),
+    ],
+    columns=[("model", "", ""), ("outgoing velocity, first sphere", "m/s", "+.4f"), ("outgoing velocity, second sphere", "m/s", "+.4f")],
+    caption="Outgoing velocities of the head-on collision, to four decimals: the elastic formula and the simulation.",
+)
 ```
+
+The two spheres have the masses `{python} f"{m1:g}"` kg and `{python} f"{m2:g}"` kg,
+the speeds `{python} f"{v1:g}"` m/s and `{python} f"{-v2:g}"` m/s towards each other,
+a combined diameter of `{python} f"{diameter:g}"` m, and a contact stiffness of
+`{python} f"{stiffness:g}"` N/m. The contact time is
+`{python} f"{contact_time:.4f}"` s; the simulated spheres overlap from
+`{python} f"{first:.3f}"` s to `{python} f"{last:.3f}"` s, which is the contact
+time to within a step. [The soft spheres leave with the hard-sphere velocities
+to the digits shown]{.claim type="numerically-verified" scope="head on, this stiffness, the step shown" evidence="fig-head-on-collision"}:
+the formula of the explanation and the simulation, which does not use it,
+agree.
 
 ```{python}
 #| label: fig-head-on-collision
-#| fig-cap: "The head-on collision: the positions of the two spheres over time, and the kinetic, contact, and total energy of the pair."
-#| fig-alt: "Two panels sharing the time axis in seconds. Top: the position of each sphere in metres; the two lines approach, meet at about half a second, and separate at reversed slopes. Bottom: the kinetic energy dips sharply during the brief contact while the contact energy rises by the same amount in a bump; the total energy stays a flat line throughout."
+#| fig-cap: "During the brief contact the kinetic energy of the pair is lent to the compression and given back, while the total stays flat; the spheres leave with reversed relative velocity."
+#| fig-alt: "Two panels sharing the time axis in seconds. Top: the position of each sphere in metres; the two lines approach, meet, and separate at reversed slopes. Bottom: the kinetic energy dips sharply during the brief contact while the contact energy rises by the same amount in a bump; the total energy stays a flat line throughout."
+#| fig-status: simulated
 energies = kinetic_energy([m1, m2], velocities)
 stored = pair_potential_energy(positions, contact)
 
 fig, (top, bottom) = plt.subplots(2, 1, figsize=(6.4, 5.2), sharex=True)
-top.plot(trajectory.t, positions[:, 0, 0], color="#93003a", label="1 kg sphere")
-top.plot(trajectory.t, positions[:, 1, 0], color="#00429d", linestyle="--", label="2 kg sphere")
+top.plot(trajectory.t, positions[:, 0, 0], color="#93003a", label=f"{m1:g} kg sphere")
+top.plot(trajectory.t, positions[:, 1, 0], color="#00429d", linestyle="--", label=f"{m2:g} kg sphere")
 top.set_ylabel("position (m)")
 top.legend(loc="upper left")
 bottom.plot(trajectory.t, energies, color="#93003a", label="kinetic")
@@ -452,77 +591,135 @@ fig.tight_layout()
 plt.show()
 ```
 
-The spheres touch for `{python} f"{1e3 * contact_time:.0f}"` ms, during
-which the kinetic energy of the pair is lent to the compression and given
-back, and they leave with the hard-sphere velocities to the digits shown.
-The step was chosen against the contact time; the cell shows what happens
-to the result when it is not.
+The energies are the kinetic energy of the simulated velocities and the
+potential $\tfrac12 k\delta^2$ of the contact, and the flat total is the
+check that the soft sphere is a conservative force. The step was chosen
+against the contact time; the next cell shows what happens to the result when
+it is not, with the drift of the total energy compared with the band of the
+numerical integrators lesson, $\omega^2\Delta t^2/4$, in which
+$\omega\Delta t = \pi/N$ for $N$ steps per contact.
 
 ```{python}
-print(" steps per contact   v1' (m/s)   v2' (m/s)   error against hard spheres (m/s)   total energy drift")
-for steps_per_contact in (5, 10, 20, 40, 80, 160):
+#| label: result-steps-per-contact
+rows = []
+for steps_per_contact in (1, 2, 5, 10, 20, 40, 80, 160):
     trajectory = collide(steps_per_contact)
     positions, velocities = unstack(trajectory.x, 2), unstack(trajectory.v, 2)
     total = kinetic_energy([m1, m2], velocities) + pair_potential_energy(positions, contact)
+    momentum = total_momentum([m1, m2], velocities)
     error = max(abs(velocities[-1, 0, 0] - expected[0][0]), abs(velocities[-1, 1, 0] - expected[1][0]))
-    print(f"{steps_per_contact:18d}{velocities[-1, 0, 0]:12.5f}{velocities[-1, 1, 0]:12.5f}{error:22.1e}"
-          f"{np.max(np.abs(total / total[0] - 1)):30.1e}")
+    drift = np.max(np.abs(total / total[0] - 1))
+    band = (np.pi / steps_per_contact) ** 2 / 4
+    kept = np.max(np.abs(momentum - momentum[0])) < tolerance * abs(momentum[0, 0]) if momentum[0, 0] else True
+    rows.append((steps_per_contact, velocities[-1, 0, 0], velocities[-1, 1, 0], error, drift, band, "yes" if kept else "no"))
+errors = {row[0]: row[3] for row in rows}
+close = [abs(row[4] / row[5] - 1) for row in rows if row[0] >= 20]
+
+table(
+    rows,
+    columns=[
+        ("steps per contact", "", "d"),
+        ("outgoing velocity, first sphere", "m/s", ".5f"),
+        ("outgoing velocity, second sphere", "m/s", ".5f"),
+        ("error against hard spheres", "m/s", ".1e"),
+        ("total energy drift", "", ".1e"),
+        ("band", "", ".1e"),
+        ("momentum constant within the bound", "", ""),
+    ],
+    caption="The head-on collision at eight step sizes: outgoing velocities, the larger error against the hard-sphere velocities, the largest relative drift of the total energy, and the band from the oscillator.",
+)
 ```
 
-With five steps per contact the outgoing speeds are off by about one per
-cent, and with ten by a tenth of that, which is the accuracy a gas
-simulation of thousands of collisions can afford. The error shrinks with
-the step, but not smoothly: the force has a kink where the spheres touch,
-and where the step lands relative to it changes from one row to the next.
-The drift of the total energy during the contact is smoother, because
-during the contact the force is a plain spring and the band of the
-numerical integrators lesson applies, $\omega^2\Delta t^2/4$ with
-$\omega\,\Delta t = \pi$ divided by the steps per contact. The step that
-resolves a collision is a fraction of the contact time, whatever the
-spheres do between collisions, and the cost of a gas simulation follows
-from it.
+With one step per contact the spheres leave at the wrong speeds by a large
+factor, and with two the first sphere is off by
+`{python} f"{100 * errors[2] / abs(expected[0][0]):.0f}"` per cent. With five steps per contact the outgoing speeds are off by
+`{python} f"{100 * errors[5] / abs(expected[0][0]):.1f}"` per cent, and with ten by
+`{python} f"{100 * errors[10] / abs(expected[0][0]):.2f}"` per cent. [The error shrinks with the step, but
+not smoothly: the force has a kink where the spheres touch, and where the
+step lands relative to it changes from one row to the
+next.]{.claim type="numerically-verified" scope="head on, velocity Verlet, this stiffness" evidence="result-steps-per-contact"}
+The drift of the total energy is smoother, because during the contact the
+force is a plain spring: [from twenty steps per contact on, the drift lies
+within `{python} f"{100 * max(close):.1f}"` per cent of the
+band]{.claim type="numerically-verified" scope="from twenty steps per contact" evidence="result-steps-per-contact"},
+while the coarser rows are outside that agreement, where the kink matters most. The momentum is constant within the bound in every row, even
+where the outgoing speeds are badly wrong, which the self-check below uses.
+The step that resolves a collision is a fraction of the contact time,
+whatever the spheres do between collisions, and the cost of a gas
+simulation follows from it.
 
 ### Off centre, and the hard-sphere limit
 
-Two equal spheres of 1 kg and a combined diameter of 0.2 m. One is at
-rest; the other approaches at 1 m/s along a line that misses the centre of
-the first by 0.1 m, half the diameter. For hard spheres the geometry fixes
-the line of centres at contact, and with it the outcome: the moving sphere
-is deflected by 60° and the two leave at a right angle. The cell runs the
-collision with five contact stiffnesses, each with 40 steps per contact,
-and prints the deflection against the hard-sphere one.
+Two equal spheres with the combined diameter of the head-on collision. One is at
+rest; the other approaches along a line that misses the centre of the first
+by half the diameter. For hard spheres the geometry fixes the line of
+centres at contact. The moving sphere comes in along the $x$ axis with its
+centre at height $b$ above the other's, and at first touch the centres are
+a distance $D$ apart, so the line of centres makes the angle
+$\alpha = \arcsin(b/D)$ with the incoming velocity. The impulse acts along
+that line, and for equal masses and a target at rest the formulas of the
+explanation send the target along the line of centres and the moving sphere
+across it, so the moving sphere is deflected by $90^\circ - \alpha$ and the
+two leave at a right angle. The cell computes these, and runs the collision
+with five contact stiffnesses, each with the same number of steps per
+contact as before.
 
 ```{python}
 offset = 0.1  # m, the distance by which the path misses the centre
 moment, normal = first_contact([-1.0, offset], [1.0, 0.0], diameter)
 hard = hard_sphere_collision(1.0, [1.0, 0.0], 1.0, [0.0, 0.0], normal)
 hard_angle = np.degrees(np.arctan2(hard[0][1], hard[0][0]))
+alpha = np.degrees(np.arcsin(offset / diameter))
 
 
 def angle_between(u, w):
     return np.degrees(np.arccos(u @ w / (np.linalg.norm(u) * np.linalg.norm(w))))
 
 
-print(f"hard spheres touch after {moment:.4f} s; the moving one is deflected by {hard_angle:.2f}°"
-      f" and the two leave {angle_between(*hard):.2f}° apart\n")
-print(" stiffness (N/m)   contact (s)   steps   deflection   difference   angle between")
+rows = []
 paths = {}
 for stiffness in (10.0, 100.0, 1000.0, 10_000.0, 100_000.0):
     tau = np.pi * np.sqrt(reduced_mass(1.0, 1.0) / stiffness)
-    dt = tau / 40
+    step = tau / fine
     glancing = State(t=0.0, x=stack([[-1.0, offset], [0.0, 0.0]]), v=stack([[1.0, 0.0], [0.0, 0.0]]))
-    trajectory = simulate(glancing, interacting([1.0, 1.0], soft_sphere(stiffness, diameter)), dt, round(2.0 / dt), step=verlet.step)
+    n_steps = round(2.0 / step)
+    trajectory = simulate(glancing, interacting([1.0, 1.0], soft_sphere(stiffness, diameter)), step, n_steps, step=verlet.step)
     paths[stiffness] = unstack(trajectory.x, 2)
     final = unstack(trajectory.v, 2)[-1]
     deflection = np.degrees(np.arctan2(final[0, 1], final[0, 0]))
-    print(f"{stiffness:16.0f}{tau:14.4f}{round(2.0 / dt):8d}{deflection:11.2f}°{deflection - hard_angle:+12.2f}°"
-          f"{angle_between(final[0], final[1]):14.2f}°")
+    rows.append((stiffness, tau, n_steps, deflection, deflection - hard_angle, angle_between(final[0], final[1])))
+differences = np.abs([row[4] for row in rows])
+ratios = differences[:-1] / differences[1:]
+right_angle = max(abs(row[5] - 90.0) for row in rows)
+```
+
+The geometry gives $\alpha =$ `{python} f"{alpha:.2f}"`$^\circ$, so the hard
+spheres touch after `{python} f"{moment:.4f}"` s, the moving one is deflected by
+`{python} f"{hard_angle:.2f}"`$^\circ$ and the two leave
+`{python} f"{angle_between(*hard):.2f}"`$^\circ$ apart. The table is the result for
+soft spheres.
+
+```{python}
+#| label: result-stiffness-sweep
+table(
+    rows,
+    columns=[
+        ("stiffness", "N/m", ".0f"),
+        ("contact time", "s", ".4f"),
+        ("steps", "", "d"),
+        ("deflection", "°", ".2f"),
+        ("difference from hard spheres", "°", "+.2f"),
+        ("angle between the leaving spheres", "°", ".2f"),
+    ],
+    caption="The glancing collision for five contact stiffnesses, each at the same number of steps per contact: deflection of the moving sphere, its difference from the hard-sphere value, and the angle between the two leaving spheres, to two decimals.",
+)
 ```
 
 ```{python}
 #| label: fig-glancing-collision
-#| fig-cap: "The glancing collision with two contact stiffnesses, against the hard-sphere paths. Circles show the spheres at the moment of first contact."
-#| fig-alt: "Plot of y against x in metres with equal axes. The moving sphere comes in from the left along a horizontal line; the target sits at the origin. Two circles of diameter 0.1 touch at the point of first contact. After it, the hard-sphere paths leave as straight dotted lines at 60 degrees upward and 30 degrees downward. The soft-sphere paths for 100 newtons per metre bend away more gradually and leave at shallower angles; the paths for 10000 newtons per metre lie close to the hard-sphere lines."
+#| fig-cap: "A stiffer contact bends the paths less, so they leave closer to the straight hard-sphere paths; the circles mark the spheres at first contact."
+#| fig-alt: "Plot of y against x in metres with equal axes. The moving sphere comes in from the left along a horizontal line; the target sits at the origin. Two circles touch at the point of first contact. After it, the hard-sphere paths leave as straight dotted lines, one upward and one downward at a right angle to each other. The soft-sphere paths for the softer contact bend away more gradually and leave at shallower angles; the paths for the stiffer contact lie close to the hard-sphere lines."
+#| fig-status: simulated
 fig, ax = plt.subplots(figsize=(6.4, 4.2))
 after = np.linspace(0.0, 1.0, 2)[:, np.newaxis]
 touch = np.array([-1.0 + moment, offset])
@@ -544,15 +741,60 @@ ax.legend(loc="upper left")
 plt.show()
 ```
 
-The spheres leave at a right angle for every stiffness, because that
-follows from momentum and energy alone, which the soft spheres conserve.
-The deflection does depend on the stiffness: during a long contact the
-line of centres turns, and the soft spheres leave at a shallower angle than
-hard ones. The difference falls by about $\sqrt{10}$ for every factor ten
-in the stiffness, as the contact time does, and the number of steps rises
-by the same factor. The hard-sphere result is a limit, approached at a
-cost, and a simulation that needs it to a given accuracy chooses its
-stiffness from this table and its step from the contact time.
+[The spheres leave at a right angle for every stiffness, to within
+`{python} f"{right_angle:.2f}"`$^\circ$]{.claim type="numerically-verified" scope="equal masses, target at rest, five stiffnesses" evidence="result-stiffness-sweep"},
+because that follows from momentum and energy alone, which the soft spheres
+conserve; the small remainder is the energy drift of the step.
+The deflection does depend on the stiffness: during a long contact the line
+of centres turns, and the soft spheres leave at a shallower angle than hard
+ones, as @fig-glancing-collision shows. [The difference from the hard-sphere
+deflection falls by a factor between
+`{python} f"{min(ratios[1:]):.1f}"` and `{python} f"{max(ratios[1:]):.1f}"` for each
+factor of ten in the stiffness over the four stiffest rows,
+near $\sqrt{10} =$ `{python} f"{np.sqrt(10):.2f}"`]{.claim type="numerically-verified" scope="equal masses, offset at half the diameter, stiffness from the second row up" evidence="result-stiffness-sweep"},
+as the contact time does, and the number of steps rises by the same
+factor. The lesson does not derive the exponent; it is a measurement over
+three decades, and the ratios are near that value, not at it. The hard-sphere result is a limit, approached at a cost, and
+a simulation that needs it to a given accuracy chooses its stiffness from
+this table and its step from the contact time.
+
+## Limits {#limits}
+
+What this lesson shows is a statement about a Hookean contact between smooth
+spheres in a model of a few particles, not about collisions in general.
+
+- The collision is elastic and the contact linear. Real contacts dissipate
+  energy and are not linear; neither is modelled or measured here, and no
+  source for either was read.
+- Only a few particles are simulated. Whether the step that resolves one
+  contact is enough when many collisions overlap in time is not tested, apart
+  from the row of three spheres of the second exercise, which fails for
+  touching spheres.
+- The scaling of the deflection with the stiffness is measured at one
+  geometry and one mass ratio, over a few decades; it is not derived.
+- The conservation of the total momentum is shown for the four fixed-step
+  methods of the course and a pairwise force given once. A force that is not a
+  pairwise force of the interface, or a method that evaluates the force with
+  different arguments inside one step, is not covered by the argument.
+- Nothing here rotates: spheres are points with a radius, so friction and
+  spin are absent.
+- Round-off is checked against a bound, not characterised.
+
+::: {.exercise .self-check}
+The total momentum is constant, within the bound, in every row of the table of the head-on collision, even with one step per contact. Does it follow
+that the simulated collision is correct?
+
+::: {.solution}
+No. The momentum is conserved by the structure of the interface, whatever
+the step: every force that one particle receives, the other loses. It says
+nothing about whether the force was resolved. In the table the momentum is
+constant in every row while the outgoing speeds are off by
+`{python} f"{100 * errors[1] / abs(expected[0][0]):.0f}"` per cent with one step per contact and by
+`{python} f"{100 * errors[5] / abs(expected[0][0]):.1f}"` per cent with five, and the
+energy of the pair is not conserved. A correct outcome needs the second conservation law, the energy, to hold too, and
+that depends on resolving the contact; the first assumption that fails when the step is too coarse is assumption five, and the momentum check cannot see it.
+:::
+:::
 
 ## Exercises
 
@@ -560,7 +802,8 @@ stiffness from this table and its step from the contact time.
 **Energy transfer.** A sphere moving at 1 m/s hits a sphere at rest head
 on. What fraction of its kinetic energy does the target carry away? Derive
 it from the hard-sphere result as a function of the mass ratio, then
-measure it with soft spheres for mass ratios from one tenth to ten.
+measure it with soft spheres for mass ratios from one tenth to ten, and find
+the speed above which soft spheres pass through each other.
 
 ::: {.solution}
 With the target at rest, $v_2' = 2 m_1 v_1 / (m_1 + m_2)$, so the fraction
@@ -570,21 +813,32 @@ $$
 \frac{\tfrac{1}{2} m_2 v_2'^2}{\tfrac{1}{2} m_1 v_1^2} = \frac{4\,m_1 m_2}{(m_1 + m_2)^2},
 $$
 
-which is 1 for equal masses and symmetric in the two masses: a light
+which is one for equal masses and symmetric in the two masses: a light
 sphere hitting a heavy one transfers as small a fraction as a heavy one
 hitting a light one.
 
 ```{python}
-print(" m2 / m1   transferred, soft spheres   4 m1 m2 / (m1 + m2)^2")
+#| label: result-energy-transfer
+rows = []
 for ratio in (0.1, 0.5, 1.0, 2.0, 10.0):
     target_mass = ratio * 1.0
     tau = np.pi * np.sqrt(reduced_mass(1.0, target_mass) / stiffness)
-    dt = tau / 40
+    step = tau / fine
     resting = State(t=0.0, x=stack([[0.0], [0.5]]), v=stack([[1.0], [0.0]]))
-    trajectory = simulate(resting, interacting([1.0, target_mass], soft_sphere(stiffness, diameter)), dt, round(1.0 / dt), step=verlet.step)
+    trajectory = simulate(resting, interacting([1.0, target_mass], soft_sphere(stiffness, diameter)), step, round(1.0 / step), step=verlet.step)
     final = unstack(trajectory.v, 2)[-1]
     transferred = target_mass * final[1, 0] ** 2 / 1.0
-    print(f"{ratio:8.1f}{transferred:22.4f}{4 * target_mass / (1 + target_mass) ** 2:25.4f}")
+    rows.append((ratio, transferred, 4 * target_mass / (1 + target_mass) ** 2))
+
+table(
+    rows,
+    columns=[
+        ("mass ratio, target over moving sphere", "", ".1f"),
+        ("transferred, soft spheres", "", ".4f"),
+        ("4 m1 m2 / (m1 + m2)^2", "", ".4f"),
+    ],
+    caption="The fraction of the kinetic energy that the target carries away: soft spheres and the formula, to four decimals.",
+)
 ```
 
 The simulation agrees with the formula to the digits shown. For a head-on
@@ -594,7 +848,38 @@ energy $\tfrac{1}{2}\mu u^2$ must stay below $\tfrac{1}{2} k D^2$, the
 contact energy at full compression, that is $|u|\sqrt{\mu/k} < D$. Below
 that bound only the duration of the contact depends on the stiffness;
 above it the spheres pass through each other, which is a property of the
-model and not a timestep error.
+model and not a timestep error. The next cell runs equal spheres at speeds
+below and above the bound.
+
+```{python}
+#| label: result-pass-through
+bound = diameter * np.sqrt(stiffness / reduced_mass(1.0, 1.0))
+rows = []
+for fraction in (0.5, 0.9, 1.1, 1.5):
+    speed = fraction * bound
+    tau = np.pi * np.sqrt(reduced_mass(1.0, 1.0) / stiffness)
+    step = tau / fine
+    rushing = State(t=0.0, x=stack([[0.0], [0.5]]), v=stack([[speed], [0.0]]))
+    trajectory = simulate(rushing, interacting([1.0, 1.0], soft_sphere(stiffness, diameter)), step, round(0.5 / step), step=verlet.step)
+    positions, final = unstack(trajectory.x, 2)[-1], unstack(trajectory.v, 2)[-1]
+    rows.append((fraction, final[0, 0] / speed, final[1, 0] / speed, "swapped" if positions[0, 0] > positions[1, 0] else "kept"))
+
+table(
+    rows,
+    columns=[
+        ("speed over the bound", "", ".1f"),
+        ("final velocity, first sphere, over the initial speed", "", "+.3f"),
+        ("final velocity, second sphere, over the initial speed", "", "+.3f"),
+        ("order of the spheres at the end", "", ""),
+    ],
+    caption=f"Equal spheres at speeds below and above the pass-through bound, which here is {bound:.2f} m/s: the velocities at the end in units of the initial speed.",
+)
+```
+
+Below the bound the first sphere stops and the second carries on with the
+whole speed; above it the order of the spheres is swapped and they emerge
+moving forward, which is the barrier of the contact potential being
+crossed.
 :::
 :::
 
@@ -612,32 +897,45 @@ gap, the middle sphere must cross it before it touches the third sphere,
 and the collisions happen one at a time.
 
 ```{python}
-row_stiffness = 10_000.0  # N/m
+#| label: result-cradle
 row_diameter = 0.1  # m
-tau = np.pi * np.sqrt(reduced_mass(1.0, 1.0) / row_stiffness)
-dt = tau / 40
 
-print(f"contact time {1e3 * tau:.1f} ms\n")
-print(" gap (m)   final velocities (m/s)")
-for gap in (0.0, 0.02):
+
+def cradle_final(row_stiffness, gap):
+    tau = np.pi * np.sqrt(reduced_mass(1.0, 1.0) / row_stiffness)
+    step = tau / fine
     row = State(t=0.0, x=stack([[-0.3], [0.0], [row_diameter + gap]]), v=stack([[1.0], [0.0], [0.0]]))
     cradle = interacting([1.0, 1.0, 1.0], soft_sphere(row_stiffness, row_diameter))
-    final = unstack(simulate(row, cradle, dt, round(0.8 / dt), step=verlet.step).v, 3)[-1, :, 0]
-    print(f"{gap:8.2f}   " + "  ".join(f"{v:+.4f}" for v in final))
+    return unstack(simulate(row, cradle, step, round(0.8 / step), step=verlet.step).v, 3)[-1, :, 0]
+
+
+rows = [(1e4, gap, *cradle_final(1e4, gap)) for gap in (0.0, 0.02)]
+rows += [(row_k, 0.0, *cradle_final(row_k, 0.0)) for row_k in (1e3, 1e5)]
+spread = np.max(np.abs([row[2:] for row in rows if row[1] == 0.0] - np.mean([row[2:] for row in rows if row[1] == 0.0], axis=0)))
+
+table(
+    rows,
+    columns=[
+        ("stiffness", "N/m", ".0f"),
+        ("gap", "m", ".2f"),
+        ("final velocity, first sphere", "m/s", "+.4f"),
+        ("final velocity, second sphere", "m/s", "+.4f"),
+        ("final velocity, third sphere", "m/s", "+.4f"),
+    ],
+    caption="The row of three spheres: final velocities for touching spheres at three stiffnesses and for a gap at one, to four decimals.",
+)
 ```
 
 Touching spheres do not make a cradle: the two contacts overlap in time,
 and all three spheres end up moving. With the gap the collisions are
-separate and the toy result appears exactly, each collision an exchange of
-velocities between equal spheres. A stiffer spring does not rescue the
-touching row: the stiffness sets the time scale of the contact and nothing
-else, so the final velocities are the same at any $k$, as a rerun of the
-cell with another stiffness shows. That real cradles work with touching
-balls is a limit of the linear contact, not of the lesson's step or
-stiffness. Real steel balls meet through the Hertz contact of assumption
-4, whose repulsion grows faster than the overlap, and how a nonlinear
-contact passes a pulse down a row of touching balls is a different model
-again.
+separate and the toy result appears: each collision is an exchange of
+velocities between equal spheres. A stiffer or softer spring does not rescue
+the touching row: the stiffness sets the time scale of the contact and
+nothing else, so the final velocities of the three touching rows differ from
+their mean by at most `{python} f"{spread:.0e}"` m/s. That real cradles work with touching balls is a limit
+of the linear contact, not of the lesson's step or stiffness; how a
+nonlinear contact passes a pulse down a row of touching balls is a different
+model, which this lesson does not simulate.
 :::
 :::
 
@@ -656,28 +954,42 @@ only turns the velocities. In the laboratory frame the speeds change,
 because the frames move relative to each other.
 
 ```{python}
+#| label: result-centre-of-mass-frame
 pair_masses = [1.0, 2.0]
 tau = np.pi * np.sqrt(reduced_mass(*pair_masses) / 10_000.0)
-dt = tau / 40
+step = tau / fine
 glancing = State(t=0.0, x=stack([[-1.0, offset], [0.0, 0.0]]), v=stack([[1.0, 0.0], [0.0, 0.0]]))
 velocities = unstack(
-    simulate(glancing, interacting(pair_masses, soft_sphere(10_000.0, diameter)), dt, round(2.0 / dt), step=verlet.step).v,
+    simulate(glancing, interacting(pair_masses, soft_sphere(10_000.0, diameter)), step, round(2.0 / step), step=verlet.step).v,
     2,
 )
 drift = total_momentum(pair_masses, velocities[0]) / sum(pair_masses)
 
-print(f"velocity of the centre of mass: ({drift[0]:.4f}, {drift[1]:.4f}) m/s\n")
-print(" sphere   speed in the lab, before and after (m/s)   in the centre-of-mass frame, before and after (m/s)")
+rows = []
 for i, mass in enumerate(pair_masses):
     before, after = velocities[0, i], velocities[-1, i]
-    print(f" {mass:.0f} kg{np.linalg.norm(before):16.4f}{np.linalg.norm(after):12.4f}"
-          f"{np.linalg.norm(before - drift):26.4f}{np.linalg.norm(after - drift):12.4f}")
+    rows.append((mass, np.linalg.norm(before), np.linalg.norm(after),
+                 np.linalg.norm(before - drift), np.linalg.norm(after - drift)))
+
+table(
+    rows,
+    columns=[
+        ("mass", "kg", ".0f"),
+        ("lab speed before", "m/s", ".4f"),
+        ("lab speed after", "m/s", ".4f"),
+        ("speed before, centre-of-mass frame", "m/s", ".4f"),
+        ("speed after, centre-of-mass frame", "m/s", ".4f"),
+    ],
+    caption="Speeds of the two spheres in the laboratory frame and in the frame of the centre of mass, before and after the glancing collision, to four decimals.",
+)
 ```
 
-In the centre-of-mass frame each sphere keeps its speed to the accuracy of
-the simulation and only changes direction, which is what "elastic" means
-once the motion of the pair as a whole is taken out. This is the frame in
-which the capstone lesson looks at two bodies under gravity.
+The velocity of the centre of mass is
+(`{python} f"{drift[0]:.4f}"`, `{python} f"{drift[1]:.4f}"`) m/s. In the
+centre-of-mass frame each sphere keeps its speed to the accuracy of the
+simulation and only changes direction, which is what "elastic" means once
+the motion of the pair as a whole is taken out. This is the frame in which
+the capstone lesson looks at two bodies under gravity.
 :::
 :::
 
