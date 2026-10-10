@@ -34,8 +34,9 @@ from support.site_checks import Violation
 SITE = "site"
 LESSONS = f"{SITE}/lessons"
 PAGE = "index.qmd"
-# The one committed recording a lesson directory may hold (ADR 002): the
-# replay fixture of an agent lesson.
+# The committed recordings a lesson directory may hold (ADR 002): the replay
+# fixture of an agent lesson, ``replay.json``, or, for a lesson with several
+# agents, one ``replay-<agent>.json`` for each.
 REPLAY_FIXTURE = "replay.json"
 # A lesson with several recorded runs names each one replay-<name>.json.
 _REPLAY_FIXTURE_NAMED = re.compile(r"replay-[a-z]+\.json")

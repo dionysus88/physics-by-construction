@@ -28,6 +28,7 @@ from pbc.authoring.progress import (
     STORAGE_KEY,
     progress_markup,
     raw_html,
+    recommendations_markup,
 )
 from pbc.authoring.website import PAGE_FILE, page_href, project_root
 
@@ -582,7 +583,7 @@ class LessonHeader:
             + ":::\n"
         )
         # The script that keeps the learner's progress in the browser.
-        return header + raw_html(progress_markup(page, lesson))
+        return header + raw_html(progress_markup(page, lesson, path))
 
     def _before_you_begin(self) -> list[tuple[str, str]]:
         if self.glossary is None:
@@ -672,7 +673,7 @@ class PathOverview:
             lines += self._items(self.path.using(method), 4)
         lines += self._graph()
         # The script that shows progress on the cards and clears it.
-        lines += [raw_html(progress_markup(self.page, None))]
+        lines += [raw_html(progress_markup(self.page, None, self.path))]
         return "\n".join(lines)
 
     def _progress(self) -> list[str]:
@@ -687,15 +688,20 @@ class PathOverview:
             " nowhere else, in local storage under the key"
             f" <code>{STORAGE_KEY}</code>: for each lesson, whether you marked"
             " it completed, whether you finished its self-check, and how often"
-            " you checked an answer. No account is needed. Nothing is sent to"
-            " a server, no cookie is set, and nothing is shared with other"
-            " sites or other devices. Clearing the data of this site in your"
+            " you checked an answer, and which suggestions you ignored. No"
+            " account is needed. Nothing is sent to a server, no cookie is set,"
+            " and nothing is shared with other sites or other devices. Clearing"
+            " the data of this site in your"
             " browser removes it too, and so does the button below.</p>",
             "<p>Without scripts nothing is stored, and the self-checks work as"
             " exercises with a solution you can open.</p>",
             '<div id="progress-controls" data-enhancement="">'
             "<p>With scripts, this place shows which lessons you have completed"
             " and a button that clears them.</p></div>",
+            "```",
+            "",
+            "```{=html}",
+            recommendations_markup(),
             "```",
             "",
         ]

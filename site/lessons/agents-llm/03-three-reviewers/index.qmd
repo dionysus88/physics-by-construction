@@ -1,0 +1,422 @@
+---
+title: "Three reviewers for one piece of code"
+description: >-
+  Three review agents, one for the physics, one for the numerical
+  implementation, and one for the evidence, each with a short list of checks
+  from the scientific validation contract, review a correct stepper and a
+  faulty one; where they disagree, the build recomputes every check and the
+  failed one stands.
+lesson:
+  id: scientific-review
+  strand: agents-llm
+  order: 3
+  difficulty: 3
+  course: mechanics
+  methods: [simulation, llm-agents]
+  outcomes:
+    - Give each of several review agents its own bounded list of checks over the same code
+    - Read a disagreement between reviewers as a difference in what each one checked
+    - Decide a review from recomputed check results, not from the words of a reviewer
+  related: []
+  prerequisites:
+    lessons: [agent-experiment, verifying-scientific-code]
+    outside:
+      - "Python: reading a short function and a dictionary"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+A piece of simulation code is handed over with a sentence about what it does:
+here, that it is a first-order method for Newton's second law and that the
+energy of an oscillator it steps stays in a band. Someone has to decide
+whether to believe the sentence. The lesson on verifying scientific code gave
+that someone five checks. This lesson gives the checks to language models,
+three of them, with different jobs, and keeps the one thing a model should not
+be trusted with out of their hands: the verdict.
+
+Each reviewer is one run of the loop of the first agent lesson. One looks at
+the physics, one at the numerical implementation, one at the evidence. Each
+has its own short list of tools, and each tool runs a check of the contract on
+one of two pieces of code. One piece is the symplectic Euler stepper of the
+course. The other is a variant with a fault that a reader could miss. The
+reviewers do not know which is which, and they do not see each other's work.
+
+What the page shows is what the build recomputed. The reviewers' words are a
+recording; every check they asked for is run again, and the verdicts below come
+from those runs.
+
+## Assumptions
+
+1. **The claim comes first.** Both pieces claim first order and a bounded
+   energy of the oscillator. A reviewer is asked whether the code does what it
+   claims, and a claim written after the checks would be a description.
+2. **The checks are the contract's, and they are shared.** The three
+   reviewers use the same functions with the same tolerances, fixed before any
+   piece was run. They differ in which checks they may run, not in what a
+   check means. If they could choose their own tolerances, a disagreement
+   might only be a disagreement about tolerances.
+3. **A reviewer's words are data.** A model may write that code passes when
+   it does not, or the reverse. The verdict of this page is read from the
+   results of the tools, never from the text.
+4. **A pass covers what was run.** A reviewer that ran three checks says
+   nothing about the other two. Where reviewers differ, the cause is usually
+   that they ran different checks, and the resolution rule is written for
+   that case.
+5. **The oscillator is a fair reference, and only one.** A fault that matters
+   for a force that depends on the velocity could pass every check here. The
+   contract says what to add for a new model, and the evidence reviewer is
+   asked to say what its evidence does not cover.
+6. **A recording is a record.** It shows what one model once did with this
+   task. The numbers in it are checked; the reasoning is not.
+
+## Three jobs, one rule {#explanation}
+
+The reviewers are three runs of the same loop with different system prompts
+and different allowlists:
+
+- the **physics** reviewer may run the checks `limits` and `bounded-energy`:
+  does the code reproduce the motions with a closed form, and does it keep the
+  quantity it says it conserves;
+- the **numerics** reviewer may run `clock`, `purity`, and
+  `convergence-order`: does a step behave as a step of a method of the claimed
+  order must;
+- the **evidence** reviewer may reproduce any of the five checks in the order
+  of the contract, and may ask for the raw error against the exact oscillator
+  at a number of time steps, so that it can write the evidence in the contract's
+  form, with the name of the check and the call from its own calls, and say what is not covered.
+
+There is no new machinery. The boundary of the first agent lesson holds
+unchanged: a model can only name a tool of its list and give numbers within
+bounds, the loop stops after a fixed number of messages, and the harness has
+no code that evaluates what a model writes. A reviewer has even less to
+ask for than the experimenter of the first lesson: its tools take the number of
+a piece of code, 1 or 2, and the number of a check.
+
+### Disagreement and resolution
+
+The three runs are compared by the build, not by a fourth model. Each tool
+result carries the numbers of a finding in the contract's form (rule 3): the
+measured value, the tolerance, and whether it passed. The name of the check and
+the call that reproduces it are in the reviewer's own tool call, and the claim
+is the one both pieces make; the build recomputes the numbers, not these. The rule that combines them is one sentence:
+
+> A check that failed when it was recomputed stands, whatever the other
+> reviewers said. A reviewer that did not run that check has no standing
+> against it.
+
+So a disagreement is not settled by a vote. When two reviewers recompute the
+same check, they get the same number, because the check is deterministic; if
+they did not, the build reports a conflict. When one reviewer found a failure
+and another did not, the second ran other checks, and the list of what each
+ran says which.
+
+## Code
+
+The allowlists of the three reviewers, as the models see them:
+
+```{python}
+#| echo: false
+from pbc.agents.display import AllowlistDisplay, RunDisplay
+from pbc.agents.review_lab import (
+    CLAIM,
+    MAX_STEPS,
+    REVIEWERS,
+    TOLERANCE,
+    ReviewDisplay,
+    replay_fixtures,
+    resolve,
+    verdicts,
+)
+from pbc.authoring import excerpt, reproduce_this
+```
+
+```{python}
+#| echo: false
+from IPython.display import Markdown, display
+
+for reviewer in REVIEWERS:
+    display(Markdown(f"**The {reviewer.role} reviewer**"))
+    display(AllowlistDisplay(reviewer.allowlist))
+```
+
+Every tool returns the evidence of the contract as numbers. The verdicts of the
+page are read from them, and the text of a reviewer is not read at all:
+
+```{python}
+#| echo: false
+excerpt(verdicts)
+```
+
+The resolution is the rule above and a list of the checks no reviewer ran:
+
+```{python}
+#| echo: false
+excerpt(resolve)
+```
+
+## Worked examples
+
+### The two pieces of code
+
+Piece 1 is the stepper of the course. Piece 2 is a variant that looks like it:
+it moves the particle with the old velocity, so the two updates are in the
+wrong order. Both claim the order and the bounded energy of
+`{python} f"{CLAIM}"`.
+
+```{python}
+#| echo: false
+from pbc.mechanics.integrators import symplectic_euler_step
+from pbc.verification.faulty import explicit_euler_as_symplectic
+
+excerpt(symplectic_euler_step)
+```
+
+```{python}
+#| echo: false
+excerpt(explicit_euler_as_symplectic)
+```
+
+The second function is wrong on purpose: it is in the gallery of faulty
+steppers of the earlier lesson, the only module outside the lessons and tests
+that imports it is the one that sets up this review.
+
+### The three recorded runs
+
+The cell replays the three recordings. The model's messages are the recorded
+ones; each tool result is computed by this build, now.
+
+```{python}
+replays = replay_fixtures()
+RunDisplay(*replays["physics"])
+```
+
+```{python}
+RunDisplay(*replays["numerics"])
+```
+
+```{python}
+RunDisplay(*replays["evidence"])
+```
+
+### Where they agree, and where they do not
+
+This is the part of the page that is decided. Every line is built from the
+recomputed results of the tools, and no text of a reviewer is in it.
+
+```{python}
+review = ReviewDisplay({name: transcript for name, (_, transcript) in replays.items()})
+growth = next(
+    v.measured
+    for v in review.verdicts
+    if v.candidate == 2 and v.check == "bounded-energy"
+)
+review
+```
+
+The numerics reviewer ran three checks and passed both pieces, and was right
+about what it ran: the faulty piece has the correct order, a correct clock,
+and no hidden state. It did not run `bounded-energy`. The physics reviewer
+and the evidence reviewer did, and the recomputed check failed for piece 2.
+By the rule, the failure stands.
+
+That is the reason to want several reviewers, and the reason not to count
+them. Had the numerics reviewer been the only one, the review would have passed a
+method whose energy grows by a factor of `{python} f"{growth:.1e}"` over a
+hundred periods.
+
+### A reviewer cannot talk its way past the build
+
+The recorded reviewers wrote honest summaries. A model need not. The cell below
+plays a reviewer that calls the check on piece 2 and then says the piece
+passes every check; the verdict is read from the result of the call.
+
+```{python}
+from pbc.agents import ModelMessage, ToolCall, run
+
+physics = REVIEWERS[0]
+
+
+class Boaster:
+    model = "a reviewer that does not tell the truth"
+    secrets = ()
+
+    def __init__(self):
+        self.messages = [
+            ModelMessage(
+                "I will check the energy.",
+                (ToolCall("1", "check_bounded_energy", {"candidate": 2}),),
+            ),
+            ModelMessage("Piece 2 passes every check, with a wide margin."),
+        ]
+
+    def complete(self, system, conversation, tools):
+        return self.messages.pop(0)
+
+
+transcript = run(Boaster(), physics.allowlist, physics.system, physics.task, MAX_STEPS)
+print("what it said: ", transcript.steps[-1].message.text)
+for v in verdicts(physics, transcript):
+    print(f"what it ran:   {v.check} on piece {v.candidate}:",
+          "passed" if v.passed else "FAILED", f"(measured {v.measured:.1e}, tolerance {v.tolerance})")
+```
+
+### The replay keeps the page honest
+
+The replay compares every recomputed result with the recorded one, to a
+relative and absolute difference of `{python} f"{TOLERANCE:g}"`. If a check
+of the contract changes, a recording is no longer a recording of what the code
+does. Here the tolerance of the exact checks is made tighter than round-off,
+and the physics reviewer is replayed.
+
+```{python}
+from pbc.agents import ReplayMismatch
+from pbc.agents.review_lab import replay_reviewer
+from pbc.verification import checks
+
+original = checks.EXACT
+checks.EXACT = 1e-30
+try:
+    replay_reviewer(physics, replays["physics"][0])
+except ReplayMismatch as mismatch:
+    print(mismatch)
+finally:
+    checks.EXACT = original
+```
+
+The build would fail with that message. The maintainer then runs the reviewers
+live, reads the new runs, and commits the new recordings.
+
+### What the evidence reviewer saw
+
+The evidence reviewer asked for the error against the exact oscillator at
+three step counts. The figure shows what the build recomputed, with a fresh
+scan of the same two pieces.
+
+```{python}
+#| label: fig-review-evidence
+#| fig-cap: "Error against the exact oscillator over two periods, against the number of time steps per period, for pieces 1 and 2. Lines are a fresh scan; dots are the values the evidence reviewer asked for, recomputed by this build."
+#| fig-alt: "A log-log chart of error against steps per period, from 20 to 800. Two lines fall with a slope close to minus one; the line of piece 2 lies above that of piece 1. Dots mark 50, 100 and 200 steps for each piece, on the lines."
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pbc.agents.review_lab import CANDIDATES
+from pbc.verification import oscillator_error
+
+counts = np.array([20, 40, 80, 160, 320, 640])
+colors = {1: "#00429d", 2: "#93003a"}
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+for piece, build in CANDIDATES.items():
+    ax.loglog(counts, [oscillator_error(build, n) for n in counts],
+              color=colors[piece], label=f"piece {piece}")
+    asked = {}
+    for step in replays["evidence"][1].steps:
+        for call, result in zip(step.message.tool_calls, step.results, strict=True):
+            if result.ok and call.name == "oscillator_error" and call.arguments["candidate"] == piece:
+                asked[call.arguments["steps_per_period"]] = result.content["error"]
+    ax.loglog(list(asked), list(asked.values()), "o", color=colors[piece])
+ax.set_xlabel("time steps per period")
+ax.set_ylabel("error")
+ax.legend()
+plt.show()
+```
+
+Both lines fall with a slope near $-1$: both are first-order methods, which is
+why the order check passes both. The line of piece 2 sits higher, and the
+figure does not show the thing that is wrong with it: an energy that grows
+without bound. A convergence plot shows how fast the error falls at a fixed
+time, and the energy test shows what happens to a long run. The contract has
+both for that reason.
+
+### Run the reviewers yourself
+
+This needs your own key and costs a few cents. The build does not run it, so
+the commands are marked.
+
+::: {.not-verified}
+```bash
+# once: install the optional provider package
+uv sync --extra openai
+
+# in this shell only: the key stays out of code and files
+export OPENAI_API_KEY="..."
+
+uv run --extra openai python -m pbc.agents.review_lab
+```
+:::
+
+It runs the three reviewers one after the other and prints each message and
+tool call. A live run will differ in its words and perhaps in the order of its
+calls; the numbers of the checks it asks for are the numbers on this page, and
+the verdicts follow from them. The maintainer records the fixtures of this page
+with `--record`, reads the files, and commits them.
+
+## Exercises
+
+::: {.exercise}
+Run all five checks of the contract on both pieces yourself, without a reviewer.
+Which check fails, and which of the three reviewers could have found it
+with its own list of tools?
+
+::: {.solution}
+```{python}
+from pbc.verification import verify
+
+for piece, build in CANDIDATES.items():
+    for finding in verify(build, CLAIM):
+        print(f"piece {piece}  {'pass' if finding.passed else 'FAIL'}  {finding.check:18} {finding.detail}")
+```
+
+Only `bounded-energy` fails, for piece 2. The physics reviewer has it in its
+list, and so has the evidence reviewer. The numerics reviewer does not, so its
+review, however careful, could not have failed the piece. Which reviewer is
+given which checks is part of the design of a review, and it should be written
+down before the reviewers run.
+:::
+:::
+
+::: {.exercise}
+Two reviewers recompute the same check on the same piece and report different
+verdicts. Build the verdicts by hand, resolve them, and say what the build
+reports and what it means.
+
+::: {.solution}
+```{python}
+from pbc.agents.review_lab import Verdict
+
+found = [
+    Verdict("physics", 1, "limits", 7e-15, 1e-12, True),
+    Verdict("evidence", 1, "limits", 3e-3, 1e-12, False),
+]
+resolution = resolve(found, 1)
+print("rejected:", resolution.rejected, "| conflicts:", resolution.conflicts)
+```
+
+The failed check stands, so the piece is rejected, and the check is reported as
+a conflict. The checks are deterministic, so two honest reviewers get the same
+number from the same check on the same code. A conflict means they did not
+run the same check or the same code, and it is the reviewers' set-up that has
+to be looked at before anything is concluded about the piece.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/agents/review_lab.py",
+        "src/pbc/verification/checks.py",
+        "src/pbc/verification/faulty.py",
+    ],
+    tests=[
+        "tests/unit/test_review_lab.py",
+        "tests/integration/test_review_replay.py",
+    ],
+)
+```

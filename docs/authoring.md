@@ -619,6 +619,13 @@ Runge-Kutta method", "the fourth-order method"), put the exact identifier in
 code font, or mark it `{.given}`; in a table cell, a caption, or math the name
 is free. (A finding of the M5 editorial pass, F30.)
 
+A unit with an exponent (`yr²/AU³`, `m/s²`) counts as a number in prose too.
+Write it in math (`$\mathrm{yr}^2/\mathrm{AU}^3$`), where it is free. A
+quantity that is at the level of round-off is not shown as a number: a table
+cell says "below 1e-12", built from a stated bound with a small helper in the
+cell, so that the page never prints a digit that another machine would change.
+(Findings of the M8 editorial pass, F30.)
+
 The check is a heuristic. Write small whole numbers that are not results as
 words ("first order", "slope one") and mark a number you really give as
 `{.given}`; do not rewrite a correct sentence to please it.
@@ -838,7 +845,35 @@ storage, and it lives in `site/learner/`, not in `site/widgets/`, whose scripts
 may not store anything. It contains no request, no other origin, and no storage
 but local storage. What it adds to a page sits in a `data-enhancement` element
 that the page has without it (`#learner-panel`, `#self-check-controls`,
-`#progress-controls`), so that nothing required depends on scripts.
+`#progress-controls`, `#recommendations`), so that nothing required depends on
+scripts.
+
+### Recommendations
+
+The learning path and every lesson page suggest what to do next, with the
+reason of each suggestion. The rules are in `site/learner/recommend.js`, a pure
+module that reads no storage and no page; `progress.js` shows its result in
+`#recommendations`. The rules use only the prerequisite graph and the stored
+results, which the page carries as data (`pbc.authoring.progress.progress_markup`
+puts the lessons, with links relative to the page, in the JSON element), so that
+computing them makes no request. With no stored result there is no suggestion
+and the page is the plain learning path.
+
+In rank order, a lesson gets the first rule that applies, and at most three
+suggestions are shown, ties in the order of the path:
+
+1. **prerequisite**: the reader completed a lesson that builds on this lesson,
+   which is not completed.
+2. **retry**: the reader checked an answer to its self-check and has not got it
+   right.
+3. **next**: the lesson is not completed and all its prerequisites are.
+
+The reader can ignore a suggestion. The record then holds an optional
+`"ignored": ["<lesson id>"]` (still version 1: absent means none), and the
+button "Show ignored suggestions again" removes it; the clear-data control
+removes it with the rest. A new rule is a new entry of `RULES` with a test in
+`tests/e2e/test_recommendations.py`. Whether the suggestions are useful cannot
+be shown by those tests; judge it by following the path as a learner.
 
 ## Widgets
 

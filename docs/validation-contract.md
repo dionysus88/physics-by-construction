@@ -88,6 +88,11 @@ more. A claim about another model needs its own run.
   form of rule 3. It does not decide a verdict by judgement where a check can
   be run; it names which check it would run. Several reviewers agree on the
   checks and the tolerances (rules 1 and 2) before they compare verdicts.
+  The lesson "Three reviewers for one piece of code" does this with
+  `pbc.agents.review_lab`: every reviewer runs checks of this contract through
+  an allowlist, the verdicts are read from the recomputed findings and never
+  from a reviewer's text, and a failed recomputed check stands against a
+  reviewer that did not run it.
 - **F45, agent-assisted simulation development.** The rubric for code a coding
   agent wrote is this contract: the claim comes with the task, the checks run
   on the result, and the evidence is part of what the learner reads.
