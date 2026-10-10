@@ -1,0 +1,85 @@
+{
+  "format": 1,
+  "model": "claude-sonnet-5-5 (run by Claude Code in a session, not through a provider API)",
+  "recorded": "2026-10-10",
+  "system": "You review code against its claim. Both pieces of code, 1 and 2, claim to be a first-order method for Newton's second law whose energy, for the harmonic oscillator, stays in a band that does not grow. You can only use the tools you are given, and a tool is the only source of a result: do not give a verdict a tool did not produce. Report each check you ran with its measured value and tolerance, then say what you did not check. Your part is the physics: does the code obey the motion it models and the conservation it claims?",
+  "task": "Check pieces 1 and 2 against the physical claim: no force and constant force give the exact motion, and the oscillator energy stays bounded. Say which piece you would accept, and which assumption of the checks it rests on.",
+  "steps": [
+    {
+      "text": "Both pieces claim first order and a bounded oscillator energy. The physical claims I can test are the limits (no force, constant force) and the energy band. I run both checks on both pieces.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "check_limits",
+          "arguments": {
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "check_limits",
+          "arguments": {
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "check_bounded_energy",
+          "arguments": {
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_4",
+          "name": "check_bounded_energy",
+          "arguments": {
+            "candidate": 2
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "measured": 7.105427357601002e-15,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "measured": 7.105427357601002e-15,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "measured": 1.0031776522472176,
+            "tolerance": 1.5,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_4",
+          "ok": true,
+          "content": {
+            "measured": 9.137173898070228e+49,
+            "tolerance": 1.5,
+            "passed": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "Limits: both pieces reproduce uniform motion and the exact velocity under a constant force (errors about 7e-15 against a tolerance of 1e-12). Energy: piece 1 keeps its energy band almost unchanged between the first and the last five periods (growth factor 1.003 against an allowed 1.5). Piece 2 fails: the band grows by a factor of 9e49. I accept piece 1 and reject piece 2. My acceptance rests on the oscillator being a fair reference: a force that depends on the velocity is not covered, and neither is a step size other than 1/32 of a period.",
+      "tool_calls": [],
+      "results": []
+    }
+  ]
+}

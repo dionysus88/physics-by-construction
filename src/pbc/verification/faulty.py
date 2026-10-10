@@ -3,8 +3,10 @@
 EVERY STEPPER IN THIS MODULE IS WRONG ON PURPOSE. They exist so that the
 lesson on verifying scientific code can show the checks catching them, and
 so that the tests can show the same checks passing the correct steppers.
-Nothing else may import this module, and no simulation of the course may use
-one of them (``tests/unit/test_verification.py`` enforces the second).
+Only the lessons and tests may import this module (in ``src`` one module does:
+``pbc.agents.review_lab``, which gives the review agents a faulty stepper to
+find), and no simulation of the course may use one of them
+(``tests/unit/test_verification.py`` enforces both).
 
 Each entry names the correct method it poses as, the fault, and the checks
 that must fail. A fault that only one check can see is the point of the

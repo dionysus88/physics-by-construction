@@ -34,9 +34,11 @@ from support.site_checks import Violation
 SITE = "site"
 LESSONS = f"{SITE}/lessons"
 PAGE = "index.qmd"
-# The one committed recording a lesson directory may hold (ADR 002): the
-# replay fixture of an agent lesson.
+# The committed recordings a lesson directory may hold (ADR 002): the replay
+# fixture of an agent lesson, ``replay.json``, or, for a lesson with several
+# agents, one ``replay-<agent>.json`` for each.
 REPLAY_FIXTURE = "replay.json"
+_REPLAY_FIXTURES = re.compile(r"replay(-[a-z]+)?\.json")
 
 # The strands in learning path order and the difficulty scale are defined
 # once, where the pages are generated from them (pbc.authoring.path).
@@ -865,7 +867,7 @@ def _lesson_file(path: Path) -> bool:
         len(parts) == 5
         and parts[2] in STRANDS
         and _LESSON_DIRECTORY.fullmatch(parts[3]) is not None
-        and parts[4] in (PAGE, REPLAY_FIXTURE)
+        and (parts[4] == PAGE or _REPLAY_FIXTURES.fullmatch(parts[4]) is not None)
     )
 
 
@@ -892,8 +894,9 @@ def check_committed_files(repository: Path) -> list[Violation]:
     """No generated artifact is committed, and a lesson directory holds only
     its page and, for an agent lesson, its replay fixture.
 
-    The replay fixture is exempt by its location alone (ADR 002): it is the
-    file ``replay.json`` next to the page of a lesson.
+    A replay fixture is exempt by its location alone (ADR 002): it is the
+    file ``replay.json``, or ``replay-<agent>.json``, next to the page of a
+    lesson.
     """
     violations = []
     for path in committed_files(repository):
