@@ -96,3 +96,29 @@ def test_the_export_text_is_the_same_every_time_and_ends_with_a_newline():
     assert export_json(path) == export_json(path)
     assert export_json(path).endswith("}\n")
     assert json.loads(export_json(path)) == path_export(path)
+
+
+def test_a_page_with_the_path_carries_the_lessons_with_pages_relative_to_itself():
+    path = LearningPath(tuple(LESSONS))
+
+    lesson_data = data_of(progress_markup(KINEMATICS.page, KINEMATICS, path))
+    path_data = data_of(progress_markup(PATH_PAGE, None, path))
+
+    assert lesson_data["path"][1] == {
+        "id": "newton",
+        "title": "Newton",
+        "href": "../02-newton/index.html",
+        "prerequisites": ["kinematics"],
+    }
+    assert (
+        path_data["path"][0]["href"] == "../lessons/mechanics/01-kinematics/index.html"
+    )
+    assert "http" not in progress_markup(PATH_PAGE, None, path)
+
+
+def test_only_a_lesson_page_gets_the_place_for_recommendations():
+    path = LearningPath(tuple(LESSONS))
+
+    assert 'id="recommendations"' in progress_markup(KINEMATICS.page, KINEMATICS, path)
+    assert 'id="recommendations"' not in progress_markup(PATH_PAGE, None, path)
+    assert 'id="recommendations"' not in progress_markup(KINEMATICS.page, KINEMATICS)
