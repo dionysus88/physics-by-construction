@@ -226,3 +226,122 @@ references:
     lessons: [kepler-orbit]
     last-checked: 2026-10-10
     licence: CC BY-SA 4.0 on Wikipedia; linked, not copied or rehosted.
+  - key: tpil-tactics
+    concept: >-
+      A tactic is an instruction that tells Lean how to build a proof term,
+      so that a proof written as a list of tactics is checked as a term
+    url: https://lean-lang.org/theorem_proving_in_lean4/Tactics/
+    title: Theorem Proving in Lean 4, chapter 5, Tactics
+    author: Lean community (the chapter page names no author)
+    section: 5. Tactics, the introduction, and 5.2 Basic Tactics
+    role: intuition
+    statement: >-
+      The chapter's first paragraph says that a proof term is a
+      representation of a mathematical proof and that tactics are commands
+      that describe how to build it, "instructions that tell Lean how to
+      construct a proof term". That is the sentence the lesson uses about the
+      proof after `by`. The chapter does not mention `field_simp`, which the
+      lesson also names, and the lesson does not rely on the chapter for it.
+      Text of the page fetched and the opening and the section list read on
+      2026-10-10.
+    alternatives: >-
+      The older address of the book on leanprover.github.io returned a page of
+      9 kB that holds only a redirect, so it was not used. Mathematics in Lean
+      was also read (see its own entry); it teaches calculation with `ring`
+      but does not explain what a tactic is. The Lean reference manual was not
+      opened. This chapter was chosen because it explains the notion of a
+      tactic that the lesson only uses, in the book the Lean community points
+      beginners to.
+    lessons: [proving-what-the-simulation-showed]
+    last-checked: 2026-10-10
+    licence: No licence stated on the chapter page; linked, not copied or rehosted.
+  - key: mil-calculating
+    concept: >-
+      Proving an identity between polynomial expressions with the `ring`
+      tactic, and the hypotheses that a proof may rewrite with
+    url: https://leanprover-community.github.io/mathematics_in_lean/C02_Basics.html#calculating
+    title: Mathematics in Lean, 2.1 Calculating
+    author: Jeremy Avigad and Patrick Massot
+    section: 2.1 Calculating, the closing paragraphs on the `ring` tactic
+    role: derivation
+    statement: >-
+      The section says that `ring` is designed to prove identities in any
+      commutative ring that follow purely from the ring axioms, without using
+      any local assumption, and shows `rw [hyp]` followed by `ring` for an
+      identity that needs a hypothesis. The lesson's proofs have the same
+      two steps: substitute the hypotheses, then `ring`. The page does not
+      say that `ring` normalises both sides; the lesson says so as its own
+      description. Text of the page fetched and the passage read on 2026-10-10.
+    alternatives: >-
+      Theorem Proving in Lean 4 (see its entry) explains tactics in general
+      and not `ring`. The Mathlib documentation of the `ring` tactic was not
+      opened. This page was chosen because it shows a proof of the same shape
+      as the lesson's, and lets the reader try one.
+    lessons: [proving-what-the-simulation-showed]
+    last-checked: 2026-10-10
+    licence: Text licensed under CC BY 4.0, as the page says; linked, not copied or rehosted.
+  - key: maxwell-boltzmann-2d-relaxation
+    concept: >-
+      The speed distribution of a gas of hard particles that move in a plane,
+      and a gas of elastic discs that starts away from it and relaxes to it
+    url: https://en.wikipedia.org/wiki/Maxwell%E2%80%93Boltzmann_distribution#Relaxation_to_the_2D_Maxwell%E2%80%93Boltzmann_distribution
+    title: Maxwell–Boltzmann distribution
+    author: Wikipedia
+    section: Relaxation to the 2D Maxwell–Boltzmann distribution
+    role: intuition
+    statement: >-
+      The section gives the speed distribution of particles confined to a plane
+      as P(s < |v| < s + ds) = (m s / kT) exp(-m s^2 / 2kT) ds, the density the
+      lesson derives and uses, and describes a molecular dynamics simulation
+      of hard particles with perfectly elastic collisions in a rectangle that
+      starts out of equilibrium and converges to it, which is what the lesson's
+      first worked example measures with a moment ratio. The page says nothing
+      about the fourth-moment ratio or the virial pressure. Text of the page
+      fetched and the section read on 2026-10-10.
+    alternatives: >-
+      Wikipedia "Rayleigh distribution" (fetched and read): it states that the
+      length of a plane vector with independent equal-variance Gaussian
+      components is Rayleigh distributed, the lesson's derivation, but it has
+      no gas and no relaxation. Wikipedia "Virial expansion" and "Hard spheres"
+      were fetched, but their passages on two dimensions and on hard discs
+      were not found in the text, so they were not chosen. The section was
+      chosen because it shows the relaxation the lesson measures and gives the
+      formula in the lesson's own variables; it is a tertiary source and the
+      owner may prefer a statistical mechanics text.
+    lessons: [particles-in-a-box]
+    last-checked: 2026-10-10
+    licence: CC BY-SA 4.0 on Wikipedia; linked, not copied or rehosted.
+  - key: openai-function-calling
+    concept: >-
+      A language model does not run a function: it returns a name and
+      JSON-encoded arguments, and the application executes the call and returns
+      the result
+    url: https://platform.openai.com/docs/guides/function-calling#handling-function-calls
+    title: Function calling
+    author: OpenAI
+    section: Handling function calls, and Strict mode
+    role: api
+    statement: >-
+      The section says that when the model calls a function "you must execute
+      it and return the result", that a response can hold zero, one, or several
+      calls, each with an id and a function with a name and JSON-encoded
+      arguments, and that the result goes back with that id. Strict mode, which
+      the page recommends, makes calls adhere to the schema reliably instead of
+      best effort. This is the round trip of the lesson's loop (calls with
+      ids, up to four per message, results returned by id). The lesson does not
+      rely on strict mode: its allowlist checks every call itself. The OpenAI
+      client of the lesson uses the Chat Completions interface; the page shows
+      it and the Responses interface. Text of the page fetched and the sections
+      read on 2026-10-10.
+    alternatives: >-
+      Anthropic, "Tool use with Claude" (platform.claude.com), fetched and read:
+      it states the same round trip for client tools, "a structured call that
+      your application executes", with a tool_use block and a tool_result
+      block, and it also covers tools that the provider runs itself. It was not
+      chosen because the lesson's client is the OpenAI one; it is the right page
+      for a reader who switches provider as the lesson describes. This page is
+      API documentation, labelled as such, and does not replace the lesson's
+      account of the boundary.
+    lessons: [agent-experiment]
+    last-checked: 2026-10-10
+    licence: No licence stated on the page; linked, not copied or rehosted.
