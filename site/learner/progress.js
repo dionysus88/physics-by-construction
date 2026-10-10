@@ -7,11 +7,16 @@
 //
 // Stored under one key, as
 //   {"version": 1, "lessons": {"<lesson id>": {"completed": true,
-//     "selfCheck": {"done": true, "attempts": 2}}}}
+//     "selfCheck": {"done": true, "attempts": 2}}},
+//    "ignored": ["<lesson id>"]}
+// "ignored" is optional: the lessons whose suggestions (recommend.js) the
+// reader dismissed.
 // Lesson ids are the stable ids of the lesson front matter. Data of any other
 // version, or data that does not have this shape, is discarded: a reader loses
 // their progress, never the page. To change the format, raise VERSION and add
 // the function that turns the previous version into the new one to MIGRATIONS.
+
+import { recommend } from "./recommend.js";
 
 const KEY = "physics-by-construction:learner-state";
 const VERSION = 1;
@@ -83,6 +88,12 @@ export function parseState(text) {
     return null;
   }
   const state = emptyState();
+  if (data.ignored !== undefined) {
+    if (!Array.isArray(data.ignored) || !data.ignored.every((id) => typeof id === "string")) {
+      return null;
+    }
+    state.ignored = [...new Set(data.ignored)].sort();
+  }
   for (const id of Object.keys(data.lessons)) {
     const entry = cleanEntry(data.lessons[id]);
     if (entry === null) {
@@ -370,6 +381,57 @@ function pathPage() {
   });
 }
 
+// The suggestions of what to do next, in the element that the page has for
+// them, with the reason of each and a button to ignore it.
+function suggestions() {
+  const container = document.getElementById("recommendations");
+  if (!container || !Array.isArray(page.path)) {
+    return;
+  }
+  const heading = element("h2", { textContent: "What to do next" });
+  const list = element("ul", { className: "recommendations" });
+  const restore = element("button", { type: "button", textContent: "Show ignored suggestions again" });
+  const restoreRow = element("p", {}, restore);
+  const note = element("p", { className: "learner-note" });
+  restore.addEventListener("click", () => {
+    update((state) => {
+      delete state.ignored;
+    });
+    renderAll();
+  });
+  renderers.push((state) => {
+    const found = recommend(page.path, state);
+    const ignored = state.ignored?.length ?? 0;
+    list.replaceChildren(
+      ...found.map((item) => {
+        const ignore = element("button", { type: "button", textContent: "Ignore" });
+        ignore.setAttribute("aria-label", `Ignore the suggestion: ${item.lesson.title}`);
+        ignore.addEventListener("click", () => {
+          update((current) => {
+            current.ignored = [...new Set([...(current.ignored ?? []), item.lesson.id])].sort();
+          });
+          renderAll();
+        });
+        return element(
+          "li",
+          {},
+          element("a", { href: item.lesson.href, textContent: item.lesson.title }),
+          element("p", { className: "recommendation-reason", textContent: "Why: " + item.reason }),
+          element("p", {}, ignore)
+        );
+      })
+    );
+    note.replaceChildren(
+      "Suggestions are worked out in your browser from your saved progress and the prerequisites of the lessons. ",
+      element("a", { href: page.explanation, textContent: "What is stored" }),
+      "."
+    );
+    restoreRow.hidden = ignored === 0;
+    container.hidden = found.length === 0 && ignored === 0;
+    container.replaceChildren(heading, ...(found.length ? [list, note] : []), restoreRow);
+  });
+}
+
 function renderAll() {
   const state = load();
   for (const render of renderers) {
@@ -380,6 +442,7 @@ function renderAll() {
 lessonPanel();
 selfCheck();
 pathPage();
+suggestions();
 renderAll();
 // Another tab of the site changed or cleared the data.
 window.addEventListener("storage", (event) => {
