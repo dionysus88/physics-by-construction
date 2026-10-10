@@ -1,0 +1,302 @@
+{
+  "format": 1,
+  "model": "claude-sonnet-5-5 (run by Claude Code in a session, not through a provider API)",
+  "recorded": "2026-10-10",
+  "system": "You review code against its claim. Both pieces of code, 1 and 2, claim to be a first-order method for Newton's second law whose energy, for the harmonic oscillator, stays in a band that does not grow. You can only use the tools you are given, and a tool is the only source of a result: do not give a verdict a tool did not produce. Report each check you ran with its measured value and tolerance, then say what you did not check. Your part is the evidence: reproduce the checks in the order of the contract and report them in its form, so that a reader can rerun them.",
+  "task": "Reproduce all five checks of the contract, in order, for pieces 1 and 2, and tabulate the error against the exact oscillator at 50, 100 and 200 steps per period. Say which piece the evidence supports, and what it does not cover.",
+  "steps": [
+    {
+      "text": "I reproduce the five checks in the order of the contract, piece 1 first.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 1,
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 2,
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 3,
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_4",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 4,
+            "candidate": 1
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "measured": 7.105427357601002e-15,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_4",
+          "ok": true,
+          "content": {
+            "measured": 1.035580786531417,
+            "tolerance": 0.4,
+            "passed": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "Now the last check of piece 1 and the first three of piece 2.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 5,
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 1,
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 2,
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_4",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 3,
+            "candidate": 2
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "measured": 1.0031776522472176,
+            "tolerance": 1.5,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_4",
+          "ok": true,
+          "content": {
+            "measured": 7.105427357601002e-15,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "The last two checks of piece 2, and the start of the error table of piece 1.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 4,
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "reproduce_check",
+          "arguments": {
+            "check": 5,
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "oscillator_error",
+          "arguments": {
+            "candidate": 1,
+            "steps_per_period": 50
+          }
+        },
+        {
+          "id": "call_4",
+          "name": "oscillator_error",
+          "arguments": {
+            "candidate": 1,
+            "steps_per_period": 100
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "measured": 1.1339372830807528,
+            "tolerance": 0.4,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "measured": 9.137173898070228e+49,
+            "tolerance": 1.5,
+            "passed": 0.0
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "error": 0.07009369850579168
+          }
+        },
+        {
+          "call_id": "call_4",
+          "ok": true,
+          "content": {
+            "error": 0.03324453589566033
+          }
+        }
+      ]
+    },
+    {
+      "text": "The rest of the error table.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "oscillator_error",
+          "arguments": {
+            "candidate": 1,
+            "steps_per_period": 200
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "oscillator_error",
+          "arguments": {
+            "candidate": 2,
+            "steps_per_period": 50
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "oscillator_error",
+          "arguments": {
+            "candidate": 2,
+            "steps_per_period": 100
+          }
+        },
+        {
+          "id": "call_4",
+          "name": "oscillator_error",
+          "arguments": {
+            "candidate": 2,
+            "steps_per_period": 200
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "error": 0.016162595225336137
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "error": 1.1928444938373608
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "error": 0.48332855088359183
+          }
+        },
+        {
+          "call_id": "call_4",
+          "ok": true,
+          "content": {
+            "error": 0.21815068090362835
+          }
+        }
+      ]
+    },
+    {
+      "text": "Piece 1 passes all five checks. Piece 2 passes the first four and fails the fifth, bounded-energy: measured growth 9.1e49 against a tolerance of 1.5. The error table agrees with a first-order method for both: the error of piece 1 is 0.0701, 0.0332, 0.0162 at 50, 100, 200 steps per period (ratios 2.1 and 2.1), that of piece 2 is 1.19, 0.483, 0.218 (ratios 2.5 and 2.2). The table also shows what the order check does not: at 50 steps the error of piece 2 is 17 times that of piece 1 although both have order 1. The evidence supports accepting piece 1 and rejecting piece 2, for the oscillator, steps of 20 to 800 per period, and a force that does not depend on velocity. It does not cover other models, a second reference implementation, or the source of either piece.",
+      "tool_calls": [],
+      "results": []
+    }
+  ]
+}

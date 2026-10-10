@@ -1,0 +1,124 @@
+{
+  "format": 1,
+  "model": "claude-sonnet-5-5 (run by Claude Code in a session, not through a provider API)",
+  "recorded": "2026-10-10",
+  "system": "You review code against its claim. Both pieces of code, 1 and 2, claim to be a first-order method for Newton's second law whose energy, for the harmonic oscillator, stays in a band that does not grow. You can only use the tools you are given, and a tool is the only source of a result: do not give a verdict a tool did not produce. Report each check you ran with its measured value and tolerance, then say what you did not check. Your part is the implementation: does a step behave as a step of a method of the claimed order must?",
+  "task": "Check pieces 1 and 2 as numerical methods: the clock, the purity of a step, and the order of convergence. Say which piece you would accept, and what your checks cannot see.",
+  "steps": [
+    {
+      "text": "I check the clock, the purity of a step, and the order of convergence, first on piece 1.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "check_clock",
+          "arguments": {
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "check_purity",
+          "arguments": {
+            "candidate": 1
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "check_convergence_order",
+          "arguments": {
+            "candidate": 1
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "measured": 1.035580786531417,
+            "tolerance": 0.4,
+            "passed": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "Piece 1 passes all three. The same checks on piece 2.",
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "name": "check_clock",
+          "arguments": {
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_2",
+          "name": "check_purity",
+          "arguments": {
+            "candidate": 2
+          }
+        },
+        {
+          "id": "call_3",
+          "name": "check_convergence_order",
+          "arguments": {
+            "candidate": 2
+          }
+        }
+      ],
+      "results": [
+        {
+          "call_id": "call_1",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_2",
+          "ok": true,
+          "content": {
+            "measured": 0.0,
+            "tolerance": 1e-12,
+            "passed": 1.0
+          }
+        },
+        {
+          "call_id": "call_3",
+          "ok": true,
+          "content": {
+            "measured": 1.1339372830807528,
+            "tolerance": 0.4,
+            "passed": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "text": "Both pieces pass all three checks. The clock and the purity errors are 0 against 1e-12. The fitted order is 1.04 for piece 1 and 1.13 for piece 2, both within 0.4 of the claimed order 1. As numerical methods of first order I find no fault in either, and I would accept both. My checks cannot see whether the energy stays bounded: I did not run that check, so this is no statement about it.",
+      "tool_calls": [],
+      "results": []
+    }
+  ]
+}

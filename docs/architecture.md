@@ -118,7 +118,8 @@ src/pbc/                 Importable Python package with all reusable lesson code
   verification/          Order estimation, invariant checks, the named checks of the validation
                          contract, and a gallery of deliberately faulty steppers (F46)
   abm/                   Agent-based models
-  agents/                Agent harness: provider interface, tool allowlist, replay
+  agents/                Agent harness: provider interface, tool allowlist, replay; the lesson
+                         modules (`projectile_lab`, `review_lab`: three reviewers, F18)
   authoring/             Helpers lessons use to display code, proofs, tables, diagrams,
                          references, and claim labels by reference
   data/                  The dataset card schema and check, the minimal readers and
