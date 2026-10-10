@@ -117,9 +117,13 @@ The right-hand sides use only values the program already has, which is what
 
 ### How large is the error?
 
-One step drops terms of size $\Delta t^{2}$. Reaching a fixed time $T$ takes
-$T / \Delta t$ steps, so the dropped terms add up to an error of size
-$\Delta t$. Explicit Euler is a **first-order** method: halve the time step
+One step drops terms of size $\Delta t^{2}$, so a step adds an error of at
+most $C\,\Delta t^{2}$ for some constant $C$ that depends on how fast $a(t)$
+changes. Reaching a fixed time $T$ takes $T / \Delta t$ steps, and the dropped
+terms add up to at most
+$(T / \Delta t)\,C\,\Delta t^{2} = C\,T\,\Delta t$: an error of size
+$\Delta t$. This bound is an argument for the order, not yet a measurement;
+the examples measure it. Explicit Euler is a **first-order** method: halve the time step
 and the error at time $T$ halves, at twice the work.
 
 For a constant acceleration $a$ we can say exactly what the method does. The
@@ -137,9 +141,12 @@ those velocities:
 
 $$
 x_n
-= x_0 + \sum_{k=0}^{n-1} v_k\,\Delta t
-= x_0 + v_0\,t_n + \tfrac{1}{2}\,a\,t_n\,(t_n - \Delta t).
+= x_0 + \sum_{k=0}^{n-1} \bigl(v_0 + a\,k\,\Delta t\bigr)\,\Delta t
+= x_0 + v_0\,t_n + a\,\Delta t^{2}\,\frac{n\,(n-1)}{2}
+= x_0 + v_0\,t_n + \tfrac{1}{2}\,a\,t_n\,(t_n - \Delta t),
 $$
+
+using $\sum_{k=0}^{n-1} k = n(n-1)/2$ and $t_n = n\,\Delta t$.
 
 Subtracting the exact position leaves
 
@@ -150,7 +157,8 @@ $$
 Each step moves the particle with the velocity it had at the *start* of the
 step, so the computed position lags behind the change in velocity. The lag
 grows in proportion to the elapsed time and to the time step. This is a
-prediction the program has to reproduce, digit for digit.
+prediction the program has to reproduce: the first worked example compares
+it with the simulation in the digits shown.
 
 [For a constant acceleration the position error of explicit Euler is exactly
 $-\tfrac{1}{2}\,a\,t_n\,\Delta t$.]{.claim type="numerically-verified"
@@ -316,6 +324,7 @@ def ball(t):
 
 step_counts = [n_steps * 2**k for k in range(6)]
 ball_errors = np.array([final_error(free_fall, ball, n) for n in step_counts])
+spacing = np.spacing(np.max(np.abs(euler.x)))  # resolution of a stored height, m
 
 table(
     [
@@ -341,6 +350,14 @@ table(
 Every halving of the time step halves the error. For a constant acceleration
 the last ratio of the table is `{python} f"{ball_errors[-2] / ball_errors[-1]:.4f}"`,
 because the error is exactly $\tfrac{1}{2}\,g\,t\,\Delta t$.
+
+The fifth assumption said that round-off stays far below the error of the
+method. The cell below puts a number on it: the spacing between neighbouring
+double-precision numbers at the height of the ball is
+`{python} f"{spacing:.1e}"` m, and the smallest error of the table is
+`{python} f"{abs(ball_errors[-1]):.1e}"` m, which is
+`{python} f"{abs(ball_errors[-1]) / spacing:.1e}"` times larger. Round-off
+begins to matter only for time steps far smaller than these.
 
 ### An acceleration that changes in time
 
