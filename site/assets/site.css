@@ -990,3 +990,21 @@ main details > summary {
   white-space: nowrap;
   border: 0;
 }
+
+/* Suggestions of what to do next (F14): the reason of each stays visible. */
+.recommendations {
+  margin: var(--pbc-space-2) 0;
+  padding-left: var(--pbc-space-4);
+}
+
+.recommendations-panel {
+  margin: var(--pbc-space-3) 0;
+  padding: var(--pbc-space-2) var(--pbc-space-3);
+  border-left: 0.25rem solid var(--pbc-rule);
+  background: var(--pbc-surface);
+}
+
+.recommendation-reason {
+  margin: var(--pbc-space-1) 0;
+  color: var(--pbc-muted);
+}

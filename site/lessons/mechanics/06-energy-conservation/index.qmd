@@ -866,7 +866,7 @@ freedom, and four fixed-step methods.
   to the accuracy of the method, as the exercise measures.
 
 ::: {.exercise .self-check}
-**Self-check.** Two runs of the same pendulum keep the energy within bands
+Two runs of the same pendulum keep the energy within bands
 of equal width over a thousand swings. A colleague concludes that they
 simulate the motion equally well. Is that right? Say what you would
 compute to find out, and what the lag table of this lesson shows about it.
