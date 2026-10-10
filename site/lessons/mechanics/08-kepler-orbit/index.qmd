@@ -14,13 +14,14 @@ lesson:
   methods: [simulation]
   outcomes:
     - Reduce two bodies under gravity to one
-    - Use the energy and the angular momentum to fix the ellipse
+    - Derive the ellipse, its size, and its period from the energy and the angular momentum
     - Compare each integrator with the exact orbit over a thousand orbits
   related: []
+  format: 2
   prerequisites:
     lessons: [energy-conservation, momentum-and-collisions]
     outside:
-      - "Vectors: the cross product of two vectors in the plane"
+      - "Vectors: the cross product in three dimensions, and the identity a × (b × c) = b (a·c) − c (a·b)"
       - "Geometry: the ellipse, its foci, semi-major axis, and eccentricity"
       - "Numerical methods: the Newton iteration for the root of an equation"
 ---
@@ -32,20 +33,22 @@ from pbc.authoring import lesson_header
 lesson_header()
 ```
 
-The orbit of a planet about its star is the problem the mechanics of this
-course was invented for, and it brings together everything the previous
-lessons built. Two bodies attract each other with a force that depends on
-their separation alone; the pairwise force and the reduction to a single
-body of the momentum lesson turn them into one body about a fixed centre.
-The force is conservative, so the energy of the energy lesson is one
-conserved quantity; it is central, so the angular momentum is a second.
-The two together fix the size and the shape of the orbit before anything
-is simulated, and the exact motion, from an equation Kepler wrote down
-four centuries ago, is available to compare with, as it was for the
+The Earth returns to the same point of its path once a year, and has done so
+for as long as anyone has recorded it. Why does the path close at all? A
+force that depends on the distance alone could just as well send a planet
+spiralling in or out. And once a computer is asked to follow the planet,
+a second question appears: for how many orbits does a simulation keep the
+planet on the ellipse it started on? Neither question needs a new idea of
+mechanics. Two bodies attract each other with a pairwise force, and the
+momentum lesson turns them into one body about a fixed centre. The force is
+conservative, so the energy of the energy lesson is conserved; it is central,
+so the angular momentum is conserved too. The two constants fix the size and
+the shape of the orbit before anything is simulated, and an equation Kepler
+wrote down gives the exact motion to compare with, as the cosine did for the
 oscillator.
 
-The simulation uses the four integrators of the course on this force and
-asks the question that was asked of each earlier system, now for the long
+The simulation then uses the four integrators of the course on this force
+and asks the question that was asked of each earlier system, now for the long
 run. One orbit is easy. A thousand orbits separate the methods completely:
 one keeps the energy in a band and the angular momentum to round-off while
 the ellipse slowly turns; another follows the planet more closely for a
@@ -59,10 +62,11 @@ The model and the program rest on these assumptions. Each one names what
 goes wrong when it does not hold.
 
 1. **Two bodies and nothing else.** A third body makes the problem
-   non-integrable: no closed orbit, no exact motion to compare with, and
-   over long times chaotic sensitivity to the initial state. The methods
-   and diagnostics of this lesson still apply, the exact reference does
-   not.
+   non-integrable: in general no fixed Keplerian ellipse, no closed-form
+   solution to compare with, and over long times chaotic sensitivity to the
+   initial state (special periodic solutions exist, but not as a general
+   rule). The methods and diagnostics of this lesson still apply, the exact
+   reference does not.
 2. **Point masses under Newtonian gravity.** The bodies are spheres small
    compared with their distance, or spherically symmetric, so each attracts
    as a point. Tides, the oblateness of a star, and general relativity add
@@ -76,127 +80,234 @@ goes wrong when it does not hold.
 4. **A bound orbit.** The energy is negative, the orbit is an ellipse and
    repeats. At or above the escape speed the motion is a parabola or a
    hyperbola, `orbital_elements` reports that the orbit is not bound, and
-   the second exercise shows both sides of the line.
+   the second exercise shows both sides of the line. A body that moves
+   straight at the centre has no angular momentum and no ellipse either, and
+   the code refuses it.
 5. **A step that is a fraction of the orbit.** The steps per orbit are
    chosen for the fast passage through the perihelion; at the aphelion the
    same step is finer than needed. An eccentric orbit wastes most of its
-   steps that way, and a method that adapts the step is the standard remedy
+   steps that way, and a method that adapts the step is the usual remedy
    and beyond this course.
 6. **Astronomical units.** Distances are in astronomical units, times in
-   years, and masses in solar masses, in which $G = 4\pi^2$ to the
-   precision shown, so that an orbit with a semi-major axis of 1 AU has a
-   period of 1 yr. Nothing in the code depends on the choice; the
-   functions take $G$ or $GM$ as an argument, and the SI value is in
-   `scipy.constants`.
-7. **Round-off is negligible.** The angular momentum is conserved to about
-   $10^{-14}$ of its size by the symplectic methods over a thousand orbits,
-   and that is the smallest quantity on the page.
+   years, and masses in solar masses. The value $GM = 4\pi^2$ in these units
+   is not a measurement but a choice that follows from Kepler's third law
+   below: it makes an orbit with a semi-major axis of one astronomical unit
+   last exactly one year. Speeds in metres per second convert the unit with
+   the SI astronomical unit and the Julian year of `scipy.constants`. The
+   functions take $G$ or $GM$ as an argument, so nothing in the code depends
+   on the choice.
+7. **One orbit and one step for the long-run results.** The thousand-orbit
+   results are for an eccentricity of one half and a hundred steps per orbit;
+   the lesson varies the step, not the eccentricity, and states nothing about
+   other eccentricities beyond what the derivations say.
+8. **Round-off is negligible.** The conserved quantities of the symplectic
+   methods stay at the level of double-precision round-off, far below every
+   other quantity on the page; the tables show such a value as a bound, not
+   as a number.
 
 ## Two bodies, one orbit {#explanation}
+
+### The reduction to one body
 
 Two bodies of masses $m_1$ and $m_2$ attract each other along the line
 between them with the force $G m_1 m_2 / r^2$, where $r$ is their
 distance. On the first body, at the position $\mathbf r = \mathbf x_1 -
-\mathbf x_2$ relative to the second,
+\mathbf x_2$ relative to the second, the force is
 
 $$
-\mathbf F_{12} = -\,\frac{G\,m_1 m_2}{r^3}\,\mathbf r ,
+\mathbf F = -\,\frac{G\,m_1 m_2}{r^3}\,\mathbf r ,
 $$
 
-and the second feels the opposite. This is a pairwise force in the sense
-of the momentum lesson, so the centre of mass moves in a straight line and
-the relative position obeys $\mu\,\ddot{\mathbf r} = \mathbf F_{12}$ with
-the reduced mass $\mu$. Dividing through,
+and the second body feels $-\mathbf F$. The accelerations are
+$\ddot{\mathbf x}_1 = \mathbf F / m_1$ and $\ddot{\mathbf x}_2 = -\mathbf F / m_2$,
+so the relative position obeys
 
 $$
-\ddot{\mathbf r} = -\,\frac{GM}{r^3}\,\mathbf r,
+\ddot{\mathbf r} = \ddot{\mathbf x}_1 - \ddot{\mathbf x}_2
+= \Bigl(\frac{1}{m_1} + \frac{1}{m_2}\Bigr)\mathbf F = \frac{\mathbf F}{\mu},
 \qquad
-M = m_1 + m_2 .
+\frac{1}{\mu} = \frac{1}{m_1} + \frac{1}{m_2},
 $$
 
-The two-body problem is a one-body problem: a particle at $\mathbf r$
-about a fixed centre with the **gravitational parameter** $GM$. For a
-planet about a star $M$ is the star's mass to a part in a thousand, and
-the planet's own mass drops out of its orbit entirely, which is why
-Kepler's laws hold for every planet alike. The position of each body
-follows from $\mathbf r$ and the centre of mass:
-$\mathbf x_1 = \mathbf X + \tfrac{m_2}{M}\mathbf r$ and
-$\mathbf x_2 = \mathbf X - \tfrac{m_1}{M}\mathbf r$.
+with the reduced mass $\mu$ of the momentum lesson. Since $m_1 m_2 / \mu =
+m_1 + m_2 = M$, the factor $\mu$ cancels the product of the masses and
 
-### Energy and angular momentum
+$$
+\ddot{\mathbf r} = -\,\frac{GM}{r^3}\,\mathbf r .
+$$
+
+The two-body problem is a one-body problem: a particle at $\mathbf r$ about
+a fixed centre with the **gravitational parameter** $GM$. The momentum lesson
+showed that the centre of mass $\mathbf X$ moves in a straight line, and the
+position of each body follows from $\mathbf r$ and $\mathbf X$: $\mathbf x_1 =
+\mathbf X + \tfrac{m_2}{M}\mathbf r$ and $\mathbf x_2 = \mathbf X -
+\tfrac{m_1}{M}\mathbf r$. For a planet about a star $M$ is the star's mass
+to a part in a thousand at most, and the planet's own mass enters the orbit
+only through that small correction, which is why Kepler's laws hold for every
+planet alike.
+
+### Two conserved quantities
 
 The force is conservative, with the potential energy $-GM\mu/r$, zero at
-infinite separation. The energy of the relative motion is
+infinite separation. Per unit mass the energy of the relative motion is
+$\varepsilon = \tfrac12 |\mathbf v|^2 - GM/r$, with $\mathbf v = \dot{\mathbf r}$,
+and it is constant because its rate of change vanishes:
 
 $$
-E = \tfrac{1}{2}\,\mu\,|\dot{\mathbf r}|^2 - \frac{GM\mu}{r},
+\dot\varepsilon = \mathbf v\cdot\dot{\mathbf v} + \frac{GM}{r^3}\,\mathbf r\cdot\mathbf v
+= -\frac{GM}{r^3}\,\mathbf v\cdot\mathbf r + \frac{GM}{r^3}\,\mathbf r\cdot\mathbf v = 0 .
 $$
 
-negative for a bound orbit: the body cannot reach infinity, where the
-potential energy is zero and the kinetic energy would have to be negative.
 The force is also **central**, directed along $\mathbf r$, and a central
-force exerts no torque about the centre. The **angular momentum**
-$\mathbf L = \mu\,\mathbf r \times \dot{\mathbf r}$ has the rate of change
-$\mu\,\dot{\mathbf r} \times \dot{\mathbf r} + \mu\,\mathbf r \times
-\ddot{\mathbf r}$, and both cross products are of parallel vectors:
-$\mathbf L$ is constant. In the plane it is the single number
-$L = \mu\,(x\,v_y - y\,v_x)$, twice the rate at which the line from the
-centre sweeps out area, times $\mu$: Kepler's second law.
+force exerts no torque about the centre. The angular momentum per unit mass
+$\mathbf h = \mathbf r \times \mathbf v$ has the rate of change
+$\mathbf v \times \mathbf v + \mathbf r \times \dot{\mathbf v}$, and both
+cross products are of parallel vectors: $\mathbf h$ is constant. In the
+plane it is the single number $h = x\,v_y - y\,v_x$. The area swept out by
+the line from the centre grows at the rate $h/2$ (half the area of the
+parallelogram that $\mathbf r\,dt$ and $\mathbf v\,dt$ span), so a constant
+$h$ is Kepler's second law. The angular momentum of the code is $L = \mu h$.
 
-The two constants fix the orbit. A bound orbit is an **ellipse** with the
-centre of attraction at one focus (Kepler's first law), and in terms of
-the energy and angular momentum per unit mass, $\varepsilon = E/\mu$ and
-$h = L/\mu$,
+### The shape of the orbit, derived
+
+A third constant gives the shape. Differentiate $\mathbf v \times \mathbf h$,
+using that $\mathbf h$ is constant and the identity for a triple product:
+
+$$
+\frac{d}{dt}\,(\mathbf v \times \mathbf h)
+= \dot{\mathbf v} \times (\mathbf r \times \mathbf v)
+= -\frac{GM}{r^3}\bigl(\mathbf r\,(\mathbf r\cdot\mathbf v) - \mathbf v\,r^2\bigr)
+= GM\Bigl(\frac{\mathbf v}{r} - \frac{\mathbf r\,(\mathbf r\cdot\mathbf v)}{r^3}\Bigr)
+= GM\,\frac{d}{dt}\frac{\mathbf r}{r} .
+$$
+
+So $\mathbf v\times\mathbf h - GM\,\mathbf r/r$ is constant. Written as a
+dimensionless vector, this is the **eccentricity vector**
+
+$$
+\mathbf e = \frac{\mathbf v \times \mathbf h}{GM} - \frac{\mathbf r}{r}
+= \frac{|\mathbf v|^2\,\mathbf r - (\mathbf r\cdot\mathbf v)\,\mathbf v}{GM} - \frac{\mathbf r}{r},
+$$
+
+and $e = |\mathbf e|$ is the eccentricity. Take the dot product with
+$\mathbf r$, and use $\mathbf r\cdot(\mathbf v\times\mathbf h) =
+\mathbf h\cdot(\mathbf r\times\mathbf v) = h^2$:
+
+$$
+\mathbf e\cdot\mathbf r = \frac{h^2}{GM} - r
+\quad\Longrightarrow\quad
+r = \frac{h^2 / GM}{1 + e\cos\theta},
+$$
+
+where $\theta$ is the angle from $\mathbf e$ to $\mathbf r$. This is the
+polar equation of a conic with a focus at the centre, and it is an ellipse
+exactly when $e < 1$: **Kepler's first law**. The closest point is at
+$\theta = 0$, in the direction of $\mathbf e$, so the eccentricity vector
+points from the centre to the perihelion, and the farthest at
+$\theta = \pi$. The two distances are $a(1-e)$ and $a(1+e)$ for the
+semi-major axis $a$, so their sum is $2a$:
+
+$$
+2a = \frac{h^2}{GM}\Bigl(\frac{1}{1+e} + \frac{1}{1-e}\Bigr) = \frac{2h^2}{GM\,(1-e^2)} .
+$$
+
+The size of $\mathbf e$ follows from squaring its definition, with
+$|\mathbf v\times\mathbf h|^2 = |\mathbf v|^2 h^2$ (the two are
+perpendicular) and the same dot product once more:
+
+$$
+e^2 = \frac{|\mathbf v|^2 h^2}{(GM)^2} - \frac{2h^2}{GM\,r} + 1
+= 1 + \frac{2\,\varepsilon\,h^2}{(GM)^2} ,
+$$
+
+so $e < 1$ is the same statement as $\varepsilon < 0$: a bound orbit is an
+ellipse. Putting $1 - e^2 = -2\varepsilon h^2/(GM)^2$ into the expression for
+$a$ gives the elements of the orbit in terms of the two constants,
 
 $$
 a = -\,\frac{GM}{2\varepsilon},
 \qquad
 e = \sqrt{1 + \frac{2\,\varepsilon\,h^2}{(GM)^2}},
 \qquad
-T = 2\pi\sqrt{\frac{a^3}{GM}} ,
+T = 2\pi\sqrt{\frac{a^3}{GM}} .
 $$
 
-with $a$ the semi-major axis, $e$ the eccentricity, and $T$ the period:
-Kepler's third law, $T^2 \propto a^3$, with a constant that depends on $M$
-alone. The closest and farthest distances are $a(1-e)$ and $a(1+e)$, the
-**perihelion** and **aphelion** for an orbit about the Sun. A third
-constant, the **eccentricity vector**
-$\mathbf e = (|\mathbf v|^2 \mathbf r - (\mathbf r \cdot \mathbf v)\,\mathbf v)/GM - \mathbf r/r$,
-points from the centre to the perihelion and has the length $e$; the exact
-motion keeps it fixed, and a simulation that turns it is precessing. These
-formulas turn any state into the orbit through it, so a simulation can be
-asked at every step which ellipse it is on, and the energy and angular
-momentum are the two diagnostics of the earlier lessons at once.
+The period is the area of the ellipse divided by the rate $h/2$ at which
+it is swept out. The ellipse is a circle of radius $a$ squeezed in one
+direction by the factor $b/a$, with the semi-minor axis $b = a\sqrt{1-e^2}$,
+so its area is $\pi a b$ and, with $h^2 = GM\,a\,(1-e^2)$,
+
+$$
+T = \frac{\pi a b}{h/2} = \frac{2\pi a^2\sqrt{1-e^2}}{\sqrt{GM\,a\,(1-e^2)}} = 2\pi\sqrt{\frac{a^3}{GM}} :
+$$
+
+**Kepler's third law**, $T^2 \propto a^3$, with a constant that depends on
+$M$ alone. The code evaluates the length of $\mathbf e$ rather than the
+square root above, because the two are equal in exact arithmetic but not
+in floating point near a circle. These formulas turn any state into the orbit
+through it, so a simulation can be asked at every step which ellipse it is
+on: the energy and the angular momentum are the two diagnostics of the
+earlier lessons at once, and the eccentricity vector adds the orientation of
+the ellipse. A **perihelion** and an **aphelion** are the names of the
+closest and farthest points of an orbit about the Sun.
 
 ### The exact motion
 
-Where the body is on its ellipse at a given time has no closed form, but
-it has an equation that can be solved to any precision. With the
-**eccentric anomaly** $E$, an angle that runs once round the ellipse per
-orbit, the position in the frame of the ellipse is
-$a(\cos E - e)$ along the major axis and $a\sqrt{1-e^2}\,\sin E$ across it,
-and Kepler's second law becomes **Kepler's equation**,
+Where the body is on its ellipse at a given time has no closed form, but it
+has an equation that can be solved to any precision. Describe the position
+by the **eccentric anomaly** $u$, the angle of the point on the circle that
+the ellipse was squeezed from. In the frame of the ellipse, with $\hat{\mathbf P}$
+along the perihelion and $\hat{\mathbf Q}$ a quarter turn ahead,
 
 $$
-E - e\,\sin E = n\,(t - t_0) + M_0,
+\mathbf r = a\,(\cos u - e)\,\hat{\mathbf P} + b\sin u\,\hat{\mathbf Q},
+\qquad
+r = a\,(1 - e\cos u),
+$$
+
+(the second follows from the first by squaring). The area swept from the
+perihelion is that of the circular sector of radius $a$ at the centre,
+$\tfrac12 a^2 u$, less the triangle that the centre, the focus, and the point
+span, $\tfrac12 (ae)(a\sin u)$, all scaled by $b/a$: $\tfrac12 a b\,(u - e\sin u)$.
+If the body is at perihelion at $t_0$, this area equals $(h/2)(t - t_0)$
+with $h = 2\pi a b/T = n\,a\,b$, which gives
+**Kepler's equation**,
+
+$$
+u - e\,\sin u = n\,(t - t_0) + \ell_0,
 \qquad
 n = \frac{2\pi}{T},
 $$
 
-whose right side, the mean anomaly, grows uniformly in time. The equation
-is solved for $E$ by Newton's method in a handful of iterations, and the
-velocity follows from the position by the same angle. This is the role the
-cosine played for the oscillator: the exact state at any time, for the
-error of a simulation to be measured against.
+whose right side, the mean anomaly $\ell$, grows uniformly in time. For a
+perihelion start $\ell_0 = 0$; for an arbitrary starting state the area
+already swept at $t_0$ adds to the right side, and $\ell_0$ is the mean
+anomaly at the start. It is solved for $u$ by the Newton
+iteration. With $f(u) = u - e\sin u - \ell$ the derivative $f'(u) = 1 - e\cos u$
+is at least $1 - e > 0$ for an ellipse, so $f$ increases steadily, has exactly
+one root, and the tangent never flattens. Differentiating the equation gives
+$\dot u = n/(1 - e\cos u)$, and the velocity follows from the position by the
+chain rule, $\mathbf v = \dot u\,d\mathbf r/du$, with $n a = \sqrt{GM/a}$. This is the role the cosine played for the oscillator: the exact
+state at any time, for the error of a simulation to be measured against. The
+code starts the iteration from a starting value of Danby (the mean anomaly
+plus a correction of $0.85\,e$), which converges in a few steps for the
+eccentricities of this lesson.
+
+::: {.go-deeper ref="kepler-equation-numerical"}
+How Kepler's equation is solved numerically: the Newton iteration for $u$,
+the starting values that suit small and large eccentricities, and why it
+is unreliable at the parabolic limit. The lesson does not need it; its own starting
+value is not the one on that page.
+:::
 
 ### What the integrators do to it
 
 The gravitational force is smooth and conservative, so the four methods
 keep the orders the numerical integrators lesson measured, and the energy
-behaves as it did there: explicit Euler feeds it in, Runge-Kutta 4 drains
-it slowly and steadily, the symplectic methods keep it in a band. The
-angular momentum is new, and here the symplectic methods do something
-exact. Symplectic Euler changes the velocity by
+behaves as it did there: explicit Euler feeds it in, the classical
+Runge-Kutta method drains it slowly and steadily, the symplectic methods keep
+it in a band. The angular momentum is new, and here the symplectic methods do
+something exact. Symplectic Euler changes the velocity by
 $\Delta t\,\mathbf a(\mathbf r_n)$, which is parallel to $\mathbf r_n$, and
 then the position by $\Delta t\,\mathbf v_{n+1}$, which is parallel to
 $\mathbf v_{n+1}$:
@@ -209,23 +320,42 @@ $$
 = \mathbf r_n \times \mathbf v_n .
 $$
 
-The angular momentum is conserved **exactly** at every step, for every
-step size, for any central force. The same algebra, a few lines longer,
-holds for velocity Verlet. Explicit Euler and Runge-Kutta 4 have no such
-property: their velocity change is not parallel to the position at which
-the position change is taken, and the angular momentum drifts. The worked
-examples check all four to round-off.
+The angular momentum is conserved **exactly** at every step, for every step
+size, for any central force. Velocity Verlet needs two more lines. Its new
+velocity is $\mathbf v_{n+1} = \mathbf v_n + \tfrac12\Delta t\,(\mathbf a_n +
+\mathbf a_{n+1})$ and its new position is $\mathbf r_{n+1} = \mathbf r_n +
+\Delta t\,(\mathbf v_n + \tfrac12\Delta t\,\mathbf a_n)$. Write $\mathbf w =
+\mathbf v_n + \tfrac12\Delta t\,\mathbf a_n$. The acceleration $\mathbf a_{n+1}$
+is parallel to $\mathbf r_{n+1}$ and drops out of the cross product with it, and
+$\mathbf a_n$ is parallel to $\mathbf r_n$:
+
+$$
+\mathbf r_{n+1} \times \mathbf v_{n+1}
+= \mathbf r_{n+1} \times \mathbf w
+= (\mathbf r_n + \Delta t\,\mathbf w) \times \mathbf w
+= \mathbf r_n \times \mathbf v_n + \tfrac12\Delta t\,\mathbf r_n \times \mathbf a_n
+= \mathbf r_n \times \mathbf v_n .
+$$
+
+Explicit Euler and the classical Runge-Kutta method have no such property:
+their velocity change is not parallel to the position at which the position
+change is taken, and the angular momentum drifts. The worked examples check
+all four.
 
 What the bounded energy and the exact angular momentum do not fix is the
-orientation of the ellipse. A symplectic method keeps the orbit on an
-ellipse of nearly the right size and shape, and that ellipse turns slowly:
-the simulated perihelion **precesses**, by an angle per orbit that is of
-the order of the method, $\Delta t^2$ for velocity Verlet. This is the
-orbital form of the phase lag of the pendulum lesson, the error the energy
-does not see, and the eccentricity vector measures it directly. The
-Runge-Kutta orbit precesses far less and shrinks instead, because the
-energy it loses is the energy that sets $a$, and a smaller $a$ is a shorter
-period, so that orbit falls steadily ahead of the real one.
+orientation of the ellipse. The energy fixes $a$, the angular momentum fixes
+$e$ together with $a$, and the direction of $\mathbf e$ is free: a symplectic
+method keeps the orbit on an ellipse of nearly the right size and shape, and
+that ellipse turns slowly. The simulated perihelion **precesses**, by an
+angle per orbit that should be of the order of the method, $\Delta t^2$ for
+velocity Verlet; the worked example measures it. This is the orbital form of
+the phase lag of the pendulum lesson, the error the energy does not see, and
+the eccentricity vector measures it directly. The Runge-Kutta orbit
+precesses far less and shrinks instead. Its energy decreases by a small
+fixed fraction at every step (the factor of the integrators lesson), and a
+lower energy means a smaller $a$ in $a = -GM/2\varepsilon$, hence a shorter
+period by Kepler's third law, so that orbit falls steadily ahead of the real
+one.
 
 ## The program {#code}
 
@@ -243,7 +373,7 @@ the same force on one body about a fixed centre, as a force for `newton`:
 ```{python}
 #| echo: false
 from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import orbit
+from pbc.mechanics import integrators, orbit
 
 excerpt(orbit.gravitational_attraction)
 ```
@@ -290,22 +420,65 @@ The exact motion, from Kepler's equation:
 excerpt(orbit.kepler_motion)
 ```
 
+The two steppers for which the angular momentum is conserved exactly, with
+the lines that carry the argument above marked. The order of the two updates
+is what makes it work:
+
+```{python}
+#| echo: false
+excerpt(
+    integrators.symplectic_euler_step,
+    notes={
+        "v = state.v + acceleration(state.t, state.x, state.v) * dt": (
+            "The velocity changes by a vector along the old position, so the"
+            " cross product of the position with it is unchanged."
+        ),
+        "return State(t=state.t + dt, x=state.x + v * dt, v=v)": (
+            "The position moves along the new velocity, which a cross product"
+            " with the new velocity does not see. Moving it along the old"
+            " velocity, as explicit Euler does, would."
+        ),
+    },
+)
+```
+
+```{python}
+#| echo: false
+excerpt(
+    integrators.verlet_step,
+    notes={
+        "x = state.x + state.v * dt + 0.5 * a * dt**2": (
+            "The position moves along the old velocity plus half a step of"
+            " the old acceleration, the vector called w in the derivation."
+        ),
+        "return State(t=t, x=x, v=state.v + 0.5 * (a + a_next) * dt)": (
+            "The part of the velocity change that comes from the new"
+            " acceleration points along the new position and drops out of"
+            " the cross product with it."
+        ),
+    },
+)
+```
+
 ## Worked examples
 
 ### One orbit, four methods
 
-The orbit of the examples has a semi-major axis of 1 AU and an
-eccentricity of 0.5 about a body of one solar mass, so its period is one
-year, its perihelion is at 0.5 AU and its aphelion at 1.5 AU. The orbiting
-body has the mass of the Earth, three millionths of a solar mass, which
-affects nothing but the units of the energy. The cell sets it up at the
-perihelion, confirms the elements, and runs two orbits with each method at
-100 steps per orbit against the exact motion.
+The orbit of the examples has a semi-major axis of [1 AU]{.given} and an
+eccentricity of [0.5]{.given} about a body of [one solar mass]{.given}. The
+orbiting body has the mass of the Earth, [three millionths]{.given} of a solar
+mass, which affects nothing but the units of the energy. The cell sets it up
+at the perihelion, takes the elements of the orbit from the state, and runs
+two orbits with each method at [100 steps per orbit]{.given} against the exact
+motion. The table lists the largest distance from the exact position, the
+relative energy drift of the energy lesson, and the relative spread of the
+angular momentum.
 
 ```{python}
 import numpy as np
 from scipy.constants import Julian_year, au
 
+from pbc.authoring import table
 from pbc.mechanics.dynamics import State, newton, simulate
 from pbc.mechanics.energy import energy_drift, mechanical_energy
 from pbc.mechanics.integrators import INTEGRATORS
@@ -325,6 +498,7 @@ gm = 4 * np.pi**2  # G times one solar mass, in AU³/yr²
 planet_mass = 3.0e-6  # solar masses: the Earth
 gravity = newton(planet_mass, central_gravity(gm, planet_mass))
 potential = gravitational_potential(gm, planet_mass)
+FLOOR = 1e-12  # below this, a conserved quantity is shown as a bound
 
 
 def at_perihelion(a, e):
@@ -334,12 +508,18 @@ def at_perihelion(a, e):
 
 
 start = at_perihelion(1.0, 0.5)
-orbit = orbital_elements(start, gm)
+ellipse = orbital_elements(start, gm)
 metres_per_second = au / Julian_year  # one AU per year
+perihelion_speed = np.linalg.norm(start.v) * metres_per_second / 1e3  # km/s
+
+
+def shown(spread):
+    """A spread at the level of round-off is shown as a bound, not as a number."""
+    return f"{spread:.1e}" if spread > FLOOR else "below 1e-12"
 
 
 def run(integrator, steps_per_orbit, n_orbits, initial=start):
-    return simulate(initial, gravity, orbit.period / steps_per_orbit, round(n_orbits * steps_per_orbit), step=integrator.step)
+    return simulate(initial, gravity, ellipse.period / steps_per_orbit, round(n_orbits * steps_per_orbit), step=integrator.step)
 
 
 def position_error(trajectory, initial=start):
@@ -348,26 +528,48 @@ def position_error(trajectory, initial=start):
     return np.max(np.hypot(*(trajectory.x - exact.x).T))
 
 
-print(f"semi-major axis {orbit.semi_major_axis:.4f} AU, eccentricity {orbit.eccentricity:.4f},"
-      f" period {orbit.period:.4f} yr")
-print(f"perihelion {orbit.periapsis:.2f} AU at {np.linalg.norm(start.v) * metres_per_second / 1e3:.1f} km/s,"
-      f" aphelion {orbit.apoapsis:.2f} AU\n")
-print(" method              position error (AU)   energy drift   angular momentum spread")
+rows = []
 for integrator in INTEGRATORS:
     trajectory = run(integrator, 100, 2)
     energies = mechanical_energy(trajectory, planet_mass, potential)
     momenta = angular_momentum(trajectory, planet_mass)
-    print(f" {integrator.name:18}{position_error(trajectory):18.1e}{energy_drift(energies):16.1e}"
-          f"{np.ptp(momenta) / momenta[0]:21.1e}")
+    rows.append((integrator.name, position_error(trajectory), energy_drift(energies), shown(np.ptp(momenta) / momenta[0])))
+
+table(
+    rows,
+    columns=[
+        ("method", "", ""),
+        ("largest position error", "AU", ".1e"),
+        ("energy drift", "", ".1e"),
+        ("angular momentum spread", "", ""),
+    ],
+    caption="Two orbits at one hundred steps per orbit: position error, relative energy drift, and relative spread of the angular momentum; a spread at round-off level is shown as a bound.",
+)
 ```
+
+The elements the state gives are a semi-major axis of
+`{python} f"{ellipse.semi_major_axis:.4f}"` AU, an eccentricity of
+`{python} f"{ellipse.eccentricity:.4f}"`, and a period of
+`{python} f"{ellipse.period:.4f}"` yr, with the perihelion at
+`{python} f"{ellipse.periapsis:.2f}"` AU, where the planet moves at
+`{python} f"{perihelion_speed:.1f}"` km/s, and the aphelion at
+`{python} f"{ellipse.apoapsis:.2f}"` AU. [The two symplectic methods conserve the
+angular momentum to round-off at a step of a hundredth of an orbit, while explicit Euler and
+the classical Runge-Kutta method do not.]{.claim type="numerically-verified"
+scope="the example orbit at this step" evidence="the table above"} This is the new result, as
+the derivation says. The energy behaves as on the oscillator and the pendulum,
+and the position error after two orbits ranks the methods by their order, as
+before: the classical Runge-Kutta method is the method for an accurate position
+over a short run.
 
 ```{python}
 #| label: fig-orbit-four-methods
-#| fig-cap: "Two orbits with each method at 100 steps per orbit, against the exact ellipse. The star is at the origin."
-#| fig-alt: "Four panels of y against x in astronomical units with equal axes, each with the exact orbit as a dotted ellipse from 0.5 on the right to minus 1.5 on the left and a marker at the origin for the star. Explicit Euler spirals outward far beyond the ellipse. Symplectic Euler traces an ellipse of about the right size that is visibly turned from the exact one. Velocity Verlet lies close to the exact ellipse, slightly turned. Runge-Kutta 4 lies on the exact ellipse to within the width of the line."
+#| fig-cap: "Two orbits with each method at the same step, against the exact ellipse, with the star at the origin. Explicit Euler spirals out of the picture; the two symplectic methods stay on ellipses of about the right size that are turned against the exact one; the classical Runge-Kutta method cannot be told from it."
+#| fig-status: simulated
+#| fig-alt: "Four panels of y against x in astronomical units with equal axes, each with the exact orbit as a dotted ellipse and a marker at the origin for the star. Explicit Euler spirals outward far beyond the ellipse. Symplectic Euler traces an ellipse of about the right size that is visibly turned from the exact one. Velocity Verlet lies close to the exact ellipse, slightly turned. The classical Runge-Kutta method lies on the exact ellipse to within the width of the line."
 import matplotlib.pyplot as plt
 
-exact_orbit = kepler_motion(start, gm, np.linspace(0.0, orbit.period, 400))
+exact_orbit = kepler_motion(start, gm, np.linspace(0.0, ellipse.period, 400))
 
 fig, axes = plt.subplots(2, 2, figsize=(6.4, 5.6), sharex=True, sharey=True)
 for ax, integrator in zip(axes.flat, INTEGRATORS, strict=True):
@@ -387,13 +589,10 @@ fig.tight_layout()
 plt.show()
 ```
 
-The angular momentum column is the new result: the two symplectic methods
-conserve it to round-off at a step of a hundredth of an orbit, as the
-derivation says, while the other two do not. The energy behaves as on the
-oscillator and the pendulum. The position error after two orbits ranks the
-methods by their order, as before, and Runge-Kutta 4 is the method for an
-accurate position over a short run, as before. The next cell confirms the
-orders by halving the step.
+The figure draws the runs of the table against the exact motion of
+`kepler_motion`; the turned ellipses of the two symplectic methods are the
+precession that the next example measures. The next cell confirms the orders
+by halving the step.
 
 ```{python}
 step_counts = [200, 400, 800, 1600, 3200]
@@ -402,31 +601,42 @@ errors = {
     for integrator in INTEGRATORS
 }
 
-print("largest position error over two orbits (AU), and the observed order\n")
-print(" steps per orbit" + "".join(f"{integrator.name:>22}" for integrator in INTEGRATORS))
+columns = [("steps per orbit", "", "d")]
+for integrator in INTEGRATORS:
+    columns += [(f"{integrator.name}: error", "AU", ".1e"), (f"{integrator.name}: order", "", ".2f")]
+rows = []
 for i, n in enumerate(step_counts):
-    row = f"{n:16d}"
+    row = [n]
     for integrator in INTEGRATORS:
         error = errors[integrator.name]
-        order = f" ({np.log2(error[i - 1] / error[i]):.2f})" if i else "       "
-        row += f"{error[i]:15.1e}{order}"
-    print(row)
+        row += [error[i], np.log2(error[i - 1] / error[i]) if i else None]
+    rows.append(row)
+
+table(
+    rows,
+    columns=columns,
+    caption="Largest position error over two orbits for each method, and the observed order from the previous row, to two decimals.",
+)
 ```
 
-Velocity Verlet shows its second order at once; Runge-Kutta 4 approaches
-its fourth from above as the step becomes small enough for the fast
-perihelion passage; the first-order methods take longer to settle, and
-explicit Euler is nowhere near its asymptotic regime at these steps,
-because the energy it feeds in during each perihelion passage changes the
-orbit itself. The accuracy question has the same answer as on the
-oscillator. The long-run question does not.
+[Velocity Verlet shows its second order at once, and the classical
+Runge-Kutta method approaches its fourth from above as the step becomes small
+enough for the fast perihelion passage.]{.claim type="numerically-verified"
+scope="the example orbit, two orbits" evidence="the order table above"}
+The first-order methods take longer to settle. Explicit Euler is nowhere near
+its asymptotic regime at these steps: at the finest step its error is still
+`{python} f"{errors['explicit Euler'][-1] / ellipse.semi_major_axis:.1f}"` times the semi-major axis, because the energy it
+feeds in during each perihelion passage changes the orbit itself, so the
+error is no longer a small perturbation of the exact orbit. The accuracy
+question has the same answer as on the oscillator. The long-run question does
+not.
 
 ### A thousand orbits
 
-The cell runs a thousand orbits with velocity Verlet and with Runge-Kutta 4
-at 100 steps per orbit. At the end of every orbit it asks which ellipse the
-body is on: the semi-major axis from the energy and the direction of the
-perihelion from the eccentricity vector.
+The cell runs a thousand orbits with velocity Verlet and with the classical
+Runge-Kutta method at a hundred steps per orbit. At the end of every orbit it
+asks which ellipse the body is on: the semi-major axis from the energy and the
+direction of the perihelion from the eccentricity vector.
 
 ```{python}
 n_orbits, steps_per_orbit = 1000, 100
@@ -444,25 +654,51 @@ def perihelion_direction(states):
     return np.degrees(np.unwrap(np.arctan2(vectors[:, 1], vectors[:, 0])))
 
 
-print(f"{n_orbits} orbits at {steps_per_orbit} steps per orbit:\n")
+long_stats = {}
+rows = []
 for integrator in (verlet, rk4):
     trajectory = long_runs[integrator.name]
     energies = mechanical_energy(trajectory, planet_mass, potential)
     momenta = angular_momentum(trajectory, planet_mass)
     axes_over_time = np.array([orbital_elements(state, gm).semi_major_axis for state in once_per_orbit(trajectory)])
     turned = perihelion_direction(once_per_orbit(trajectory))
-    print(f" {integrator.name}:")
-    print(f"   energy drift over the first 100 orbits {energy_drift(energies[: 100 * steps_per_orbit + 1]):.1e},"
-          f" over all {n_orbits}: {energy_drift(energies):.1e}")
-    print(f"   angular momentum spread {np.ptp(momenta) / momenta[0]:.1e}")
-    print(f"   semi-major axis between {axes_over_time.min():.4f} and {axes_over_time.max():.4f} AU")
-    print(f"   perihelion turned by {turned[-1] - turned[0]:+.1f}° in all, {(turned[-1] - turned[0]) / n_orbits:+.3f}° per orbit")
+    long_stats[integrator.name] = {
+        "axis_min": axes_over_time.min(),
+        "axis_max": axes_over_time.max(),
+        "turned": turned[-1] - turned[0],
+    }
+    rows.append((
+        integrator.name,
+        energy_drift(energies[: 100 * steps_per_orbit + 1]),
+        energy_drift(energies),
+        shown(np.ptp(momenta) / momenta[0]),
+        axes_over_time.min(),
+        axes_over_time.max(),
+        turned[-1] - turned[0],
+        (turned[-1] - turned[0]) / n_orbits,
+    ))
+
+table(
+    rows,
+    columns=[
+        ("method", "", ""),
+        ("energy drift, first hundred orbits", "", ".1e"),
+        ("energy drift, all orbits", "", ".1e"),
+        ("angular momentum spread", "", ""),
+        ("smallest semi-major axis", "AU", ".4f"),
+        ("largest semi-major axis", "AU", ".4f"),
+        ("perihelion turned in all", "degrees", "+.1f"),
+        ("perihelion turned per orbit", "degrees", "+.3f"),
+    ],
+    caption="A thousand orbits at a hundred steps per orbit: energy drift over the first hundred and over all orbits, spread of the angular momentum, range of the semi-major axis at the end of each orbit, and the turn of the perihelion.",
+)
 ```
 
 ```{python}
 #| label: fig-orbit-thousand
-#| fig-cap: "A thousand orbits at 100 steps per orbit: the semi-major axis of the ellipse the body is on, and the direction of its perihelion, at the end of every orbit."
-#| fig-alt: "Two panels against the orbit number from 0 to 1000. Top: the semi-major axis in astronomical units. The velocity Verlet curve stays at 1.00 to 1.01 throughout. The Runge-Kutta 4 curve falls steadily in a straight line from 1.000 to about 0.971. Bottom: the direction of the perihelion in degrees. The velocity Verlet curve falls in a straight line to about minus 870 degrees. The Runge-Kutta 4 curve stays within a few degrees of zero."
+#| fig-cap: "The semi-major axis of the ellipse the body is on, and the direction of its perihelion, at the end of every orbit. Velocity Verlet keeps the size of the ellipse and turns it at a steady rate; the classical Runge-Kutta method holds the direction and shrinks the ellipse at a steady rate."
+#| fig-status: simulated
+#| fig-alt: "Two panels against the orbit number. Top: the semi-major axis in astronomical units. The velocity Verlet curve stays close to one throughout. The Runge-Kutta curve falls steadily in a nearly straight line. Bottom: the direction of the perihelion in degrees. The velocity Verlet curve falls in a straight line through several full turns. The Runge-Kutta curve stays close to zero."
 fig, (top, bottom) = plt.subplots(2, 1, figsize=(6.4, 5.6), sharex=True)
 for integrator, style in ((verlet, "-"), (rk4, "--")):
     states = once_per_orbit(long_runs[integrator.name])
@@ -479,42 +715,60 @@ fig.tight_layout()
 plt.show()
 ```
 
-The two methods fail in opposite ways. Velocity Verlet's energy band is as
-wide after a thousand orbits as after one, its angular momentum is exact,
-and the semi-major axis stays within about one per cent of the truth for
-the whole thousand orbits measured;
-what it gets wrong is the direction of the ellipse, which turns at a
-steady rate and has gone round more than twice. Runge-Kutta 4 holds the
-direction but loses energy at every step, so its ellipse shrinks by about
-three per cent in a thousand orbits, and with it the period: that orbit
-is a different orbit by then. The energy of the symplectic method is
-trustworthy; its position after a thousand orbits is not, and the
-precession is the measure of how much it is not. The cell measures it
-against the step.
+The two methods fail in opposite ways. [Velocity Verlet's energy band is as
+wide after a thousand orbits as after one, its angular momentum is exact to
+round-off, and the semi-major axis stays within
+`{python} f"{100 * (long_stats['velocity Verlet']['axis_max'] - 1):.1f}"` per cent
+of the truth for the whole run.]{.claim type="numerically-verified"
+scope="the example orbit at this step" evidence="the table above and fig-orbit-thousand"}
+What it gets wrong is the direction of the ellipse, which turns at a steady
+rate and has gone round `{python} f"{abs(long_stats['velocity Verlet']['turned']) / 360:.1f}"`
+times. [The classical Runge-Kutta method holds the direction but loses energy at
+every step, so its ellipse shrinks by
+`{python} f"{100 * (1 - long_stats['Runge-Kutta 4']['axis_min']):.1f}"` per cent in a thousand orbits, and
+with it the period.]{.claim type="numerically-verified" scope="the example
+orbit at this step" evidence="the table above and fig-orbit-thousand"}
+That orbit is a different orbit by then. The energy of the symplectic method is
+trustworthy; its position after a thousand orbits is not, and the precession
+is the measure of how much it is not. The cell measures it against the step.
 
 ```{python}
-print(" steps per orbit   precession per orbit, velocity Verlet")
+rows, previous = [], None
 for n in (100, 200, 400):
     final = run(verlet, n, 50)
-    turned = perihelion_direction([State(final.t[-1], final.x[-1], final.v[-1])])
-    print(f"{n:16d}{turned[0] / 50:+21.4f}°")
+    turned = perihelion_direction([State(final.t[-1], final.x[-1], final.v[-1])])[0] / 50
+    rows.append((n, turned, turned / previous if previous else None))
+    previous = turned
+
+table(
+    rows,
+    columns=[
+        ("steps per orbit", "", "d"),
+        ("perihelion turned per orbit", "degrees", "+.4f"),
+        ("ratio to the row above", "", ".3f"),
+    ],
+    caption="Precession of the perihelion per orbit for velocity Verlet over fifty orbits, for three steps, and its ratio to the coarser step.",
+)
 ```
 
-The precession quarters when the step halves: it is a second-order error,
-like everything else about the method, and a run that needs the perihelion
-to stay put to a given angle over a given number of orbits chooses its
-step from this table. The position error of a symplectic method grows
-linearly in time, as the phase lag of the pendulum did, with the energy in
-its band all the while.
+[The precession falls by a factor of four when the step halves.]{.claim
+type="numerically-verified" scope="velocity Verlet, the example orbit"
+evidence="the precession table above"} It is a second-order error, like
+everything else about the method, and a run that needs the perihelion to
+stay put to a given angle over a given number of orbits chooses its step from
+this table. The position error of a symplectic method grows linearly in time,
+as the phase lag of the pendulum did, with the energy in its band all the
+while. The figure and the tables are one run of one orbit; the precession
+rate for other eccentricities was not measured.
 
 ### Two bodies
 
 The reduction to one body is an exact identity of the equations. The cell
-checks that the simulation respects it: a star of one solar mass and a
-planet of one thousandth, the mass of Jupiter, on the same orbit, simulated
-as two interacting particles with the code of the momentum lesson, against
-the one-body simulation with the reduced mass and $G(m_1 + m_2)$. The
-centre of mass starts at rest at the origin.
+checks that the simulation respects it: a star of [one solar mass]{.given} and
+a planet of [one thousandth]{.given}, about the mass of Jupiter, on the same
+orbit, simulated as two interacting particles with the code of the momentum
+lesson, against the one-body simulation with the reduced mass and
+$G(m_1 + m_2)$. The centre of mass starts at rest at the origin.
 
 ```{python}
 from pbc.mechanics.particles import centre_of_mass, interacting, reduced_mass, stack, unstack
@@ -537,18 +791,28 @@ as_one = simulate(relative, newton(mu, central_gravity(gm * total_mass, mu)), dt
 
 positions, velocities = unstack(as_two.x, 2), unstack(as_two.v, 2)
 star_speed = np.linalg.norm(velocities[:, 0], axis=1) * metres_per_second
+centre_drift = np.max(np.abs(centre_of_mass([star_mass, heavy_planet], positions)))
+difference = np.max(np.abs((positions[:, 1] - positions[:, 0]) - as_one.x))
+BOUND = 1e-9  # AU, far above round-off and far below any other length of the lesson
 
-print(f"period with the heavier planet: {pair_orbit.period:.5f} yr")
-print(f"centre of mass moved by at most {np.max(np.abs(centre_of_mass([star_mass, heavy_planet], positions))):.1e} AU")
-print(f"relative position of the two bodies against the one-body simulation:"
-      f" largest difference {np.max(np.abs((positions[:, 1] - positions[:, 0]) - as_one.x)):.1e} AU")
-print(f"the star moves at between {star_speed.min():.1f} and {star_speed.max():.1f} m/s")
+table(
+    [
+        ("period of the pair", "yr", f"{pair_orbit.period:.5f}"),
+        ("drift of the centre of mass below the bound", "", "yes" if centre_drift < BOUND else "no"),
+        ("difference from the one-body run below the bound", "", "yes" if difference < BOUND else "no"),
+        ("slowest speed of the star", "m/s", f"{star_speed.min():.1f}"),
+        ("fastest speed of the star", "m/s", f"{star_speed.max():.1f}"),
+    ],
+    columns=[("quantity", "", ""), ("unit", "", ""), ("value", "", "")],
+    caption="The two bodies as two bodies over five orbits: the period, whether the centre of mass and the relative position agree with the one-body statements to a bound of 1e-9 AU, and the speed of the star.",
+)
 ```
 
 ```{python}
 #| label: fig-two-bodies
-#| fig-cap: "The two bodies about their common centre of mass over five orbits: the planet's ellipse and, magnified a thousandfold, the star's."
-#| fig-alt: "Plot of y against x in astronomical units with equal axes. A large ellipse, the planet's orbit, runs from about 0.5 on the right to minus 1.5 on the left. A small ellipse of the same shape but opposite orientation, drawn magnified a thousand times, lies at the origin: the star's orbit about the centre of mass, which is marked with a cross."
+#| fig-cap: "The two bodies about their common centre of mass over five orbits: the planet's ellipse and, magnified a thousandfold, the star's, which has the same shape on the opposite side."
+#| fig-status: simulated
+#| fig-alt: "Plot of y against x in astronomical units with equal axes. A large ellipse, the planet's orbit, has its perihelion on the right of the origin and its aphelion on the left. A small ellipse of the same shape but opposite orientation, drawn magnified a thousand times, lies at the origin: the star's orbit about the centre of mass, which is marked with a cross."
 fig, ax = plt.subplots(figsize=(6.4, 4.2))
 ax.plot(positions[:, 1, 0], positions[:, 1, 1], color="#93003a", label="planet")
 ax.plot(1000 * positions[:, 0, 0], 1000 * positions[:, 0, 1], color="#00429d", linestyle="--", label="star, ×1000")
@@ -560,27 +824,88 @@ ax.legend(loc="upper left")
 plt.show()
 ```
 
-The two simulations agree to round-off, as they must: the same method and
-the same step applied to the same equations in two forms. The star moves
-on an ellipse a thousand times smaller than the planet's, opposite to it,
-at tens of metres per second. That motion is visible in the star's light,
-as a periodic Doppler shift, and it is how the first planets around other
-stars were found. The third exercise computes it for Jupiter and the Sun.
+[The two simulations agree, as they must: the same method and the same step
+applied to the same equations in two forms.]{.claim type="numerically-verified"
+scope="velocity Verlet, five orbits" evidence="the table above"} The star
+moves on an ellipse a thousand times smaller than the planet's, opposite to
+it, at between `{python} f"{star_speed.min():.0f}"` and
+`{python} f"{star_speed.max():.0f}"` metres per second. That motion is visible in the star's light, as a
+periodic Doppler shift, and it is how planets around other stars are found.
+[The first planet confirmed around a star like the Sun was found this
+way.]{.claim type="observational" scope="the radial velocity method" evidence="doppler-spectroscopy-overview"}
+The third exercise computes the speed for Jupiter and the Sun.
+
+::: {.go-deeper ref="doppler-spectroscopy-overview"}
+How the wobble of a star becomes a measurement: the Doppler shift of its
+spectrum, the instruments that reached the size of the effect, and what the
+amplitude gives for the mass of the planet. The lesson does not need it; it
+shows only the motion that the method measures.
+:::
+
+## Limits {#limits}
+
+What this lesson shows is a statement about one force law and four fixed-step
+methods on one orbit, not about orbital mechanics in general.
+
+- The exact motion and the formulas for $a$, $e$, and $T$ are specific to the
+  two-body problem. Generic three-body motion follows no fixed Keplerian
+  ellipse and has no general closed form, so $a$, $e$, and $T$ describe the
+  instant and not the future, and there is no exact motion to measure
+  against. (Some special three-body solutions are periodic.)
+- The long-run results are for one eccentricity and one step. That the
+  precession falls with the square of the step is measured at three steps;
+  that it grows with the eccentricity, or that a method with a variable step
+  would behave differently, is not measured here.
+- The elements come from the energy and the angular momentum as the code
+  evaluates them in floating point. They are exact for the exact state and
+  show the state of the simulation, not its error: the position error comes
+  only from the comparison with `kepler_motion`.
+- The precession shown is an error of the method. The real orbits of the
+  planets precess for other reasons (the other planets, general relativity),
+  which this lesson does not model and does not claim to separate from it.
+- Nothing proved here is a theorem in Lean; the derivations are on the page
+  and the checks are numerical.
+- The wobble is the speed of the star about the centre of mass for an orbit
+  seen from above. A real measurement gets only the component along the line
+  of sight, and the inclination of the orbit hides part of the amplitude.
+
+::: {.exercise .self-check}
+Velocity Verlet conserves the angular momentum of the orbit exactly at every
+step, and its energy stays in a band. Does it follow that the simulated planet
+stays on the exact ellipse for a thousand orbits? Say what the long-run table
+shows, and which of the three constants is the one that fails.
+
+::: {.solution}
+No. The angular momentum and the energy fix the size and the shape of the
+ellipse ($a$ and $e$), and they do not fix its direction. The eccentricity
+vector is the third constant, and the method does not conserve it: in the long
+run its direction has turned by
+`{python} f"{abs(long_stats['velocity Verlet']['turned']):.0f}"` degrees, with the
+angular momentum at round-off and the semi-major axis within
+`{python} f"{100 * (long_stats['velocity Verlet']['axis_max'] - 1):.1f}"` per cent of
+the start. A planet on an ellipse of the right size and shape but turned by
+that angle is at the wrong place at the wrong time, although every
+conserved quantity that the earlier lessons monitor says the run is healthy.
+The first assumption that fails is the one about what "accurate" means:
+bounded energy and exact angular momentum say that the state lies on a
+slightly wrong ellipse, not that it lies where the exact motion is.
+:::
+:::
 
 ## Exercises
 
 ::: {.exercise}
 **Kepler's third law.** Put a body on circular orbits with radii of 0.5, 1,
-2, and 4 AU, simulate each with Runge-Kutta 4 at 200 steps per orbit, and
-measure the period as the time between two crossings of the $x$ axis in the
-same direction. Check $T^2 / a^3$.
+2, and 4 AU, simulate each with the classical Runge-Kutta method at 200 steps
+per orbit, and measure the period as the time between two crossings of the
+$x$ axis in the same direction. Check $T^2 / a^3$.
 
 ::: {.solution}
 On a circular orbit the speed is $\sqrt{GM/a}$. The crossing times are
 interpolated within the step, as the period of the pendulum was.
 
 ```{python}
-print(" radius (AU)   measured period (yr)   T^2 / a^3 (yr^2 / AU^3)")
+third_law_rows = []
 for a in (0.5, 1.0, 2.0, 4.0):
     circular = State(t=0.0, x=[a, 0.0], v=[0.0, np.sqrt(gm / a)])
     period = 2 * np.pi * np.sqrt(a**3 / gm)
@@ -588,45 +913,73 @@ for a in (0.5, 1.0, 2.0, 4.0):
     y = trajectory.x[:, 1]
     before = np.where((y[:-1] < 0) & (y[1:] >= 0))[0]
     crossing = trajectory.t[before] - y[before] / (y[before + 1] - y[before]) * (trajectory.t[before + 1] - trajectory.t[before])
-    print(f"{a:12.1f}{crossing[0]:20.4f}{crossing[0] ** 2 / a**3:24.4f}")
+    third_law_rows.append((a, crossing[0], crossing[0] ** 2 / a**3))
+
+table(
+    third_law_rows,
+    columns=[
+        ("radius", "AU", ".1f"),
+        ("measured period", "yr", ".4f"),
+        ("T² / a³", "yr² / AU³", ".4f"),
+    ],
+    caption="Period of a circular orbit measured from the crossings of the x axis, and T² / a³, to four decimals.",
+)
 ```
 
-The ratio is 1 yr²/AU³ for every radius, which is the content of the law
-and the reason for the units: it depends on the mass of the central body
-and on nothing else about the orbit.
+The ratio is the same for every radius, equal to
+`{python} f"{np.mean([row[2] for row in third_law_rows]):.4f}"` $\mathrm{yr}^2/\mathrm{AU}^3$ to the
+precision of the table, which is the content of the law and the reason for the
+units: it depends on the mass of the central body and on nothing else about
+the orbit.
 :::
 :::
 
 ::: {.exercise}
 **Escape.** At the perihelion of the example orbit, 0.5 AU from the star,
 the escape speed is $\sqrt{2GM/r}$. Launch a body from there at 99 per cent
-and at 101 per cent of it, simulate thirty years with Runge-Kutta 4, and
-ask `orbital_elements` about each.
+and at 101 per cent of it, simulate thirty years with the classical
+Runge-Kutta method, and ask `orbital_elements` about each.
 
 ::: {.solution}
-At 99 per cent of the escape speed the energy is slightly negative: a long,
-thin ellipse that comes back. At 101 per cent the energy is positive and
-there is no ellipse to report.
+Just below the escape speed the energy is slightly negative: a long, thin
+ellipse that comes back. Just above it the energy is positive and there is no
+ellipse to report.
 
 ```{python}
-r = 0.5  # AU
-escape_speed = np.sqrt(2 * gm / r)
+launch_distance = 0.5  # AU
+escape_speed = np.sqrt(2 * gm / launch_distance)
 
-print(f"escape speed at {r} AU: {escape_speed:.3f} AU/yr, {escape_speed * metres_per_second / 1e3:.1f} km/s\n")
+escape_rows = []
 for fraction in (0.99, 1.01):
-    launched = State(t=0.0, x=[r, 0.0], v=[0.0, fraction * escape_speed])
+    launched = State(t=0.0, x=[launch_distance, 0.0], v=[0.0, fraction * escape_speed])
     trajectory = simulate(launched, gravity, 0.005, 6000, step=rk4.step)
     distance = np.hypot(*trajectory.x.T)
-    print(f"{100 * fraction:.0f} per cent: after 30 years at {distance[-1]:.1f} AU, farthest {distance.max():.1f} AU;", end=" ")
     try:
         elements = orbital_elements(launched, gm)
-        print(f"a = {elements.semi_major_axis:.1f} AU, e = {elements.eccentricity:.3f}, period {elements.period:.0f} yr")
-    except ValueError as reason:
-        print(reason)
+        axis, ecc, period_text = elements.semi_major_axis, elements.eccentricity, f"{elements.period:.0f}"
+    except ValueError:
+        axis, ecc, period_text = None, None, "not bound"
+    escape_rows.append((100 * fraction, distance[-1], distance.max(), axis, ecc, period_text))
+
+table(
+    escape_rows,
+    columns=[
+        ("launch speed", "per cent of escape", ".0f"),
+        ("distance after thirty years", "AU", ".1f"),
+        ("farthest distance", "AU", ".1f"),
+        ("semi-major axis", "AU", ".1f"),
+        ("eccentricity", "", ".3f"),
+        ("period", "yr", ""),
+    ],
+    caption="Two launches from the perihelion of the example orbit, at 99 and at 101 per cent of the escape speed, and what orbital_elements reports.",
+)
 ```
 
-Two per cent in the launch speed is the difference between a comet that
-returns in half a century and one that never does, and the energy knows
+The escape speed at that distance is
+`{python} f"{escape_speed:.3f}"` AU/yr, or
+`{python} f"{escape_speed * metres_per_second / 1e3:.1f}"` km/s. A small
+difference in the launch speed is the difference between a comet that returns in
+`{python} f"{escape_rows[0][5]}"` years and one that never does, and the energy knows
 it at the moment of launch. The simulation of the bound case needs the
 whole orbit to confirm what the two conserved quantities said from the
 first state.
@@ -646,24 +999,40 @@ jupiter_mass, jupiter_a, jupiter_e = 0.000955, 5.20, 0.049
 total = 1.0 + jupiter_mass
 sun_and_jupiter = interacting([1.0, jupiter_mass], gravitational_attraction(gm, 1.0, jupiter_mass))
 
-r = jupiter_a * (1 - jupiter_e)
-relative = State(t=0.0, x=[r, 0.0], v=[0.0, np.sqrt(gm * total * (1 + jupiter_e) / r)])
-both = State(
+jupiter_r = jupiter_a * (1 - jupiter_e)
+jupiter_relative = State(t=0.0, x=[jupiter_r, 0.0], v=[0.0, np.sqrt(gm * total * (1 + jupiter_e) / jupiter_r)])
+jupiter_both = State(
     t=0.0,
-    x=stack([-jupiter_mass / total * relative.x, 1.0 / total * relative.x]),
-    v=stack([-jupiter_mass / total * relative.v, 1.0 / total * relative.v]),
+    x=stack([-jupiter_mass / total * jupiter_relative.x, 1.0 / total * jupiter_relative.x]),
+    v=stack([-jupiter_mass / total * jupiter_relative.v, 1.0 / total * jupiter_relative.v]),
 )
-period = orbital_elements(relative, gm * total).period
-trajectory = simulate(both, sun_and_jupiter, period / 400, 400, step=verlet.step)
-sun_speed = np.linalg.norm(unstack(trajectory.v, 2)[:, 0], axis=1) * metres_per_second
+jupiter_period = orbital_elements(jupiter_relative, gm * total).period
+jupiter_run = simulate(jupiter_both, sun_and_jupiter, jupiter_period / 400, 400, step=verlet.step)
+sun_speed = np.linalg.norm(unstack(jupiter_run.v, 2)[:, 0], axis=1) * metres_per_second
 circular_estimate = jupiter_mass / total * np.sqrt(gm * total / jupiter_a) * metres_per_second
 
-print(f"period of Jupiter: {period:.2f} yr")
-print(f"the Sun moves at between {sun_speed.min():.1f} and {sun_speed.max():.1f} m/s about the centre of mass")
-print(f"circular estimate: {circular_estimate:.1f} m/s")
+table(
+    [
+        ("slowest speed of the Sun", sun_speed.min()),
+        ("fastest speed of the Sun", sun_speed.max()),
+        ("circular estimate", circular_estimate),
+    ],
+    columns=[("quantity", "", ""), ("speed", "m/s", ".1f")],
+    caption="The speed of the Sun about the centre of mass of the Sun and Jupiter over one orbit, from the two-body simulation, and the circular estimate, to one decimal.",
+)
 ```
 
-About a dozen metres per second, a brisk cycling speed, over twelve years.
+The period of Jupiter comes out as `{python} f"{jupiter_period:.2f}"` yr. The
+Sun moves at between `{python} f"{sun_speed.min():.1f}"` and
+`{python} f"{sun_speed.max():.1f}"` m/s about the centre of mass, and the
+circular estimate is `{python} f"{circular_estimate:.1f}"` m/s: about a dozen
+metres per second, a brisk cycling speed, over
+`{python} f"{jupiter_period:.0f}"` years. [The overview of the radial velocity
+method quotes the same effect for Jupiter and the Sun:
+[about 12.4 m/s]{.not-verified}, as the change of the speed of the Sun over
+one orbit of Jupiter.]{.claim type="observational" scope="the Sun and Jupiter, as quoted"
+evidence="doppler-spectroscopy-overview"} The simulated range and the
+circular estimate bracket it.
 Detecting it in the spectrum of a star across light years is the radial
 velocity method of exoplanet astronomy, and the two-body code of this
 page is its model.

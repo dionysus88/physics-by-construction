@@ -260,17 +260,18 @@ REFERENCE_ROWS = {
         "1 1.0000 0.5994 0.6667 0.6664",
     ],
     KEPLER: [
-        "perihelion 0.50 AU at 51.6 km/s, aphelion 1.50 AU",
+        "explicit Euler 6.4e+00 7.4e-01 2.8e-01",
         "Runge-Kutta 4 1.6e-03 6.3e-05 9.2e-06",
-        "3200 1.4e+00 (0.58) 9.0e-03 (0.99) 3.5e-04 (2.00) 5.9e-10 (4.07)",
-        "semi-major axis between 0.9710 and 1.0000 AU",
-        "perihelion turned by -872.3° in all, -0.872° per orbit",
-        "200 -0.2208°",
-        "the star moves at between 17.1 and 51.6 m/s",
+        "3200 1.4e+00 0.58 9.0e-03 0.99 3.5e-04 2.00 5.9e-10 4.07",
+        "velocity Verlet 1.1e-02 1.1e-02 below 1e-12 1.0000 1.0110 -872.3 -0.872",
+        "Runge-Kutta 4 3.0e-03 3.0e-02 4.7e-03 0.9710 1.0000 +4.6 +0.005",
+        "200 -0.2208 0.252",
+        "slowest speed of the star m/s 17.1",
+        "fastest speed of the star m/s 51.6",
         "4.0 8.0000 1.0000",
-        "99 per cent: after 30 years at 22.7 AU, farthest 24.6 AU; a = 12.6 AU,"
-        " e = 0.960, period 45 yr",
-        "the Sun moves at between 11.9 and 13.1 m/s about the centre of mass",
+        "99 22.7 24.6 12.6 0.960 45",
+        "slowest speed of the Sun 11.9",
+        "fastest speed of the Sun 13.1",
     ],
 }
 
