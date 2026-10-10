@@ -18,7 +18,7 @@ in `docs/workflow.md`.
 | `data/registry/<dataset>.yaml` | One card per surveyed dataset: source, rights, artifact types, schema, estimates, and the go, defer, reject, or survey-only decision |
 | `data/samples/<dataset>/` | The committed samples of datasets with a go decision, under the caps of 2 MB per file, 8 MB per dataset, 32 MB in all; `data/downloads/` is the ignored target of `scripts/fetch-data.sh` |
 | `docs/datasets/` | The feasibility dossier of each spiked dataset and `README.md` with the decision table and the recommendation for the first lab |
-| `lean/` | The Lean project: `lean-toolchain`, `lakefile.toml`, and `lake-manifest.json` pin Lean and Mathlib; proofs live in `PhysicsByConstruction/`; `AxiomAudit.lean` is the audit run by `scripts/check-lean.sh` |
+| `lean/` | The Lean project: `lean-toolchain`, `lakefile.toml`, and `lake-manifest.json` pin Lean and Mathlib; proofs live in `PhysicsByConstruction/`; exercise stubs with `sorry` live in `Exercises/`, outside the library (ADR 011); `AxiomAudit.lean` is the audit run by `scripts/check-lean.sh` |
 | `pyproject.toml`, `uv.lock`, `.python-version` | The Python toolchain pins, including Quarto and the browser for the site checks |
 | `LICENSE`, `LICENSE-CONTENT` | MIT for code, CC BY 4.0 for lesson text and figures |
 
@@ -30,7 +30,7 @@ in `docs/workflow.md`.
 | `scripts/verify.conf` | The required verification checks of the project |
 | `scripts/verify-workflow.conf` | The self-tests of the workflow scripts and the workflow files they guard |
 | `scripts/preflight.sh` | First check: reports every missing prerequisite of the one-time setup with a fix hint |
-| `scripts/check-lean.sh` | Builds every Lean module against Mathlib from its build cache, fails on `sorry` and project axioms, and records what compiled the proofs for the pages that show them |
+| `scripts/check-lean.sh` | Builds every Lean module against Mathlib from its build cache, fails on `sorry` and project axioms, pairs every exercise stub with its checked solution, and records what compiled the proofs for the pages that show them |
 | `scripts/build-site.sh` | Builds the site with Quarto; fails on a failing cell or an equation that is not MathML |
 | `scripts/check-determinism.sh` | Builds the site a second time and requires byte-identical output |
 | `scripts/fetch-data.sh` | Learner-side download of a full dataset by its card's URLs and checksums; never run by verification, the build, or CI, and refuses to run when `CI` is set |

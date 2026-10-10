@@ -990,3 +990,10 @@ main details > summary {
   white-space: nowrap;
   border: 0;
 }
+
+/* A stub of a Lean exercise (pbc.authoring.exercises) is highlighted like a
+   proof; the warning surface would leave its tokens below the contrast the
+   scan requires, so the listing keeps the page background. */
+div.not-verified div.sourceCode {
+  background-color: var(--pbc-background);
+}

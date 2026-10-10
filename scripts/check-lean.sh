@@ -14,7 +14,8 @@ set -euo pipefail
 # A passed check leaves the build record .lake/pbc-build-record.json in the
 # Lean project, and a failed or interrupted one leaves none. A lesson page
 # reads the record to state what compiled its proofs (pbc.authoring.lean): the
-# versions of Lean and Mathlib, and a checksum of every module.
+# versions of Lean and Mathlib, and a checksum of every module and of every
+# exercise stub.
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 project="${1:-$root/lean}"
@@ -57,11 +58,34 @@ trap 'rm -rf "$tmp"' EXIT
 } >"$tmp/AxiomAudit.lean"
 lake env lean "$tmp/AxiomAudit.lean"
 
+echo "== Exercise stubs =="
+# The stubs of lean/Exercises hold 'sorry' by design and are not part of the
+# library (ADR 011). Each must pair with a checked solution of the library and
+# must still compile, with nothing but the 'sorry' warning.
+stubs="$(find Exercises -name '*.lean' 2>/dev/null | LC_ALL=C sort || true)"
+uv run --locked --project "$root" python -m pbc.authoring.exercises "$project"
+if [[ -n "$stubs" ]]; then
+  while IFS= read -r stub; do
+    log="$(lake env lean "$stub" 2>&1)" || { printf '%s\n' "$log" >&2; fail "$stub does not compile"; }
+    if grep -v -e "declaration uses .sorry." <<<"$log" | grep -q .; then
+      printf '%s\n' "$log" >&2
+      fail "$stub reports more than its 'sorry' warnings"
+    fi
+    echo "$stub compiles"
+  done <<<"$stubs"
+fi
+
 echo "== Build record =="
 checksums="$(
   while IFS= read -r module; do
     printf '%s\t%s\n' "$module" "$(shasum -a 256 "${module//.//}.lean" | cut -d' ' -f1)"
   done <<<"$modules"
+)"
+exercise_checksums="$(
+  while IFS= read -r stub; do
+    [[ -n "$stub" ]] || continue
+    printf '%s\t%s\n' "$(basename "${stub%.lean}" | sed 's/^/Exercises./')" "$(shasum -a 256 "$stub" | cut -d' ' -f1)"
+  done <<<"$stubs"
 )"
 lean_version="$(lake env lean --version)"
 jq -n -S \
@@ -69,10 +93,12 @@ jq -n -S \
   --arg lean "$lean_version" \
   --argjson mathlib "$(jq -c '.packages[] | select(.name == "mathlib") | {tag: .inputRev, rev: .rev}' lake-manifest.json)" \
   --arg checksums "$checksums" \
+  --arg exercises "$exercise_checksums" \
   '{
     toolchain: $toolchain,
     lean: ($lean | capture("version (?<version>[0-9][^,]*), .*commit (?<commit>[0-9a-f]+)") ),
     mathlib: $mathlib,
-    modules: ($checksums | split("\n") | map(split("\t") | {(.[0]): .[1]}) | add)
+    modules: ($checksums | split("\n") | map(split("\t") | {(.[0]): .[1]}) | add),
+    exercises: ($exercises | split("\n") | map(select(. != "") | split("\t") | {(.[0]): .[1]}) | add // {})
   }' >"$record"
 echo "Wrote $record"
