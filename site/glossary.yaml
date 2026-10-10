@@ -85,3 +85,5 @@ entries:
       of two vectors is a number, the cross product in a plane is a number
       for the area they span, and the gradient of a function of the position
       is the vector of its derivatives along each axis.
+      In three dimensions the cross product is a vector perpendicular to both,
+      and a × (b × c) = b (a·c) − c (a·b).
