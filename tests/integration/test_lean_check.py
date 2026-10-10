@@ -115,3 +115,45 @@ def test_a_relative_project_argument_keeps_the_record_in_that_project(
 
     assert failed.returncode != 0
     assert not record.exists()
+
+
+def _exercise(project: Path, stub: str, solution: str) -> None:
+    (project / "Exercises").mkdir(exist_ok=True)
+    (project / "Exercises" / "Twice.lean").write_text(stub)
+    (project / "PhysicsByConstruction" / "Exercises").mkdir(exist_ok=True)
+    (project / "PhysicsByConstruction" / "Exercises" / "Twice.lean").write_text(
+        solution
+    )
+
+
+_STATEMENT = "theorem twice (n : Nat) : n + n = 2 * n := by\n"
+
+
+def test_passes_a_stub_with_a_checked_solution(lean_project: Path):
+    _exercise(lean_project, _STATEMENT + "  sorry\n", _STATEMENT + "  omega\n")
+
+    result = run_check("lean-build", lean_project)
+
+    assert result.returncode == 0, output(result)
+    record = json.loads((lean_project / ".lake" / "pbc-build-record.json").read_text())
+    assert list(record["exercises"]) == ["Exercises.Twice"]
+
+
+def test_fails_on_a_stub_without_a_solution(lean_project: Path):
+    _exercise(
+        lean_project, _STATEMENT + "  sorry\n", "theorem other : True := trivial\n"
+    )
+
+    result = run_check("lean-build", lean_project)
+
+    assert result.returncode != 0
+    assert "does not prove 'twice'" in output(result)
+
+
+def test_fails_on_a_stub_that_does_not_compile(lean_project: Path):
+    broken = "theorem twice (n : Nat) : n + n = 2 * m := by\n  sorry\n"
+    _exercise(lean_project, broken, broken.replace("sorry", "omega"))
+
+    result = run_check("lean-build", lean_project)
+
+    assert result.returncode != 0
