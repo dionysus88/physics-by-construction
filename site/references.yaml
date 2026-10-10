@@ -226,6 +226,49 @@ references:
     lessons: [kepler-orbit]
     last-checked: 2026-10-10
     licence: CC BY-SA 4.0 on Wikipedia; linked, not copied or rehosted.
+  - key: drag-coefficient-regimes
+    concept: >-
+      Drag of a sphere: linear in the speed in creeping flow at a Reynolds
+      number much below one (Stokes), and quadratic in the Newtonian drag
+      regime, where the drag coefficient is approximately constant
+    url: https://math.libretexts.org/Bookshelves/Differential_Equations/A_First_Course_in_Differential_Equations_for_Scientists_and_Engineers_(Herman)/03%3A_Numerical_Solutions/3.05%3A_Numerical_Applications/3.5.07%3A_The_Coefficient_of_Drag
+    title: The Coefficient of Drag
+    author: Russell Herman, LibreTexts Mathematics
+    section: 3.5.7, on the Stokes drag coefficient and the Newtonian regime
+    role: derivation
+    statement: >-
+      At low Reynolds number the drag coefficient is C_D = 24 / Re (the page
+      says this follows from an analytic solution), so the force is
+      proportional to the speed; for creeping flow the page writes Re much
+      below one. At large Reynolds number the drag coefficient is constant (the
+      Newtonian regime), so the force is proportional to the speed squared.
+      The inference from C_D to the speed dependence is the lesson's, not the
+      page's wording. The page divides laminar and turbulent flow at other
+      Reynolds numbers than the lesson (laminar below one thousand, turbulent
+      above 2.5e5), so the lesson's Reynolds ranges for the quadratic law are
+      marked as order-of-magnitude values and are not taken from this page.
+      First selected by a drafting agent from a summary of the page. The
+      project owner opened the page and checked both statements against it on
+      2026-10-11: the page says that for low Reynolds number the inertial
+      forces are small compared to the viscous forces, leading to the Stokes
+      drag force, and that for large Reynolds number the drag coefficient is a
+      constant, "the Newtonian regime". The second holds within that regime
+      only: the drag coefficient is not constant at every large Reynolds
+      number, a sphere goes through a drag crisis, and the page itself notes
+      differences between drag models there. The lessons therefore say
+      "in the Newtonian drag regime" and "approximately constant".
+    alternatives: >-
+      A lab handout of Penn State (Cimbala, ME 325, drag) was found by search
+      and states a constant drag coefficient of a sphere between about one
+      thousand and two hundred thousand and the drag crisis above that, but its
+      PDF text could not be extracted, so it was not read and not chosen. An
+      American Journal of Physics paper on a thrown ball with linear or
+      quadratic drag came up in search and was not opened. The Herman page was
+      chosen because it ties both force laws to the drag coefficient of a
+      sphere in one short, public page, which the lesson does not derive.
+    lessons: [newtons-laws, projectile-with-drag]
+    last-checked: 2026-10-11
+    licence: Not checked on the page by the agent; the site is a LibreTexts open textbook. Linked, not copied or rehosted.
   - key: tpil-tactics
     concept: >-
       A tactic is an instruction that tells Lean how to build a proof term,

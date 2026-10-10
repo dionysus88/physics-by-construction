@@ -460,7 +460,7 @@ Progress, self-check results, and recommendations are computed in the browser
 and written to browser local storage under a versioned, site-specific key.
 There is no request that carries them anywhere.
 
-Delivered by F13 (progress and self-checks; recommendations are F14):
+Delivered by F13 (progress and self-checks) and F14 (recommendations):
 
 - **Format.** A self-check of a lesson may hold choices with feedback; without
   scripts it is an exercise with a solution that opens in the page
@@ -474,6 +474,11 @@ Delivered by F13 (progress and self-checks; recommendations are F14):
   that clears it.
 - **Export.** The build writes `path.json`, the learning path as data, for
   client-side use. It holds no learner state.
+- **Recommendations (F14).** `site/learner/recommend.js` holds the rules, a
+  pure function of the prerequisite graph and the stored results; the page
+  carries the graph as data, so computing them makes no request. Each
+  suggestion states its reason and can be ignored (an optional `ignored` list
+  in the same record). No server, model, or analytics is involved.
 - **Boundary.** `site/learner/progress.js` is the only script that uses
   browser storage. It makes no request. Built-site checks scan it, record the
   requests and writes of a page while a self-check is completed, and fail on a
