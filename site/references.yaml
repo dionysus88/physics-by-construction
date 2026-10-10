@@ -113,3 +113,61 @@ references:
     lessons: [numerical-integrators]
     last-checked: 2026-10-10
     licence: No licence stated on the page; linked, not copied or rehosted.
+  - key: kepler-equation-numerical
+    concept: >-
+      Solving Kepler's equation for the eccentric anomaly by the Newton
+      iteration, and the choice of the starting value
+    url: https://en.wikipedia.org/wiki/Kepler%27s_equation#Numerical_approximation_of_inverse_problem
+    title: Kepler's equation
+    author: Wikipedia
+    section: Numerical approximation of inverse problem, Newton's method
+    role: derivation
+    statement: >-
+      The equation to solve is f(E) = E - e sin E - M with the derivative
+      1 - e cos E, and the Newton step is E - f(E)/f'(E), the form the lesson
+      uses (with the lesson's letters u and the mean anomaly written l). The
+      page says that E and M are in radians, that the starting value E = M
+      suffices for most elliptical orbits and E = pi for an eccentricity above
+      0.8, and that the derivative becomes small at the parabolic limit, where
+      bisection is safer. The lesson's code starts from Danby's value, which
+      the page does not give; the lesson says so. Text of the page fetched and
+      the passage read on 2026-10-10.
+    alternatives: >-
+      Fitzpatrick, Celestial Mechanics (University of Texas at Austin), the page
+      on orbital elements: fetched and read, but its equations are images, so
+      the passage on Kepler's equation could not be checked from the text and it
+      was not chosen. No other page was opened. The Wikipedia page was chosen
+      because it adds the starting values and the failure at the parabolic limit
+      in one public section; it is a tertiary source, and the owner may prefer a
+      course text.
+    lessons: [kepler-orbit]
+    last-checked: 2026-10-10
+    licence: CC BY-SA 4.0 on Wikipedia; linked, not copied or rehosted.
+  - key: doppler-spectroscopy-overview
+    concept: >-
+      The radial velocity method: the wobble of a star about the centre of mass
+      of the star and its planet, measured as the Doppler shift of its
+      spectrum
+    url: https://en.wikipedia.org/wiki/Doppler_spectroscopy
+    title: Doppler spectroscopy
+    author: Wikipedia
+    section: introduction and History (first paragraphs), and the Jupiter and Sun example
+    role: intuition
+    statement: >-
+      The page says that a planet makes its star wobble about their common
+      centre of mass, that the star's spectrum shifts as its radial velocity
+      changes, that the first planet confirmed around a main-sequence star was
+      found with this method, and that Jupiter changes the speed of the Sun by
+      about 12.4 m/s over twelve years. It does not use the lesson's
+      derivation; the lesson's own range for the Sun over one orbit of Jupiter
+      is computed in the third exercise. Text of the page fetched and the
+      passages read on 2026-10-10.
+    alternatives: >-
+      The NASA Science page on the radial velocity method returned "Page not
+      found", and the NASA exoplanet page on ways to find a planet was fetched
+      but contained no passage on the wobble, so neither was chosen. The
+      Wikipedia page is a tertiary source and the owner may prefer an
+      observatory or course page.
+    lessons: [kepler-orbit]
+    last-checked: 2026-10-10
+    licence: CC BY-SA 4.0 on Wikipedia; linked, not copied or rehosted.

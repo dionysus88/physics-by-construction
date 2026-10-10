@@ -603,6 +603,13 @@ Runge-Kutta method", "the fourth-order method"), put the exact identifier in
 code font, or mark it `{.given}`; in a table cell, a caption, or math the name
 is free. (A finding of the M5 editorial pass, F30.)
 
+A unit with an exponent (`yr²/AU³`, `m/s²`) counts as a number in prose too.
+Write it in math (`$\mathrm{yr}^2/\mathrm{AU}^3$`), where it is free. A
+quantity that is at the level of round-off is not shown as a number: a table
+cell says "below 1e-12", built from a stated bound with a small helper in the
+cell, so that the page never prints a digit that another machine would change.
+(Findings of the M8 editorial pass, F30.)
+
 The check is a heuristic. Write small whole numbers that are not results as
 words ("first order", "slope one") and mark a number you really give as
 `{.given}`; do not rewrite a correct sentence to please it.
