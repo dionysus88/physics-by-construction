@@ -19,7 +19,7 @@ from pbc.agents.review_lab import (
 )
 
 ROOT = Path(__file__).parents[2]
-LESSON = ROOT / "site" / "lessons" / "agents-llm" / "02-three-reviewers"
+LESSON = ROOT / "site" / "lessons" / "agents-llm" / "03-three-reviewers"
 CREDENTIAL = re.compile(
     r"sk-[A-Za-z0-9_-]{10,}|Bearer\s+\S+|api[_-]?key", re.IGNORECASE
 )

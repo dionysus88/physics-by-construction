@@ -56,7 +56,7 @@ MAX_STEPS = 6  # model messages per reviewer
 # relative and in absolute terms; the checks are deterministic.
 TOLERANCE = 1e-6
 
-DIRECTORY = "site/lessons/agents-llm/02-three-reviewers"
+DIRECTORY = "site/lessons/agents-llm/03-three-reviewers"
 RECORD_COMMAND = (
     "uv run --extra openai python -m pbc.agents.review_lab --record"
     " (with OPENAI_API_KEY set)"

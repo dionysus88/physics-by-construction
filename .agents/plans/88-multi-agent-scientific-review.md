@@ -22,7 +22,7 @@ Issue #88. Short plan. Written by the implementer: no plan existed.
     checks no reviewer ran are listed as not covered. Disagreement is two
     reviewers whose own verdicts on a candidate differ.
   - Live entry point with `--record`, one fixture per reviewer.
-- Lesson `agents-llm/02-three-reviewers`: three replays, the disagreement
+- Lesson `agents-llm/03-three-reviewers`: three replays, the disagreement
   table, the resolution, the ADR 004 boundary restated.
 - Fixtures: `replay-physics.json`, `replay-numerics.json`,
   `replay-evidence.json` next to the page.

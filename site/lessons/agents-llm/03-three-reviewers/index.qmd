@@ -9,7 +9,7 @@ description: >-
 lesson:
   id: scientific-review
   strand: agents-llm
-  order: 2
+  order: 3
   difficulty: 3
   course: mechanics
   methods: [simulation, llm-agents]
