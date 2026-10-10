@@ -365,6 +365,22 @@ lean_excerpt(MODULE, "velocity_sq_of_constant_acceleration")
 A code block of Lean that is not an excerpt, such as the shape of a
 declaration, is not verified and carries the marker of the section above.
 
+### Lean exercises
+
+An exercise for the learner to complete on their own machine is a pair of
+files (ADR 011): the stub `lean/Exercises/<Name>.lean`, whose theorems end in
+`sorry`, and the checked solution
+`lean/PhysicsByConstruction/Exercises/<Name>.lean`, which states the same
+theorems with the same text and proves them. Mark the region of each theorem
+with the same `-- ANCHOR: <theorem>` in both files. `./scripts/check-lean.sh`
+fails on a stub without a solution, on a differing statement, on a stub
+without `sorry`, and on a stub that does not compile.
+
+On a page, show the stub with `lean_stub(name, anchor)` from
+`pbc.authoring.exercises`, which marks it "not verified", and the solution with
+`lean_excerpt`. Put the hints in `.hint` divs as for any exercise, and list the
+solution modules in `lesson.lean-modules`.
+
 ## Numbers
 
 Every result on the page is computed by the build.
