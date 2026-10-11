@@ -596,7 +596,7 @@ table(
 ```{python}
 #| label: fig-profile
 #| fig-cap: "The chi-square of the fit over the chirp mass, minimised over the coalescence time at each mass, relative to its minimum. The dotted line marks one above the minimum, and the dashed vertical line the published value, shifted to the detector frame."
-#| fig-alt: "Line plot of the chi-square difference against chirp mass from twenty-two to fifty solar masses on a logarithmic vertical axis: a bowl with its minimum near thirty-four solar masses that rises steeply on both sides. A dotted horizontal line sits one unit above the minimum and a dashed vertical line sits slightly to the left of the minimum."
+#| fig-alt: "Line plot of the chi-square difference against chirp mass from twenty-two to fifty solar masses on a logarithmic vertical axis: a bowl with a single minimum that rises steeply on both sides. A dotted horizontal line sits one unit above the minimum, and a dashed vertical line, the published value, sits well to the left of the minimum, where the curve is far above the dotted line."
 #| fig-status: processed
 #| fig-dataset: gw150914-strain
 fig, ax = plt.subplots(figsize=(6.8, 3.8), constrained_layout=True)
