@@ -130,6 +130,49 @@ more slowly than its terminal speed hardly notices the air; a ball thrown at
 its terminal speed starts with a drag equal to its weight, and its path looks
 nothing like a parabola.
 
+The two laws differ in how fast the drag grows with the speed.
+
+```{python}
+#| label: fig-drag-against-speed
+#| fig-cap: "Drag against speed for the linear and the quadratic law. The quadratic drag is smaller at low speed and larger above the crossing."
+#| fig-status: conceptual
+#| fig-alt: "Sketch of drag force against speed. A solid line, the linear law, rises in a straight line from the origin. A dashed curve, the quadratic law, starts flatter and below the line, crosses it, and then climbs above it ever more steeply."
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pbc.authoring import FIGURE_COLOURS
+from pbc.authoring.design import PAGE
+from pbc.authoring.diagrams import arrow, canvas, text
+
+fig, ax = canvas(6.4, 3.6, (0, 10), (0, 6))
+ax.set_aspect("auto")
+origin, width, height = 0.6, 8.6, 4.6
+arrow(ax, (origin, origin), (9.8, origin), colour=PAGE["muted"])
+arrow(ax, (origin, origin), (origin, 5.7), colour=PAGE["muted"])
+text(ax, (9.8, origin - 0.18), r"speed $|v|$", colour=PAGE["muted"], ha="right")
+text(ax, (origin + 0.1, 5.7), "drag force", colour=PAGE["muted"], ha="left")
+share = np.linspace(0.0, 1.0, 100)
+ax.plot(origin + width * share, origin + height * share / 2, color=FIGURE_COLOURS[0], linewidth=1.6)
+ax.plot(
+    origin + width * share,
+    origin + height * share**2,
+    color=FIGURE_COLOURS[1],
+    linewidth=1.6,
+    linestyle="--",
+)
+# The line height * share / 2 and the curve height * share**2 are equal at
+# share = 1/2, where both are height / 4: the marker is on both.
+ax.plot([origin + width / 2], [origin + height / 4], marker="o", color=FIGURE_COLOURS[2])
+text(ax, (6.6, 1.2), r"linear: $b\,|v|$", colour=0, ha="left")
+text(ax, (3.2, 3.9), r"quadratic: $c\,|v|^{2}$", colour=1, ha="right")
+text(ax, (4.7, 3.4), "the curves cross", colour=2, ha="right")
+plt.show()
+```
+
+The sketch has no scale, and where the curves cross depends on $b$ and $c$.
+It carries the shape: doubling the speed doubles a linear drag and
+quadruples a quadratic one.
+
 ### Why there is no closed form
 
 With $x$ horizontal and $y$ upward, Newton's second law reads

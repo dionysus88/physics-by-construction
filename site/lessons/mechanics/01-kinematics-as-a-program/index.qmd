@@ -115,6 +115,34 @@ $$
 The right-hand sides use only values the program already has, which is what
 "explicit" means.
 
+```{python}
+#| label: fig-state-and-update
+#| fig-cap: "The program holds one state and one rule. The rule turns the state at one step into the state at the next, using nothing but that state."
+#| fig-status: conceptual
+#| fig-alt: "Sketch of two boxes joined by an arrow that points from left to right. The left box holds the state at step n: time, position, and velocity. The right box holds the state at step n plus one. The arrow between them is labelled update rule, one time step."
+import matplotlib.pyplot as plt
+
+from pbc.authoring.diagrams import arrow, canvas, state_box, text
+
+fig, ax = canvas(6.4, 2.2, (0, 10), (0, 3.4))
+state_box(ax, (1.7, 1.7), "state $n$\n" r"$t_n,\ x_n,\ v_n$", width=3.0, height=1.5)
+state_box(
+    ax,
+    (8.3, 1.7),
+    "state $n+1$\n" r"$t_{n+1},\ x_{n+1},\ v_{n+1}$",
+    width=3.0,
+    height=1.5,
+    colour=1,
+)
+arrow(ax, (3.3, 1.7), (6.7, 1.7), colour=2)
+text(ax, (5.0, 2.35), "update rule", colour=2)
+text(ax, (5.0, 1.05), r"one time step $\Delta t$", colour=2)
+plt.show()
+```
+
+A simulation is this arrow applied again and again, and everything the arrow
+may use sits in the box on its left. The sketch computes nothing.
+
 ### How large is the error?
 
 One step drops terms of size $\Delta t^{2}$, so a step adds an error of at

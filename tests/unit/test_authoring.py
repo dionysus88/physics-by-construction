@@ -413,3 +413,19 @@ def test_a_diagram_is_deterministic_and_draws_what_was_asked():
     assert first == second
     assert "state" in labels
     assert diagrams._colour(1) == FIGURE_COLOURS[1]
+
+
+def test_an_arrow_takes_the_colour_and_the_line_style_given():
+    import matplotlib.colors
+    import matplotlib.pyplot as plt
+
+    from pbc.authoring import FIGURE_COLOURS, diagrams
+
+    fig, ax = diagrams.canvas(3.0, 2.0, (0.0, 3.0), (0.0, 2.0))
+    diagrams.arrow(ax, (0.5, 1.0), (2.5, 1.0), colour=2, linestyle=":")
+    (patch,) = [p for p in ax.get_children() if hasattr(p, "arrow_patch")]
+    plt.close(fig)
+    assert patch.arrow_patch.get_linestyle() == ":"
+    assert (
+        matplotlib.colors.to_hex(patch.arrow_patch.get_edgecolor()) == FIGURE_COLOURS[2]
+    )
