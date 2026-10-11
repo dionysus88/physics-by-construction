@@ -15,7 +15,9 @@ lesson:
     - Give a language model a short, bounded list of tools to run a simulation
     - Read a recorded agent run as an experiment
     - Recompute every tool result of a run without a model or a key
+    - Say what a replay does and does not show about an agent's conclusion
   related: []
+  format: 2
   prerequisites:
     lessons: [projectile-with-drag]
     outside:
@@ -30,12 +32,16 @@ from pbc.authoring import lesson_header
 lesson_header()
 ```
 
-In the mechanics lessons you chose every simulation yourself: the launch angle,
-the time step, the next run. This lesson hands those choices to a language
-model. The model reads a question, asks for simulations, reads their results,
-and decides what to ask next, until it believes it can answer. The program
-around the model is small, and this lesson builds all of it: a loop, a list of
-the functions the model may call, and a check on every call.
+At what angle should a tennis ball be thrown to land as far away as possible?
+Without air the answer is forty-five degrees, as the projectile lesson shows.
+With drag the ball loses speed along its whole path, the best angle moves
+lower, and no formula gives it. The projectile lesson answered by scanning the
+angle and running the simulation at each one. This lesson hands the choices of
+that scan to a language model. The model reads the question, asks for
+simulations, reads their results, and decides what to ask next, until it
+believes it can answer. The program around the model is small, and this lesson
+builds all of it: a loop, a list of the functions the model may call, and a
+check on every call.
 
 What makes this safe to teach is what the model is **not** given. It cannot
 write or run code, open a file, start a program, or reach the network. It can
@@ -47,7 +53,9 @@ a key, and costs money, so the site never calls one. The lesson shows a
 **recorded run**: the model's messages are replayed from a file in the
 repository, but every simulation the model asked for is run again by the build,
 and the page shows the new results. If the simulation changes, the build fails
-instead of showing numbers that no code produced.
+instead of showing numbers that no code produced. What that check proves about
+the model's *conclusion*, and what it does not, is the subject of the second
+half of the lesson.
 
 ## Assumptions
 
@@ -68,7 +76,9 @@ instead of showing numbers that no code produced.
 5. **A recording is a record, not a proof.** It shows what one model once
    did with this question. It does not show what the model will do again, and
    it does not show that the model's reasoning was sound. The numbers in it
-   are checked; the words are not.
+   are checked; the words are not. The page says which model made the
+   recording and how, and a reader who doubts a recording can read the
+   committed file.
 6. **The key stays on your machine.** The live run uses your own provider
    key, read from an environment variable. Anything you commit or paste can
    be copied, and a key that leaks can be used by others at your cost.
@@ -127,6 +137,16 @@ The agent **may not**, and the harness has no code that could let it:
   outside its bounds. Such a call is rejected without being executed, and the
   model is told why.
 
+Each bound has a reason. The launch speed and the angle are bounded to the
+range in which the simulation of the projectile lesson means something: the
+angle excludes the throw along the ground and the throw straight up, whose
+ranges are zero or degenerate. The time step has two bounds for two different
+reasons: the lower bound limits the cost of one call, because the number of
+steps grows as the step shrinks, and the upper bound limits the error, because
+explicit Euler is first order and a coarse step is visibly wrong (the first
+exercise measures both ends). A bound is a decision about what the model may
+ask for, not a property of the physics.
+
 A boundary like this is only as good as its tests. The unit tests of the
 harness try tool names such as `os.system` and `eval`, numbers that are not
 finite, strings where a number belongs, extra arguments, and code in the place
@@ -162,11 +182,46 @@ The recorded run below is one run of one model. Your live run will differ:
   for other time steps, or take more or fewer steps. Language models do not
   repeat themselves.
 - **The numbers do not differ for the same question.** If your run asks for the
-  range at 40 degrees with a time step of 0.002 s, it gets exactly the number
-  on this page, because the simulation is deterministic.
+  range at [40 degrees]{.given} with a time step of [0.002 s]{.given}, it gets
+  exactly the number on this page, because the simulation is deterministic.
 - **The conclusion should agree** to the precision the question asks for, the
   best angle to within a degree. If it does not, one of the runs is wrong, and
   the numbers in the transcript let you find out which.
+
+::: {.go-deeper ref="openai-function-calling"}
+How a provider's interface hands a tool call to your program: a name and
+JSON-encoded arguments that you execute and answer. It documents the round
+trip of the loop below for the provider the lesson's client uses, and it
+describes a strict mode for schemas that the lesson does not rely on, because
+its allowlist checks every call itself. The lesson does not need the page.
+:::
+
+### What an agent's claim is, and how it is tested
+
+The model's last message holds a claim: a sentence such as "the best angle
+is between two values". It was produced by a program that continues a text, so
+it has the authority of the evidence behind it and no more. Three things can
+be tested, and they are different tests.
+
+1. **Did the numbers come from the code?** The replay recomputes every tool
+   result and compares it with the recorded one. A figure the model cites
+   that the simulation does not give is found, because the tool results are
+   what the page shows. It does not reach a number the model states in its
+   own words without a tool call.
+2. **Does the conclusion follow?** The model reasons in text, and the build
+   does not check that reasoning. What it can do is test the conclusion
+   against a computation the model did not control: a scan of the same
+   simulation, made by this page, that finds the best angle independently.
+3. **Is the model right about the world?** Nothing here measures a ball.
+
+These three kinds of evidence have different names on this site. What a
+simulation recomputed by the build says about the simulated ball is
+*numerical* evidence, and a claim that rests on it is labelled
+`numerically-verified`. A statement from a measurement of a real ball would be
+*experimental*, which this lesson has none of. A statement proved for every
+case by a proof assistant would be *formal*, which the Lean lessons give. The
+agent's conclusion, where the build recomputes the numbers it rests on, is
+numerical, and the lesson labels only that part.
 
 ## Code
 
@@ -245,6 +300,7 @@ them reaches a simulation.
 
 ```{python}
 from pbc.agents import ToolCall
+from pbc.authoring import table
 
 allowlist = tools()
 attempts = [
@@ -255,14 +311,33 @@ attempts = [
     ToolCall("5", "range_with_drag", {"speed": "25", "angle": 40, "dt": 0.01}),
     ToolCall("6", "range_without_drag", {"speed": 25, "angle": 40, "code": "1+1"}),
 ]
+rows = []
 for attempt in attempts:
     result = allowlist.dispatch(attempt)
-    outcome = f"{result.content['range_m']:.3f} m" if result.ok else result.content["error"]
-    print(f"{attempt.name}({attempt.arguments}): {outcome}")
+    shown = ", ".join(f"{key}={value!r}" for key, value in attempt.arguments.items())
+    rows.append(
+        (
+            attempt.name,
+            shown,
+            result.content["range_m"] if result.ok else None,
+            "ran" if result.ok else result.content["error"],
+        )
+    )
+table(
+    rows,
+    [
+        ("tool the model named", "", ""),
+        ("arguments", "", ""),
+        ("range", "m", ".3f"),
+        ("outcome", "", ""),
+    ],
+    "Six calls that a misbehaving model might send, and what the allowlist did with each; the range is empty where nothing ran.",
+)
 ```
 
 Only the first call ran. The others were turned away with a reason, which is
-also what the model reads in its next request.
+also what the model reads in its next request. The boundary does not depend on
+the model meaning well: it treats every call the same way.
 
 ### A recorded run, replayed
 
@@ -342,8 +417,9 @@ the same simulation gives.
 
 ```{python}
 #| label: fig-agent-evidence
-#| fig-cap: "Range of the ball against launch angle at 25 m/s. The curve is a fresh scan; the points are the ranges the agent asked for with a time step of 0.002 s or less, recomputed by this build."
-#| fig-alt: "A line chart of range in metres against launch angle in degrees. The curve rises from about 33 metres at 30 degrees to a flat maximum of about 35.7 metres near 40 degrees and falls to about 35.4 metres at 45 degrees. Dots mark the angles the agent tried, 40, 41 and 45 degrees, lying on the curve."
+#| fig-cap: "The ranges the agent asked for lie on the curve that an independent scan of the simulation gives: the best angle is a little below forty-five degrees, and the curve is flat near its maximum, so nearby angles give almost the same range."
+#| fig-alt: "A line chart of range in metres against launch angle in degrees. The curve rises, reaches a flat maximum a little below forty-five degrees, and falls slowly beyond it. Three dots mark the angles the agent tried at its smallest steps, and they lie on the curve."
+#| fig-status: simulated
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -368,12 +444,73 @@ ax.legend()
 plt.show()
 ```
 
-The best angle in the scan is
-`{python} f"{angles[int(np.argmax(scan))]:.0f}"` degrees with a range of
-`{python} f"{max(scan):.2f}"` m, and the range at 45 degrees is
-`{python} f"{scan[15]:.2f}"` m. The agent's answer, in its last message, agrees
-to the precision it was asked for. Whether it reasoned well to get there is not
-something the build checks.
+The data are simulated ranges of a tennis ball with quadratic drag. The curve is
+a scan made by this page, and the points are results the replay recomputed; the
+two come from the same simulation, so agreement shows that the agent's numbers
+are the simulation's, not that the simulation is right about a real ball.
+
+The agent's last message names an interval for the best angle and gives its
+evidence in words. The build does not read those words. What it can do is
+repeat the question with a computation of its own: the two angles the agent
+tried at its smallest step that gave the longest ranges bracket an interval,
+and a scan in steps of a quarter of a degree, at the smallest step the
+allowlist allows, finds the best angle independently.
+
+```{python}
+#| label: agent-conclusion
+smallest = min(
+    call.arguments["dt"]
+    for step in transcript.steps
+    for call in step.message.tool_calls
+    if call.name == "range_with_drag"
+)
+at_smallest = {}
+for step in transcript.steps:
+    for call, result in zip(step.message.tool_calls, step.results, strict=True):
+        if result.ok and call.name == "range_with_drag" and call.arguments["dt"] == smallest:
+            at_smallest[call.arguments["angle"]] = result.content["range_m"]
+
+best_two = sorted(sorted(at_smallest, key=at_smallest.get)[-2:])
+bracket_low, bracket_high = best_two
+grid = np.arange(bracket_low - 2.0, bracket_high + 2.0 + 1e-9, 0.25)
+grid_ranges = [projectile_range(25.0, a, MASS, DRAG, smallest) for a in grid]
+best_angle = grid[int(np.argmax(grid_ranges))]
+best_range = max(grid_ranges)
+range_at_45 = projectile_range(25.0, 45.0, MASS, DRAG, smallest)
+
+table(
+    [
+        (angle, range_m)
+        for angle, range_m in sorted(at_smallest.items())
+    ],
+    [("angle asked by the agent", "degrees", ".0f"), ("range recomputed", "m", ".4f")],
+    "The ranges the agent asked for at its smallest time step, as recomputed by the build.",
+)
+table(
+    [
+        ("best angle of the scan", best_angle, "degrees"),
+        ("range at the best angle", best_range, "m"),
+        ("range at 45 degrees", range_at_45, "m"),
+        ("gain over 45 degrees", best_range - range_at_45, "m"),
+        ("gain over 45 degrees", 100 * (best_range - range_at_45) / range_at_45, "per cent"),
+    ],
+    [("quantity", "", ""), ("value", "", ".4g"), ("unit", "", "")],
+    "An independent scan of the same simulation at the agent's smallest step, in steps of a quarter of a degree.",
+)
+```
+
+[At the smallest time step the agent used, the two angles it tried with the
+longest ranges bracket the best angle of an independent scan of the simulation,
+and the best angle lands the ball further than forty-five degrees by the amount
+in the table.]{.claim type="numerically-verified" scope="the simulated tennis
+ball with quadratic drag at 25 m/s, explicit Euler at the smallest allowed step,
+no measurement" evidence="agent-conclusion"} The bracket is
+`{python} f"{bracket_low:.0f}"` to `{python} f"{bracket_high:.0f}"` degrees, and
+the scan's best angle is `{python} f"{best_angle:.2f}"` degrees, inside it.
+This is the part of the agent's conclusion that the build recomputes. That the
+agent reasoned well to reach it, and that its remarks about convergence are
+right, is not something the build checks; the reader can compare them with the
+time-step table of the first exercise.
 
 ### Run the agent yourself
 
@@ -399,6 +536,41 @@ a key ever appears in one, revoke it at the provider and make a new one.
 The maintainer records the replay fixture of this page from a live run with
 the same command and `--record`, reads the file, and commits it.
 
+## Limits {#limits}
+
+- **One recorded run.** The page shows what one model once did. A live run
+  differs in its path, and nothing here says how often a model finds the right
+  answer.
+- **A replay checks numbers, not reasoning.** It shows that every result the
+  agent was shown is what this code computes. It does not show that the agent
+  read them correctly, and the build never reads its words. The conclusion
+  is compared with a scan only in the part the page computes.
+- **Numerical evidence about a model.** The ranges are those of explicit Euler
+  with quadratic drag for one ball. No ball was thrown and measured, so
+  nothing on this page is experimentally supported, and nothing is proved.
+- **The bounds are decisions, tested but not proved.** The unit tests try the
+  attacks listed above and read the source for imports; they do not prove that
+  no other route exists.
+- **The live run is not verified.** The commands to run the agent yourself need
+  a key, cost money, and are not run by the build, so they are marked.
+
+::: {.exercise .self-check}
+The replay recomputed every tool result of the run and found no difference
+from the recording. Does that show that the agent's conclusion is correct? What
+would have to be checked in addition?
+
+::: {.solution}
+No. It shows that the numbers the agent was shown, and the numbers the page
+displays, are the ones the code computes. The conclusion is a sentence the model
+wrote after reading them, and a model can read correct numbers and conclude
+something they do not support. The page tests the conclusion in a second, separate
+way: a scan of the simulation that the model did not control gives the best
+angle, and it falls inside the interval the agent's best two runs bracket. Even
+both together are evidence about the simulated ball only; whether a real ball
+behaves so is settled by measuring one.
+:::
+:::
+
 ## Exercises
 
 ::: {.exercise}
@@ -415,9 +587,15 @@ fine = allowlist.dispatch(
 coarse = allowlist.dispatch(
     ToolCall("b", "range_with_drag", {"speed": 25, "angle": 40, "dt": 0.05})
 )
-print(f"dt = 0.001 s: {fine.content['range_m']:.3f} m")
-print(f"dt = 0.05 s:  {coarse.content['range_m']:.3f} m")
-print(f"difference: {coarse.content['range_m'] - fine.content['range_m']:.3f} m")
+table(
+    [
+        ("smallest allowed step", 0.001, fine.content["range_m"]),
+        ("largest allowed step", 0.05, coarse.content["range_m"]),
+        ("difference", None, coarse.content["range_m"] - fine.content["range_m"]),
+    ],
+    [("step", "", ""), ("time step", "s", ".3f"), ("range", "m", ".3f")],
+    "The range of the throw at forty degrees with the smallest and the largest time step the allowlist accepts.",
+)
 ```
 
 Explicit Euler has an error proportional to the step, so the largest step is
@@ -447,15 +625,33 @@ flight_time = Tool(
     },
 )
 extended = Allowlist((*tools().tools, flight_time))
+rows = []
 for angle in (90, 60):
     result = extended.dispatch(
         ToolCall("c", "flight_time_without_drag", {"speed": 25, "angle": angle})
     )
-    print(angle, result.content)
+    rows.append(
+        (
+            angle,
+            "ran" if result.ok else "rejected",
+            result.content["time_s"] if result.ok else None,
+            "" if result.ok else result.content["error"],
+        )
+    )
+table(
+    rows,
+    [
+        ("angle", "degrees", "d"),
+        ("outcome", "", ""),
+        ("flight time", "s", ".3f"),
+        ("reason", "", ""),
+    ],
+    "The new tool called with an angle outside its bounds and with one inside them.",
+)
 ```
 
-The new tool inherits the bounds of the parameters it reuses, so the 90
-degree call is refused before the function runs. Nothing else about the loop
+The new tool inherits the bounds of the parameters it reuses, so the call at
+ninety degrees is refused before the function runs. Nothing else about the loop
 or the replay changes; a lesson that uses the tool would record a new run.
 :::
 :::
