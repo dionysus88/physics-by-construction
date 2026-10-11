@@ -1206,6 +1206,20 @@ in `src/pbc/authoring/identity.py`. Rules for every page:
   link, and no surface advertises. `CITATION.cff` has no DOI until a release
   policy exists.
 
+## Instructor packs
+
+An instructor pack (`docs/instructor-packs/<lesson id>.md`, F59) is a
+teaching pack for one published lesson. Its block between the
+`pack:start` and `pack:end` markers (objectives, prerequisites, difficulty,
+and the citation) is written from the lesson's front matter and from
+`CITATION.cff` by `python -m pbc.authoring.educators` (`--check` only
+compares); `tests/unit/test_educators.py` fails when a pack differs from its
+lesson. Everything else in the pack is written by hand. The assignment's
+reference solution is a test (`tests/unit/test_instructor_pack_<lesson>.py`)
+that asserts the figures the pack states. The "For educators" page of the
+site lists every pack that exists. A pack makes no claim about who uses it
+and asks for no contact.
+
 ## Third-party material
 
 Lesson text and figures are published under CC BY 4.0 and code under MIT

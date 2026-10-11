@@ -24,6 +24,9 @@ creator, licence, measurement type, size, and what a lesson could learn from
 it. No form asks for contact details, and you do not need to contact JIDAI or
 anyone else; the outcome is recorded on the issue.
 
+Educators who teach with a lesson report what an
+[instructor pack](educators.qmd) lacked in the same way.
+
 Do not put secrets in an issue. A security-sensitive finding follows the
 [security policy](https://github.com/taspinar/physics-by-construction/blob/main/SECURITY.md).
 

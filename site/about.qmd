@@ -31,7 +31,8 @@ The repository has a `CITATION.cff` file in the
 it and offers "Cite this repository". It names the authors, the project
 address, the repository, and the licences. It has no DOI: none exists until
 the project has a release policy. A suitable citation is "Physics by
-Construction", with a link to the page you used.
+Construction", with a link to the page you used. Teaching with a lesson? The
+[For educators](educators.qmd) page lists the instructor packs.
 
 ## How to contribute
 

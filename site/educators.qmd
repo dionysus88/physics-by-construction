@@ -1,0 +1,63 @@
+---
+title: "For educators"
+description: >-
+  Instructor packs for published lessons, the licence that lets you reuse them,
+  how to cite the project, and how to suggest improvements.
+---
+
+An instructor pack is a Markdown file with a lecturer guide, the learning
+objectives and prerequisites of the lesson, the approximate time, a student
+assignment, a rubric, a reference solution that the build runs, accessibility
+notes, and a way to teach the lesson without an AI tool. You do not need to
+register or to contact anyone to use one.
+
+## Packs
+
+```{python}
+#| echo: false
+#| output: asis
+from pathlib import Path
+
+from pbc.authoring import LearningPath
+from pbc.authoring.educators import packs_list
+from pbc.authoring.website import project_root
+
+print(packs_list(LearningPath.read(project_root(Path.cwd()))))
+```
+
+The objectives, prerequisites, and difficulty in a pack are written from the
+front matter of its lesson, so they match the lesson on this site.
+
+## Reuse
+
+Lesson text, figures, and the packs are under
+[CC BY 4.0](https://github.com/taspinar/physics-by-construction/blob/main/LICENSE-CONTENT):
+you may adapt them, including commercially, when you give credit, link to the
+licence, and indicate changes. Code is under the
+[MIT licence](https://github.com/taspinar/physics-by-construction/blob/main/LICENSE).
+
+## Cite
+
+```{python}
+#| echo: false
+#| output: asis
+from pbc.authoring.educators import citation_text
+
+print(f"> {citation_text()}")
+```
+
+The text is built from `CITATION.cff`, which GitHub reads to offer "Cite this
+repository". The project has no DOI.
+
+## Suggest an improvement
+
+Open an issue from one of the forms. The outcome is recorded on the issue; no
+form asks for contact details.
+
+```{python}
+#| echo: false
+#| output: asis
+from pbc.authoring.educators import forms_list
+
+print(forms_list())
+```

@@ -222,6 +222,12 @@ main a > code:not(.sourceCode) {
   overflow-wrap: anywhere;
 }
 
+/* A quoted citation ends in the address of the site, which has no space to
+   break at and would widen the page on a phone: let it wrap. */
+main blockquote {
+  overflow-wrap: anywhere;
+}
+
 /* The build evidence of a Lean lesson: what compiled the proofs, and where to
    read them. */
 .lean-evidence {
