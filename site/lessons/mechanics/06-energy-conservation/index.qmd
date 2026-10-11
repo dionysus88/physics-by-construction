@@ -286,6 +286,43 @@ logarithm to base two of the ratio of successive drifts. Whether the observed
 order equals the order of the method is something the table shows, not
 something the lesson assumes.
 
+The three behaviours that the runs below measure can be told apart before
+any run, by what the energy does as the run gets longer:
+
+```{python}
+#| label: fig-energy-bands
+#| fig-cap: "Three ways in which the energy of a simulation can stray, drawn as a sketch against the length of the run. Drift grows without limit, a band oscillates inside fixed bounds however long the run, and a slow loss falls steadily. Only a growth that never stops is a failure of the whole run; a band is a bounded error."
+#| fig-status: conceptual
+#| fig-alt: "Sketch of the energy minus its starting value against time. A grey horizontal band surrounds zero. One straight line rises steadily and leaves the band. One dashed curve oscillates up and down inside the band for the whole time. One dash-dotted straight line falls slowly."
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pbc.authoring import FIGURE_COLOURS, diagrams
+
+t = np.linspace(0.0, 10.0, 400)
+fig, ax = diagrams.canvas(6.4, 3.2, (-1.4, 15.6), (-2.6, 2.8))
+ax.set_aspect("auto")
+ax.fill_between([0, 10], [-0.5, -0.5], [0.5, 0.5], color="#eaecf0", zorder=0)
+diagrams.arrow(ax, (0, -2.2), (0, 2.6), colour="#1f2328", width=1.0)
+diagrams.arrow(ax, (0, -2.2), (10.8, -2.2), colour="#1f2328", width=1.0)
+diagrams.line(ax, [(0, 0), (10, 0)], colour="#57606a", linestyle=":", width=1.0)
+diagrams.text(ax, (10.9, -2.2), "time", ha="left")
+diagrams.text(ax, (-0.2, 2.65), "energy minus its start", ha="left", va="bottom")
+ax.plot(t, 0.22 * t, color=FIGURE_COLOURS[0], linestyle="-", linewidth=1.6)
+ax.plot(t, 0.36 * np.sin(2.3 * t), color=FIGURE_COLOURS[1], linestyle="--", linewidth=1.6)
+ax.plot(t, -0.09 * t, color=FIGURE_COLOURS[2], linestyle="-.", linewidth=1.6)
+diagrams.text(ax, (10.3, 2.2), "drift: grows with\nthe length of the run", ha="left", colour=0)
+diagrams.text(ax, (10.3, 0.4), "band: oscillates,\ndoes not grow", ha="left", colour=1)
+diagrams.text(ax, (10.3, -1.0), "slow loss", ha="left", colour=2)
+diagrams.text(ax, (0.2, -1.5), "grey band: where the energy of a bounded method stays", ha="left", colour="#57606a")
+plt.show()
+```
+
+The sketch is not data; it fixes what the word "drift" will mean when the
+measured curves appear. A single drift number, the largest deviation, cannot
+tell a band from the beginning of a drift, which is why the runs below are
+made at several lengths.
+
 ### What explicit Euler does to the energy
 
 One step of explicit Euler moves the position with the old velocity,

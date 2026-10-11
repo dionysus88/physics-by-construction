@@ -1135,6 +1135,57 @@ def test_an_unknown_format_is_reported(make_repository: Repository):
             "fig-status",
         ),
         (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+                "#| fig-dataset: gw150914-strain\n"
+            },
+            "figure-dataset",
+            "cannot be 'simulated'",
+        ),
+        (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: processed\n"
+                "#| fig-dataset: no-such-dataset\n"
+            },
+            "figure-dataset",
+            "no card",
+        ),
+        (
+            {
+                "plt.plot([0.0, 1.0], [0.0, position])\n": (
+                    "from pbc.data.touchstone import read_touchstone\n"
+                    'plt.plot(read_touchstone("x.s2p").frequency)\n'
+                )
+            },
+            "figure-dataset",
+            "names none",
+        ),
+        (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: processed\n"
+                "#| fig-model-of: gw150914-strain\n"
+            },
+            "figure-dataset",
+            "is 'simulated', not 'processed'",
+        ),
+        (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+                "#| fig-model-of: no-such-dataset\n"
+            },
+            "figure-dataset",
+            "no card",
+        ),
+        (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: processed\n"
+                "#| fig-dataset: gw150914-strain\n"
+                "#| fig-model-of: gw150914-strain\n"
+            },
+            "figure-dataset",
+            "both 'fig-dataset' and 'fig-model-of'",
+        ),
+        (
             {"A straight line that rises": "A line with slope 0.5 that rises"},
             "typed-number",
             "0.5",
@@ -1158,6 +1209,193 @@ def test_a_violation_of_format_2_is_reported(
 
     assert rule in rules(violations), details(violations)
     assert text in details(violations)
+
+
+def test_a_figure_of_a_dataset_with_a_status_its_card_allows_passes(
+    make_format_2: Repository,
+):
+    repository = make_format_2(
+        {
+            "#| fig-status: simulated\n": "#| fig-status: processed\n"
+            "#| fig-dataset: gw150914-strain\n"
+        }
+    )
+
+    assert "figure-dataset" not in rules(format_2_checks(repository))
+
+
+# The figure cell of the lesson plots 'position' and is labelled 'simulated',
+# without 'fig-dataset'. Each of these cells, put before it, makes 'position'
+# a measurement of a registered dataset; none of them is named in the figure
+# cell itself.
+_READS_A_SAMPLE = (
+    "from pbc.data import SAMPLES_DIR\n"
+    "from pbc.data.gwosc import read_strain\n"
+    "\n"
+    'strain = read_strain(SAMPLES_DIR / "gw150914-strain" / "H1.hdf5")\n'
+)
+_DATA_BEFORE_THE_FIGURE = {
+    "a name bound in an earlier cell": _READS_A_SAMPLE
+    + "position = float(strain.strain[0])\n",
+    "a module under another name": (
+        "import pbc.data.gwosc as g\n"
+        "from pbc import data as d\n"
+        "\n"
+        'position = g.read_strain(d.SAMPLES_DIR / "x.hdf5").strain[0]\n'
+    ),
+    "a function of the lesson": _READS_A_SAMPLE
+    + "def first():\n    return float(strain.strain[0])\n\nposition = first()\n",
+    "a loop and a container": _READS_A_SAMPLE
+    + "values = []\nfor sample in strain.strain:\n    values.append(sample)\n"
+    "position = values[0]\n",
+    "a path written out": (
+        "import numpy as np\n"
+        "\n"
+        'position = np.loadtxt("../../data/samples/aalborg-submerged-bar/a.csv")[0]\n'
+    ),
+    "a star import of the package": (
+        "import numpy as np\n"
+        "from pbc.data import *\n"
+        "\n"
+        'position = np.loadtxt(SAMPLES_DIR / "aalborg-submerged-bar" / "a.csv")[0]\n'
+    ),
+    "a reference loader": (
+        "from pbc.data import DOWNLOADS_DIR\n"
+        "from pbc.data.reference import gw150914\n"
+        "\n"
+        'position = gw150914.load(DOWNLOADS_DIR)["H1"].strain[0]\n'
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    "cell", _DATA_BEFORE_THE_FIGURE.values(), ids=list(_DATA_BEFORE_THE_FIGURE)
+)
+def test_a_simulated_figure_made_from_a_measured_dataset_is_refused(
+    make_format_2: Repository, cell: str
+):
+    repository = make_format_2({"position = 1.0 + 2.0 * 0.5\n": cell})
+
+    violations = format_2_checks(repository)
+
+    assert "figure-dataset" in rules(violations), details(violations)
+    assert "'fig-line' is made from a dataset" in details(violations)
+
+
+def test_a_figure_drawn_on_axes_that_received_data_is_refused(
+    make_format_2: Repository,
+):
+    repository = make_format_2(
+        {
+            "position = 1.0 + 2.0 * 0.5\n": _READS_A_SAMPLE
+            + "import matplotlib.pyplot as plt\n\nposition = 2.0\n"
+            "fig, ax = plt.subplots()\nax.plot(strain.strain)\n",
+            "plt.plot([0.0, 1.0], [0.0, position])\nplt.show()\n": "fig\n",
+        }
+    )
+
+    assert "figure-dataset" in rules(format_2_checks(repository))
+
+
+def test_naming_the_dataset_of_such_a_figure_brings_the_card_rule(
+    make_format_2: Repository,
+):
+    cell = _DATA_BEFORE_THE_FIGURE["a name bound in an earlier cell"]
+    named = make_format_2(
+        {
+            "position = 1.0 + 2.0 * 0.5\n": cell,
+            "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+            "#| fig-dataset: gw150914-strain\n",
+        }
+    )
+
+    assert "cannot be 'simulated'" in details(format_2_checks(named))
+
+
+def _figure_of_the_flume(status: str, artifact: str | None) -> dict[str, str]:
+    """The figure names the dataset that holds measurements and a model."""
+    options = f"#| fig-status: {status}\n#| fig-dataset: aalborg-submerged-bar\n"
+    if artifact is not None:
+        options += f"#| fig-artifact: {artifact}\n"
+    return {"#| fig-status: simulated\n": options}
+
+
+@pytest.mark.parametrize(
+    ("status", "artifact", "text"),
+    [
+        ("simulated", "processed-measured", "cannot be 'simulated'"),
+        ("processed", "modelled-reference", "cannot be 'processed'"),
+        ("simulated", None, "say which one"),
+        ("processed", None, "say which one"),
+        ("simulated", "raw-measured", "'fig-artifact' names 'raw-measured'"),
+    ],
+)
+def test_the_measurements_of_a_card_with_a_model_cannot_pass_as_simulated(
+    make_format_2: Repository, status: str, artifact: str | None, text: str
+):
+    violations = format_2_checks(make_format_2(_figure_of_the_flume(status, artifact)))
+
+    assert "figure-dataset" in rules(violations), details(violations)
+    assert text in details(violations)
+
+
+@pytest.mark.parametrize(
+    ("status", "artifact"),
+    [("processed", "processed-measured"), ("simulated", "modelled-reference")],
+)
+def test_a_figure_of_one_artifact_of_such_a_card_passes(
+    make_format_2: Repository, status: str, artifact: str
+):
+    repository = make_format_2(_figure_of_the_flume(status, artifact))
+
+    assert "figure-dataset" not in rules(format_2_checks(repository))
+
+
+def test_an_artifact_without_a_dataset_is_reported(make_format_2: Repository):
+    repository = make_format_2(
+        {
+            "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+            "#| fig-artifact: modelled-reference\n"
+        }
+    )
+
+    assert "'fig-artifact' without 'fig-dataset'" in details(
+        format_2_checks(repository)
+    )
+
+
+def test_a_figure_of_a_model_fitted_to_a_dataset_declares_it(
+    make_format_2: Repository,
+):
+    cell = _DATA_BEFORE_THE_FIGURE["a name bound in an earlier cell"]
+    repository = make_format_2(
+        {
+            "position = 1.0 + 2.0 * 0.5\n": cell,
+            "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+            "#| fig-model-of: gw150914-strain\n",
+        }
+    )
+
+    assert "figure-dataset" not in rules(format_2_checks(repository))
+
+
+def test_the_tools_of_the_data_package_do_not_make_a_figure_a_data_figure(
+    make_format_2: Repository,
+):
+    repository = make_format_2(
+        {
+            "position = 1.0 + 2.0 * 0.5\n": (
+                "import numpy as np\n"
+                "from pbc.data.plotting import series_with_band\n"
+                "from pbc.data.series import Series\n"
+                "\n"
+                'series = Series(np.arange(3.0), np.arange(3.0), "simulation")\n'
+                "position = float(series.y[1])\n"
+            )
+        }
+    )
+
+    assert "figure-dataset" not in rules(format_2_checks(repository))
 
 
 def test_given_values_and_math_are_not_hand_typed_numbers(make_format_2: Repository):

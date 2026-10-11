@@ -183,6 +183,51 @@ and the step agrees with the Taylor expansion of the exact motion through the
 fourth power of $\Delta t$. Showing that for a general rate takes several
 pages of algebra; the accuracy table below measures it instead.
 
+The two Euler rules differ only in an ordering, and a picture of the data
+flow shows what the ordering changes:
+
+```{python}
+#| label: fig-update-orderings
+#| fig-cap: "The same four quantities, wired in two orders. In explicit Euler the position is moved by the old velocity, so the two updates are independent of each other. In symplectic Euler the velocity is updated first and the position is moved by the new one, so the position update waits for the velocity update."
+#| fig-status: conceptual
+#| fig-alt: "Two diagrams side by side, each with the position and velocity at step n on the left and at step n plus one on the right. In both, each quantity has an arrow to its own successor, and a dashed arrow runs from the old position to the new velocity, for the force. In explicit Euler a solid arrow runs from the old velocity to the new position, crossing the dashed one. In symplectic Euler a solid arrow runs upward from the new velocity to the new position."
+import matplotlib.pyplot as plt
+
+from pbc.authoring import diagrams
+
+fig, axes = plt.subplots(1, 2, figsize=(6.4, 3.0))
+orderings = (
+    ("Explicit Euler", 0, False),
+    ("Symplectic Euler", 1, True),
+)
+for ax, (name, colour, velocity_first) in zip(axes, orderings, strict=True):
+    diagrams.frame(ax, (-0.2, 4.4), (-0.7, 3.2))
+    diagrams.text(ax, (2.1, 3.0), name, colour=colour)
+    left, right = 0.4, 3.8
+    diagrams.state_box(ax, (left, 2.0), "$x_n$", width=1.0, height=0.7, colour=colour)
+    diagrams.state_box(ax, (left, 0.4), "$v_n$", width=1.0, height=0.7, colour=colour)
+    diagrams.state_box(ax, (right, 2.0), "$x_{n+1}$", width=1.0, height=0.7, colour=colour)
+    diagrams.state_box(ax, (right, 0.4), "$v_{n+1}$", width=1.0, height=0.7, colour=colour)
+    diagrams.arrow(ax, (left + 0.5, 2.0), (right - 0.5, 2.0), colour=colour)
+    diagrams.arrow(ax, (left + 0.5, 0.4), (right - 0.5, 0.4), colour=colour)
+    diagrams.arrow(ax, (left + 0.45, 1.7), (right - 0.45, 0.7), colour=colour, linestyle="--")
+    if velocity_first:
+        diagrams.arrow(ax, (right, 0.75), (right, 1.65), colour=colour)
+        diagrams.text(ax, (right + 0.1, 1.2), "new\nvelocity", ha="left", colour=colour)
+    else:
+        diagrams.arrow(ax, (left + 0.45, 0.7), (right - 0.45, 1.7), colour=colour)
+        diagrams.text(ax, (right + 0.1, 1.2), "old\nvelocity", ha="left", colour=colour)
+    diagrams.text(ax, (2.1, -0.4), "dashed: the force, from $x_n$", colour="#57606a")
+fig.tight_layout()
+plt.show()
+```
+
+The diagram is drawn by hand, and nothing in it is computed. It answers the
+question the two formulas raise: if both methods read the same inputs, why
+should they differ? The difference is a single arrow, the source of the
+velocity that moves the position, and the energy section below follows what
+that one arrow does.
+
 ### Order of accuracy
 
 A method whose single step matches the Taylor expansion of the motion

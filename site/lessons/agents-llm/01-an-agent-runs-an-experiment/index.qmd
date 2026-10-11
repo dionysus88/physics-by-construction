@@ -98,6 +98,51 @@ An agent here is three parts and a loop.
    repeats. It stops when the model asks for no tool or when it has reached
    the step limit.
 
+The parts are easier to hold in mind as a flow of messages, with the line
+drawn between what is trusted and what is not:
+
+```{python}
+#| label: fig-tool-flow
+#| fig-cap: "One turn of the loop. The model only produces text and tool calls; the harness checks each call against the allowlist, and only a call that passes reaches the simulation. The result goes back to the model as text. The model is untrusted, and the allowlist is the boundary."
+#| fig-status: conceptual
+#| fig-alt: "A diagram of four boxes in a row: model, harness, allowlist, simulation. A solid arrow runs from the model to the harness, labelled tool call. An arrow runs from the harness to the allowlist, labelled check name and bounds, and on to the simulation, labelled only if it passes. A dashed arrow runs back from the simulation along the bottom to the model, labelled result as text. A second dashed arrow from the allowlist back to the harness is labelled rejected with a reason. A dashed vertical line between the model and the harness marks the edge of what is trusted."
+import matplotlib.pyplot as plt
+
+from pbc.authoring import diagrams
+
+fig, ax = diagrams.canvas(6.4, 3.0, (-0.2, 12.6), (-1.6, 3.4))
+names = (("model", 0), ("harness", 1), ("allowlist", 2), ("simulation", 3))
+centres = {name: (1.1 + 3.4 * i, 2.0) for name, i in names}
+for name, _ in names:
+    diagrams.state_box(
+        ax, centres[name], name, width=2.2, height=0.9, colour=0 if name == "model" else 1
+    )
+for left, right, label in (
+    ("model", "harness", "tool call"),
+    ("harness", "allowlist", "name, bounds"),
+    ("allowlist", "simulation", "only if it passes"),
+):
+    (x0, y), (x1, _) = centres[left], centres[right]
+    diagrams.arrow(ax, (x0 + 1.15, y), (x1 - 1.15, y), colour=1)
+    diagrams.text(ax, ((x0 + x1) / 2 + (0.0 if left != "model" else 0.9), y + 0.65), label)
+diagrams.line(ax, [(2.8, 3.1), (2.8, -0.9)], colour="#57606a", linestyle=":")
+diagrams.text(ax, (2.6, 3.2), "untrusted", ha="right", colour="#57606a")
+diagrams.text(ax, (3.0, 3.2), "trusted", ha="left", colour="#57606a")
+back = -0.4
+diagrams.line(ax, [(centres["simulation"][0], 1.5), (centres["simulation"][0], back), (centres["model"][0] + 0.6, back)], colour=0, linestyle="--")
+diagrams.arrow(ax, (centres["model"][0] + 0.6, back), (centres["model"][0] + 0.6, 1.5), colour=0, linestyle="--")
+diagrams.text(ax, (6.3, back - 0.4), "result, as text", colour=0)
+diagrams.arrow(ax, (centres["allowlist"][0] - 0.4, 1.5), (centres["harness"][0] + 0.4, 1.5), colour=0, linestyle="--")
+diagrams.text(ax, (centres["harness"][0] + 1.7, 0.95), "rejected, with a reason", colour=0)
+fig.tight_layout()
+plt.show()
+```
+
+The diagram is a sketch, not a measurement. It answers the question the
+paragraph above raises: if the model can only ask, what stops a bad request?
+Every request passes the allowlist on the way in, and everything that comes
+back, a result or a refusal, is text the model reads and cannot execute.
+
 ### What the agent may and may not do
 
 This is the complete list for this lesson.
@@ -356,6 +401,43 @@ The messages come from `{python} recording.model`, recorded on
 different messages.
 
 ### The check that makes the page honest
+
+Two things enter the replay and one comes out of it:
+
+```{python}
+#| label: fig-replay-check
+#| fig-cap: "What the replay keeps and what it recomputes. The recorded messages are reused as they are; every recorded tool result is thrown away and computed again by the simulation. The two results are compared, and a difference beyond the tolerance fails the build. The model's words are never compared."
+#| fig-status: conceptual
+#| fig-alt: "A diagram with a recording on the left holding two items: the model's messages and the recorded tool results. The messages feed a replay client that sends the same tool calls through the allowlist to the simulation, which produces new results. A comparison box in the middle receives the recorded results and the new results. An arrow from the comparison leads to the page if they agree within the tolerance and to a failed build if they do not. The messages are not sent to the comparison."
+import matplotlib.pyplot as plt
+
+from pbc.authoring import diagrams
+
+fig, ax = diagrams.canvas(6.4, 3.4, (-0.2, 12.6), (-1.0, 4.4))
+diagrams.state_box(ax, (1.4, 3.4), "recorded messages", width=2.8, height=0.8, colour=0)
+diagrams.state_box(ax, (1.4, 0.6), "recorded results", width=2.8, height=0.8, colour=0)
+diagrams.state_box(ax, (5.4, 3.4), "allowlist + simulation", width=3.2, height=0.8, colour=1)
+diagrams.state_box(ax, (7.4, 0.6), "compare", width=2.0, height=0.8, colour=2)
+diagrams.state_box(ax, (11.2, 2.2), "page", width=1.8, height=0.8, colour=1)
+diagrams.state_box(ax, (11.2, 0.0), "build fails", width=1.8, height=0.8, colour=3)
+diagrams.arrow(ax, (2.8, 3.4), (3.8, 3.4), colour=0)
+diagrams.text(ax, (3.3, 3.9), "same calls", colour=0)
+diagrams.arrow(ax, (5.4, 3.0), (7.0, 1.0), colour=1)
+diagrams.text(ax, (6.9, 2.3), "new results", ha="left", colour=1)
+diagrams.arrow(ax, (2.8, 0.6), (6.4, 0.6), colour=0)
+diagrams.arrow(ax, (8.4, 0.9), (10.3, 2.0), colour=1)
+diagrams.text(ax, (8.9, 1.9), "agree", ha="left", colour=1)
+diagrams.arrow(ax, (8.4, 0.4), (10.3, 0.1), colour=3)
+diagrams.text(ax, (9.3, -0.35), "differ", colour=3)
+diagrams.text(ax, (1.4, 2.0), "the words are shown,\nnever compared", colour="#57606a")
+fig.tight_layout()
+plt.show()
+```
+
+The diagram is a sketch and computes nothing. It answers the question the
+section raises: what exactly is recomputed? The tool results, and only those.
+That is why the check can catch a changed simulation and cannot tell whether
+the model reasoned well.
 
 The replay compares every recomputed result with the recorded one and allows a
 relative difference of `{python} f"{TOLERANCE:g}"`. To see it work, change the

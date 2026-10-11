@@ -82,6 +82,60 @@ ax.legend()
 plt.show()
 ```
 
+## Measured data
+
+The pattern of a measured-data lab (docs/authoring.md, "Measured data"): the
+data card of the dataset, rendered from its card, and a figure made from the
+committed sample whose status the build checks against that card.
+
+```{python}
+#| echo: false
+from pbc.authoring import data_card
+
+data_card("npl-onwafer-sparameters")
+```
+
+```{python}
+#| label: fig-measured-transmission
+#| fig-cap: "Transmission of a calibrated 3 dB attenuator against frequency."
+#| fig-status: calibrated
+#| fig-dataset: npl-onwafer-sparameters
+#| fig-alt: "Line plot of transmission in decibels against frequency in gigahertz. The curve stays close to a constant value slightly below zero across the band and falls slowly towards high frequency."
+from pbc.data import SAMPLES_DIR
+from pbc.data.adapters import transmission_series
+from pbc.data.plotting import series_with_band
+from pbc.data.touchstone import read_touchstone
+
+network = read_touchstone(
+    SAMPLES_DIR / "npl-onwafer-sparameters" / "coaxial_3dB_attenuator_0601_CORR.s2p"
+)
+fig, ax = series_with_band(transmission_series(network), "3 dB attenuator", figsize=(6.4, 3.6))
+ax.set_title("Transmission of a calibrated attenuator")
+plt.show()
+```
+
+A figure of a model fitted to the dataset shows no data; it is simulated and
+names the dataset it was fitted to:
+
+```{python}
+#| label: fig-modelled-transmission
+#| fig-cap: "A constant-loss model fitted to the transmission of the attenuator."
+#| fig-status: simulated
+#| fig-model-of: npl-onwafer-sparameters
+#| fig-alt: "Line plot of modelled transmission in decibels against frequency in gigahertz: one horizontal line slightly below zero across the band."
+import numpy as np
+
+measured = transmission_series(network)
+loss = float(np.mean(measured.y))
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(measured.x, np.full_like(measured.x, loss), linestyle="--")
+ax.set_xlabel(f"{measured.x_name} ({measured.x_unit})")
+ax.set_ylabel(f"{measured.y_name} ({measured.y_unit})")
+ax.set_title("Constant-loss model of the attenuator")
+plt.show()
+```
+
 ## Lesson constructs
 
 These are the constructs of the lesson format, one of each.

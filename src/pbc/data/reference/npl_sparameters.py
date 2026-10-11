@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pbc.data.plotting import add_credit, label_status
 from pbc.data.touchstone import Network, read_touchstone
 
 FILES = {
@@ -65,8 +66,9 @@ def make_figure(data_dir: Path) -> plt.Figure:
     ax_gamma.set_aspect("equal")
     ax_gamma.set_xlim(-0.6, 1.05)
     ax_gamma.set_ylim(-0.6, 0.6)
-    ax_gamma.set_xlabel("Re S11")
-    ax_gamma.set_ylabel("Im S11")
+    ax_gamma.set_xlabel("Re S11 [1]")
+    ax_gamma.set_ylabel("Im S11 [1]")
+    ax_gamma.legend(fontsize=8, loc="lower left")
     ax_gamma.set_title(
         "Calibrated: input reflection in the reflection-coefficient plane"
     )
@@ -76,9 +78,10 @@ def make_figure(data_dir: Path) -> plt.Figure:
     ax_s21.legend(fontsize=8)
     ax_sv.axhline(1, color="k", linestyle="--", label="passivity limit")
     ax_sv.set_xlabel("frequency [GHz]")
-    ax_sv.set_ylabel("largest singular value of S")
+    ax_sv.set_ylabel("largest singular value of S [1]")
     ax_sv.set_title("Consistency check: passive means <= 1 (50 ohm reference)")
     ax_sv.set_ylim(0, 1.1)
+    ax_sv.legend(fontsize=8, loc="lower left")
     single = networks["single sweep, 3 dB pad"]
     coaxial = networks["coaxial, 3 dB pad"]
     freq, diff = cross_check_db(single, coaxial)
@@ -87,12 +90,11 @@ def make_figure(data_dir: Path) -> plt.Figure:
     ax_diff.set_xlabel("frequency [GHz]")
     ax_diff.set_ylabel("single sweep minus coaxial, |S21| [dB]")
     ax_diff.set_title("Two instruments, same 3 dB pad (2.5-50 GHz)")
-    fig.text(
-        0.01,
-        -0.02,
+    add_credit(
+        fig,
         "Data: Ausden, Ridler, Rumiantsev, Martens, Shang, NPL, Zenodo "
         "10.5281/zenodo.22658069, CC BY 4.0. Files are the calibrated (_CORR, "
         "multiline TRL) S2P files, unmodified.",
-        fontsize=7,
     )
+    label_status(fig, "calibrated")
     return fig

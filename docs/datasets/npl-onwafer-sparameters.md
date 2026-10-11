@@ -15,7 +15,7 @@ Card: `data/registry/npl-onwafer-sparameters.yaml`. Spike of 2026-10-09 (F50).
 
 The sample is four members, copied byte for byte and renamed to lower case: the coaxial 3, 6, and 10 dB pads (2.5-50 GHz, 191 points) and the single-sweep 3 dB pad (2.5-220 GHz, 871 points). Their sha256 digests are on the card. Format: Touchstone 1.0, option line `# Hz S RI R 50.0`, columns S11 S21 S12 S22 as real and imaginary parts, 250 MHz step, written by scikit-rf. No missing values.
 
-Reader: `pbc.data.touchstone.read_touchstone`, a 40-line parser over NumPy. The Issue lists a locked Touchstone reader among the dependencies; this spike did not add one, because a parser that handles RI, MA, and DB two-port files is smaller than the dependency tree of a general network library, and adds no licence to track. F51 may replace it.
+Reader: `pbc.data.touchstone.read_touchstone`, a 40-line parser over NumPy. The Issue lists a locked Touchstone reader among the dependencies; this spike did not add one, because a parser that handles RI, MA, and DB two-port files is smaller than the dependency tree of a general network library, and adds no licence to track. **Decision (F51, Issue #66): the in-repository parser stays.** It is covered by the parsing test and by the passivity, reciprocity, and cross-instrument tests on the committed samples; it adds no licence or lock entry. A library such as scikit-rf is reconsidered when a lab needs n-port files, other parameter types, or noise data.
 
 ## Artifact labels
 

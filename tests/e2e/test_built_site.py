@@ -164,9 +164,8 @@ def test_rendering_check_page_shows_code_output_figure_and_equations(
     # The output is what the executed cell printed.
     assert "x = +1.0000 m" in page.locator(".cell-output-stdout").first.inner_text()
     # The figure was produced by the build and loads.
-    assert page.locator("img.figure-img").evaluate(
-        "image => image.complete && image.naturalWidth > 0"
-    )
+    for image in page.locator("img.figure-img").all():
+        assert image.evaluate("image => image.complete && image.naturalWidth > 0")
     # Every equation has a rendered box.
     boxes = page.locator("math").evaluate_all(
         "equations => equations.map(e => e.getBoundingClientRect().width)"
@@ -286,3 +285,33 @@ def test_the_search_index_holds_the_prose_of_a_page_and_not_its_code(
             if len(code) >= 80 and code in text:
                 indexed_code.append(f"{entry['href']}: {code[:60]}")
     assert not indexed_code, "\n".join(indexed_code[:10])
+
+
+def test_a_figure_made_from_a_dataset_carries_a_status_its_card_allows(
+    site_dir: Path,
+):
+    """A figure of a measured sample is measured, calibrated, or processed,
+    never simulated (ADR 007)."""
+    violations = site_checks.check_figure_datasets(site_dir)
+    assert not violations, describe(violations)
+
+
+def test_the_measured_data_pattern_shows_the_card_the_labels_and_the_no_llm_path(
+    page: Page, server: SiteServer
+):
+    page.goto(server.url + "rendering-check.html", wait_until="load")
+    card = page.locator(".data-card")
+    assert card.is_visible()
+    text = card.inner_text()
+    for part in ("CC BY 4.0", "calibrated-observation", "calibrated", "fetch-data.sh"):
+        assert part in text, part
+    assert "No-LLM path" in text
+    figure = page.locator("figcaption .figure-status[data-dataset]").first
+    assert figure.get_attribute("data-status") in (
+        "measured",
+        "calibrated",
+        "processed",
+    )
+    model = page.locator("figcaption .figure-status[data-model-of]").first
+    assert model.get_attribute("data-status") == "simulated"
+    assert model.get_attribute("data-dataset") is None

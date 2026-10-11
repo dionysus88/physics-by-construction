@@ -13,6 +13,7 @@ import numpy as np
 from scipy import signal
 
 from pbc.data.gwosc import Strain, read_strain
+from pbc.data.plotting import label_status
 
 EVENT_GPS = 1126259462.4  # GWOSC event record, GWTC-1 v3
 PUBLISHED_CHIRP_MASS_SOURCE = 28.6  # solar masses, GWTC-1
@@ -140,14 +141,14 @@ def make_figure(data_dir: Path) -> plt.Figure:
     middle.set_xlabel("time since the event [s]")
     middle.set_ylabel("frequency [Hz]")
     middle.set_title("Processed: H1 spectrogram of the whitened strain")
-    fig.colorbar(mesh, ax=middle, label="amplitude [arb. units]")
+    fig.colorbar(mesh, ax=middle, label="amplitude [arb. units] (false colour)")
 
     bottom.plot(fit["masses"], fit["network_snr"], color="#009E73")
     bottom.axvline(
         expected, color="k", linestyle="--", label="published, detector frame"
     )
     bottom.set_xlabel("template chirp mass, detector frame [solar masses]")
-    bottom.set_ylabel("network matched-filter SNR")
+    bottom.set_ylabel("network matched-filter SNR [1]")
     bottom.set_title(
         "Fitted (leading-order template): best "
         f"{fit['best_mass']:.0f} Msun, SNR {fit['best_snr']:.0f}; published "
@@ -165,4 +166,5 @@ def make_figure(data_dir: Path) -> plt.Figure:
         fontsize=7,
         va="top",
     )
+    label_status(fig, "processed")
     return fig

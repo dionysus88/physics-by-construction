@@ -27,6 +27,10 @@ import yaml
 
 from pbc.authoring import evidence, glossary, is_numeric_console_block
 from pbc.authoring import path as learning_path
+from pbc.data import REGISTRY_DIR
+from pbc.data.card import load_card
+from pbc.data.status import allowed_statuses, artifact_types, needs_artifact
+from support.data_use import DataUse
 from support.site_checks import Violation
 
 # --- The format ---------------------------------------------------------------
@@ -1034,6 +1038,47 @@ def _figure_cells(lesson: Lesson) -> Iterator[tuple[Cell, dict[str, Any]]]:
                 yield cell, options
 
 
+def _data_use(lesson: Lesson) -> DataUse:
+    """What the executed Python cells of the lesson derive from data."""
+    cells = (lesson.cell(path[-1]) for path in _walk(lesson.blocks))
+    return DataUse(cell.code for cell in cells if cell is not None and cell.executed)
+
+
+def _artifact_problems(
+    card: dict, dataset: str, options: dict[str, Any]
+) -> Iterator[tuple[str, str]]:
+    """A figure of a dataset carries a status the artifact it shows allows."""
+    status = options.get("fig-status")
+    artifact = options.get("fig-artifact")
+    if artifact is None and needs_artifact(card):
+        yield (
+            "figure-dataset",
+            f"{dataset} holds measurements and a modelled artifact; say which one"
+            " the figure shows with 'fig-artifact', one of"
+            f" {', '.join(sorted(artifact_types(card)))}",
+        )
+    elif artifact is not None and str(artifact) not in artifact_types(card):
+        yield (
+            "figure-dataset",
+            f"'fig-artifact' names {artifact!r}; the card of {dataset} has"
+            f" {', '.join(sorted(artifact_types(card)))}",
+        )
+    else:
+        allowed = allowed_statuses(card, None if artifact is None else str(artifact))
+        if status not in allowed:
+            shown = dataset if artifact is None else f"the {artifact} of {dataset}"
+            yield (
+                "figure-dataset",
+                f"a figure of {shown} cannot be {status!r}; its card allows"
+                f" {', '.join(sorted(allowed))}",
+            )
+
+
+def _dataset_card(dataset: str) -> dict | None:
+    path = REGISTRY_DIR / f"{dataset}.yaml"
+    return load_card(path) if path.is_file() else None
+
+
 def _texts_of(value: Any) -> list[str]:
     return [
         item
@@ -1107,6 +1152,7 @@ def _format_2_problems(
                 f" {REFERENCES}",
             )
 
+    data_use = _data_use(lesson)
     for cell, options in _figure_cells(lesson):
         if options.get("fig-status") not in FIGURE_STATUSES:
             yield (
@@ -1114,6 +1160,52 @@ def _format_2_problems(
                 f"figure cell '{options.get('label') or _first_line(cell.code)}' has no"
                 f" 'fig-status' of {', '.join(FIGURE_STATUSES)}",
             )
+        name = options.get("label") or _first_line(cell.code)
+        dataset = options.get("fig-dataset")
+        model_of = options.get("fig-model-of")
+        if dataset is None and model_of is None and data_use.uses(cell.code):
+            yield (
+                "figure-dataset",
+                f"figure cell '{name}' is made from a dataset (it uses a data"
+                " reader, a sample, or a name derived from one) but names none:"
+                " add 'fig-dataset' for a figure of the data, or 'fig-model-of'"
+                " for a figure of a model fitted to it",
+            )
+        if dataset is not None and model_of is not None:
+            yield (
+                "figure-dataset",
+                f"figure cell '{name}' has both 'fig-dataset' and 'fig-model-of';"
+                " a figure that shows the data is a figure of the dataset",
+            )
+        if dataset is not None:
+            card = _dataset_card(str(dataset))
+            if card is None:
+                yield (
+                    "figure-dataset",
+                    f"'fig-dataset' names {dataset!r}, which has no card in"
+                    " data/registry",
+                )
+            else:
+                yield from _artifact_problems(card, str(dataset), options)
+        if dataset is None and options.get("fig-artifact") is not None:
+            yield (
+                "figure-dataset",
+                f"figure cell '{name}' has 'fig-artifact' without 'fig-dataset'",
+            )
+        if model_of is not None:
+            if _dataset_card(str(model_of)) is None:
+                yield (
+                    "figure-dataset",
+                    f"'fig-model-of' names {model_of!r}, which has no card in"
+                    " data/registry",
+                )
+            elif options.get("fig-status") != "simulated":
+                yield (
+                    "figure-dataset",
+                    f"a figure of a model of {model_of} is 'simulated', not"
+                    f" {options.get('fig-status')!r}; a figure that shows the data"
+                    " names it with 'fig-dataset'",
+                )
         for key in ("fig-alt", "fig-cap"):
             for value in _texts_of(options.get(key)):
                 for word in value.split():

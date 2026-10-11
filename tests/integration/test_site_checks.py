@@ -99,6 +99,126 @@ def test_a_clean_site_passes_every_check(make_site: Site, browser: Browser):
         assert site_checks.check_accessibility(browser, server, site) == []
 
 
+def figure_label(status: str, dataset: str) -> str:
+    return (
+        f'<figure><figcaption><span class="figure-status" data-status="{status}"'
+        f' data-dataset="{dataset}">{status}</span> A figure.</figcaption></figure>'
+    )
+
+
+@pytest.mark.parametrize("status", ["calibrated", "processed"])
+def test_a_figure_of_a_measured_sample_with_a_measured_status_passes(
+    make_site: Site, status: str
+):
+    site = make_site(body=figure_label(status, "npl-onwafer-sparameters"))
+
+    assert site_checks.check_figure_datasets(site) == []
+
+
+def test_a_calibrated_product_is_not_called_raw_measured(make_site: Site):
+    site = make_site(body=figure_label("measured", "npl-onwafer-sparameters"))
+
+    assert rules(site_checks.check_figure_datasets(site)) == {"figure-dataset"}
+
+
+@pytest.mark.parametrize("status", ["simulated", "conceptual"])
+def test_a_figure_of_a_measured_sample_labelled_simulated_is_reported(
+    make_site: Site, status: str
+):
+    site = make_site(body=figure_label(status, "gw150914-strain"))
+
+    violations = site_checks.check_figure_datasets(site)
+
+    assert rules(violations) == {"figure-dataset"}
+    assert f"labelled '{status}'" in site_checks.describe(violations)
+
+
+def artifact_label(status: str, artifact: str | None) -> str:
+    """A figure of the dataset that holds measurements and a modelled artifact."""
+    extra = "" if artifact is None else f' data-artifact="{artifact}"'
+    return (
+        f'<figure><figcaption><span class="figure-status" data-status="{status}"'
+        f' data-dataset="aalborg-submerged-bar"{extra}>{status}</span> A figure.'
+        "</figcaption></figure>"
+    )
+
+
+@pytest.mark.parametrize(
+    ("status", "artifact"),
+    [("processed", "processed-measured"), ("simulated", "modelled-reference")],
+)
+def test_a_figure_with_the_status_of_the_artifact_it_shows_passes(
+    make_site: Site, status: str, artifact: str
+):
+    site = make_site(body=artifact_label(status, artifact))
+
+    assert site_checks.check_figure_datasets(site) == []
+
+
+@pytest.mark.parametrize(
+    ("status", "artifact", "text"),
+    [
+        # The measurements of a card that also holds a model are not simulated.
+        ("simulated", "processed-measured", "labelled 'simulated'"),
+        ("processed", "modelled-reference", "labelled 'processed'"),
+        ("simulated", None, "does not say which artifact"),
+        ("processed", None, "does not say which artifact"),
+        ("simulated", "raw-measured", "no artifact of type raw-measured"),
+    ],
+)
+def test_a_figure_of_a_card_with_a_model_is_held_to_its_artifact(
+    make_site: Site, status: str, artifact: str | None, text: str
+):
+    violations = site_checks.check_figure_datasets(
+        make_site(body=artifact_label(status, artifact))
+    )
+
+    assert rules(violations) == {"figure-dataset"}
+    assert text in site_checks.describe(violations)
+
+
+def model_label(status: str, dataset: str, extra: str = "") -> str:
+    return (
+        f'<figure><figcaption><span class="figure-status" data-status="{status}"'
+        f' data-model-of="{dataset}"{extra}>{status}</span> A figure.</figcaption>'
+        "</figure>"
+    )
+
+
+def test_a_figure_of_a_model_of_a_dataset_is_simulated(make_site: Site):
+    site = make_site(body=model_label("simulated", "npl-onwafer-sparameters"))
+
+    assert site_checks.check_figure_datasets(site) == []
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        model_label("processed", "npl-onwafer-sparameters"),
+        model_label("simulated", "no-such-dataset"),
+        model_label(
+            "simulated",
+            "npl-onwafer-sparameters",
+            ' data-dataset="npl-onwafer-sparameters"',
+        ),
+    ],
+)
+def test_a_model_figure_that_claims_to_show_data_is_reported(
+    make_site: Site, label: str
+):
+    assert "figure-dataset" in rules(
+        site_checks.check_figure_datasets(make_site(body=label))
+    )
+
+
+def test_a_figure_of_a_dataset_without_a_card_is_reported(make_site: Site):
+    site = make_site(body=figure_label("processed", "no-such-dataset"))
+
+    assert "no card for no-such-dataset" in site_checks.describe(
+        site_checks.check_figure_datasets(site)
+    )
+
+
 def test_image_without_alt_text_is_reported(make_site: Site):
     site = make_site(body='<img src="pixel.png" width="1" height="1">')
 
