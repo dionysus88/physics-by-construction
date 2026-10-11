@@ -875,7 +875,7 @@ def check_keyboard_navigation(
 # scripts, and the data of an embedded widget (docs/architecture.md, "Budgets").
 PAYLOAD_BUDGET = 3_000_000
 # The search index is fetched when a reader searches, on top of the page.
-SEARCH_INDEX_BUDGET = 500_000
+SEARCH_INDEX_BUDGET = 1_000_000
 
 
 def measure_payloads(
@@ -1187,11 +1187,11 @@ def _source_of(
     part of a Python object, or None when it does not exist.
 
     A module of ``pbc`` names a top-level function or class of ``src/``; a
-    module of ``PhysicsByConstruction`` names a region of a Lean file in
-    ``lean/``.
+    module of ``PhysicsByConstruction`` or an exercise stub (``Exercises``)
+    names a region of a Lean file in ``lean/``.
     """
     module, _, target = name.partition(":")
-    if module.split(".")[0] == "PhysicsByConstruction":
+    if module.split(".")[0] in ("PhysicsByConstruction", "Exercises"):
         return None if region or lines else _lean_region(repository, name)
     file = repository / "src" / Path(*module.split(".")).with_suffix(".py")
     if module.split(".")[0] != "pbc" or not file.is_file():

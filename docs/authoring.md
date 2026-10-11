@@ -365,6 +365,22 @@ lean_excerpt(MODULE, "velocity_sq_of_constant_acceleration")
 A code block of Lean that is not an excerpt, such as the shape of a
 declaration, is not verified and carries the marker of the section above.
 
+### Lean exercises
+
+An exercise for the learner to complete on their own machine is a pair of
+files (ADR 011): the stub `lean/Exercises/<Name>.lean`, whose theorems end in
+`sorry`, and the checked solution
+`lean/PhysicsByConstruction/Exercises/<Name>.lean`, which states the same
+theorems with the same text and proves them. Mark the region of each theorem
+with the same `-- ANCHOR: <theorem>` in both files. `./scripts/check-lean.sh`
+fails on a stub without a solution, on a differing statement, on a stub
+without `sorry`, and on a stub that does not compile.
+
+On a page, show the stub with `lean_stub(name, anchor)` from
+`pbc.authoring.exercises`, which marks it "not verified", and the solution with
+`lean_excerpt`. Put the hints in `.hint` divs as for any exercise, and list the
+solution modules in `lesson.lean-modules`.
+
 ## Numbers
 
 Every result on the page is computed by the build.
@@ -470,6 +486,15 @@ ax.plot(t, y, color=FIGURE_COLOURS[1], linestyle="--", label="Euler")
 ```
 
 Colour never tells two series apart alone; vary the line style or the marker.
+
+**Conceptual diagrams.** A diagram that shows an idea, not a result, is
+drawn by an executed cell with the helpers of `pbc.authoring.diagrams`:
+`canvas` (or `frame`, for a figure of several panels) makes a frameless
+axes in data units, and `arrow`, `state_box`, `circle`, `line`, and `text`
+draw on it with the figure colours. The cell has `#| fig-status: conceptual`,
+alt text that conveys the insight, and a caption that states it. The diagram
+is a sketch: the sentence after it says so and says what question it
+answers. Nothing is stored as an image file.
 
 **Components.** `rendering-check.qmd` holds one sample of each; copy its markup.
 
@@ -1232,6 +1257,20 @@ in `src/pbc/authoring/identity.py`. Rules for every page:
 - Nothing requires an account, contact with JIDAI, tracking, or a corporate
   link, and no surface advertises. `CITATION.cff` has no DOI until a release
   policy exists.
+
+## Instructor packs
+
+An instructor pack (`docs/instructor-packs/<lesson id>.md`, F59) is a
+teaching pack for one published lesson. Its block between the
+`pack:start` and `pack:end` markers (objectives, prerequisites, difficulty,
+and the citation) is written from the lesson's front matter and from
+`CITATION.cff` by `python -m pbc.authoring.educators` (`--check` only
+compares); `tests/unit/test_educators.py` fails when a pack differs from its
+lesson. Everything else in the pack is written by hand. The assignment's
+reference solution is a test (`tests/unit/test_instructor_pack_<lesson>.py`)
+that asserts the figures the pack states. The "For educators" page of the
+site lists every pack that exists. A pack makes no claim about who uses it
+and asks for no contact.
 
 ## Third-party material
 

@@ -10,7 +10,7 @@ boundaries every feature must respect.
   2026-10-06, re-approved with the change cycle `physics-next-phase` on
   2026-10-09). Where this document and the requirements disagree, the
   requirements win and the disagreement is a defect in this document.
-- Decisions with a durable record: `docs/decisions/001` to `010`.
+- Decisions with a durable record: `docs/decisions/001` to `011`.
 - Planning base commits: `502ced0` for the bootstrap planning, when the
   repository held only the workflow template; `2f011ea` for the change cycle
   `physics-next-phase` (`docs/changes/physics-next-phase.md`), when F01 to
@@ -141,6 +141,8 @@ tests/
 lean/                    One Lake project for all proofs
   lean-toolchain, lakefile.toml, lake-manifest.json
   PhysicsByConstruction/<Course>/<Topic>.lean
+  PhysicsByConstruction/Exercises/<Name>.lean   Checked solutions of the exercise stubs (F21, ADR 011)
+  Exercises/<Name>.lean  Exercise stubs with `sorry`, outside the library glob (F21, ADR 011)
 scripts/verify.sh        Existing single verification entry point
 scripts/verify.conf      Existing list of required checks; project checks are added here
 scripts/check-links.sh   On-demand link maintenance check, never a required check (next phase, F39, ADR 009)
@@ -519,7 +521,7 @@ shown.
 | I9 | The deployed site is the artifact the verify run built for that `main` commit. The deploy job does not build. | Workflow structure (F01); ADR 003. |
 | I10 | Toolchains are pinned: Python version and `uv.lock`; Lean toolchain and Mathlib revision; Quarto version; the browser build through the Playwright version in `uv.lock`; GitHub Actions by commit SHA; any JavaScript dependency by version and checksum. | Lock files; frozen installs in verification (F01). |
 | I11 | Builds are deterministic: the same commit produces byte-identical output. | Determinism check (F01). |
-| I12 | Lean proofs contain no `sorry`, `admit`, or project-declared `axiom`. Physical assumptions are theorem hypotheses or structure fields, so the page shows them. | Lean build check (F01, F08). |
+| I12 | Lean proofs contain no `sorry`, `admit`, or project-declared `axiom`. Physical assumptions are theorem hypotheses or structure fields, so the page shows them. The one exception is the exercise stubs of `lean/Exercises/`, outside the checked library, each paired with a solution in the library and shown as "not verified". | Lean build check and exercise pairing check (F01, F08, F21); ADR 011. |
 | I13 | Lean proofs are about physics models. Nothing on the site claims the Python code is formally verified or that a proof establishes the physical accuracy of a measurement. | Review; authoring guide (F08, F56). |
 | I14 | Agents in the harness can call only allowlisted functions with validated arguments. No shell, file, or network capability. Credentials come only from environment variables and are never printed or logged. | Harness design and tests (F09); ADR 004. |
 | I15 | Pull requests from forks get a read-only token and no secrets. Workflows use `pull_request`, never `pull_request_target`, and never trigger on Issues. | Workflow review and test (F01, F12). |
@@ -677,7 +679,7 @@ Per-page and per-lesson budgets that the next phase adds:
 | Executed time of a measured-data lesson page | 30 seconds, as any lesson; the sample size is chosen for it | Site build (F51) |
 | Committed dataset sample | 2 MB per file, 8 MB per dataset, 32 MB for all of `data/samples/` | Dataset check (F50, ADR 007) |
 | Initial payload of a page (HTML, CSS, fonts, static figures, embedded widget data), measured for the page opened on its own, so shared files count for every page | 3 MB transferred | Built-site check (F44) |
-| Search index (`search.json`), fetched when a reader searches | 0.5 MB | Built-site check (F41) |
+| Search index (`search.json`), fetched when a reader searches | 1 MB | Built-site check (F41) |
 | Optional data a page loads on demand (animation frames, field data) | 3 MB per page, from the site's own origin, only after a user action, never required to read the page | Built-site check (F43) |
 | Everything a page can load | 5 MB | Built-site check (F43) |
 

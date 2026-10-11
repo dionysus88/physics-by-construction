@@ -387,3 +387,29 @@ def test_reproduction_outside_a_website_project_is_rejected(
 
     with pytest.raises(FileNotFoundError, match="website project"):
         reproduce_this(code=[CODE])
+
+
+def test_a_diagram_is_deterministic_and_draws_what_was_asked():
+    from io import BytesIO
+
+    import matplotlib.pyplot as plt
+
+    from pbc.authoring import FIGURE_COLOURS, diagrams
+
+    def draw() -> tuple[bytes, list[str]]:
+        fig, ax = diagrams.canvas(3.0, 2.0, (0.0, 3.0), (0.0, 2.0))
+        diagrams.state_box(ax, (1.0, 1.0), "state")
+        diagrams.arrow(ax, (1.0, 1.0), (2.5, 1.0), colour=1, linestyle="--")
+        diagrams.circle(ax, (2.0, 0.5), 0.2, filled=True)
+        diagrams.line(ax, [(0.0, 0.0), (1.0, 0.5)], colour="#000000")
+        labels = [t.get_text() for t in ax.texts]
+        buffer = BytesIO()
+        fig.savefig(buffer, format="png", dpi=80)
+        plt.close(fig)
+        return buffer.getvalue(), labels
+
+    first, labels = draw()
+    second, _ = draw()
+    assert first == second
+    assert "state" in labels
+    assert diagrams._colour(1) == FIGURE_COLOURS[1]

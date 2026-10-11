@@ -5,6 +5,7 @@ page shows is read from the repository when the page is built and cannot
 drift from it (ADR 002). ``docs/authoring.md`` describes their use.
 """
 
+from pbc.authoring import diagrams
 from pbc.authoring.datalab import DataCard, data_card
 from pbc.authoring.design import (
     CLAIM_TYPES,
@@ -60,6 +61,7 @@ __all__ = [
     "WidgetScript",
     "build_commit",
     "data_card",
+    "diagrams",
     "excerpt",
     "glossary_page",
     "home_content",

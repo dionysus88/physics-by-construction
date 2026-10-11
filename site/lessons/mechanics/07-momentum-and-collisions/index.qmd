@@ -207,6 +207,59 @@ does not depend on what the contact force is, only on its direction and on
 the energy being conserved. It is the reference the simulation is measured
 against.
 
+Two pictures carry the geometry of the last two sections. The upper one is
+a collision at first touch: the line of centres, which fixes the direction
+of the impulse, and the offset $b$ of the incoming path. The lower one is the
+centre of mass of two unequal masses.
+
+```{python}
+#| label: fig-collision-geometry
+#| fig-cap: "Above, a collision at first touch: the moving sphere, blue, comes in along a path that misses the centre of the target by the offset b, the centres are a distance D apart, and the target leaves along the line of centres. Below, the centre of mass of two unequal masses lies on the line between them, nearer the heavy one, and moves at the constant velocity that the total momentum fixes."
+#| fig-status: conceptual
+#| fig-alt: "Two diagrams. The upper one shows two circles touching. A blue circle comes in from the left along a horizontal arrow that lies a distance b above the horizontal through the centre of a red circle. A dashed line joins the two centres, and a red arrow leaves the red circle along that line, down and to the right. The lower one shows a large blue dot and a small red dot joined by a line, a tick mark for the centre of mass close to the large dot, and an arrow above it pointing right for the constant velocity."
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pbc.authoring import diagrams
+
+fig, (geometry, centre) = plt.subplots(
+    2, 1, figsize=(6.4, 4.8), gridspec_kw={"height_ratios": [1.5, 1]}
+)
+radius, b = 0.5, 0.5
+contact = (-np.sqrt(1.0 - b**2), b)
+diagrams.frame(geometry, (-3.2, 3.2), (-1.5, 1.3))
+diagrams.circle(geometry, (0.0, 0.0), radius, colour=1)
+diagrams.circle(geometry, contact, radius, colour=0)
+diagrams.line(geometry, [(-2.9, 0.0), (-0.5, 0.0)], colour="#57606a", linestyle=":")
+diagrams.arrow(geometry, (-3.0, b), (contact[0] - radius - 0.1, b), colour=0)
+diagrams.text(geometry, (-3.0, b + 0.25), "incoming velocity", ha="left", colour=0)
+diagrams.line(geometry, [(-2.5, 0.0), (-2.5, b)], colour="#57606a", width=1.0)
+diagrams.text(geometry, (-2.4, b / 2), "$b$", ha="left", colour="#57606a")
+diagrams.line(geometry, [contact, (0.0, 0.0)], colour="#1f2328", linestyle="--")
+diagrams.text(geometry, (-0.12, 0.34), "$D$", ha="center")
+diagrams.arrow(geometry, (0.45, -0.26), (1.5, -0.87), colour=1)
+diagrams.text(geometry, (0.7, -1.2), "the target leaves along the line of centres", ha="left", colour=1)
+diagrams.frame(centre, (-0.4, 5.4), (-1.0, 1.9))
+diagrams.line(centre, [(0.3, 0.0), (3.7, 0.0)], colour="#57606a")
+diagrams.circle(centre, (0.3, 0.0), 0.32, colour=0, filled=True)
+diagrams.circle(centre, (3.7, 0.0), 0.16, colour=1, filled=True)
+diagrams.text(centre, (0.3, -0.65), "$m_1$", colour=0)
+diagrams.text(centre, (3.7, -0.65), "$m_2$", colour=1)
+com = 0.3 + 3.4 * 0.2
+diagrams.line(centre, [(com, -0.22), (com, 0.22)], colour="#1f2328", width=2.4)
+diagrams.text(centre, (com, -0.65), "$\\mathbf{X}$", colour="#1f2328")
+diagrams.arrow(centre, (com - 0.5, 1.0), (com + 1.7, 1.0), colour="#1f2328")
+diagrams.text(centre, (com + 0.6, 1.5), "$\\mathbf{P}/M$, constant", colour="#1f2328")
+fig.tight_layout()
+plt.show()
+```
+
+Both are sketches. The upper answers why the offset decides the angle: the
+impulse acts along the line of centres, so only the offset sets its
+direction. The lower answers why the centre of mass is a useful frame: the
+internal forces cancel in pairs, so whatever the particles do, the point
+moves in a straight line.
+
 ### The soft-sphere model
 
 The simulation needs a force, and the simplest one that acts only on
