@@ -12,20 +12,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-from pbc.data.gwosc import Strain, read_strain
+from pbc.data.gwosc import (
+    EVENT_GPS,
+    FILES,
+    PUBLISHED_CHIRP_MASS_SOURCE,
+    PUBLISHED_REDSHIFT,
+    Strain,
+    read_strain,
+)
 from pbc.data.plotting import label_status
 
-EVENT_GPS = 1126259462.4  # GWOSC event record, GWTC-1 v3
-PUBLISHED_CHIRP_MASS_SOURCE = 28.6  # solar masses, GWTC-1
-PUBLISHED_REDSHIFT = 0.09
 BAND = (35.0, 350.0)  # Hz
 G_M_SUN_OVER_C3 = 4.925490947e-6  # s, G * M_sun / c^3
 LAG_L1 = 0.0069  # s; L1 is shifted by the light-travel delay and inverted to overlay H1
-
-FILES = {
-    "H1": "H-H1_GWOSC_4KHZ_R1-1126259447-32.txt.gz",
-    "L1": "L-L1_GWOSC_4KHZ_R1-1126259447-32.txt.gz",
-}
 
 
 def whiten(strain: Strain, band: tuple[float, float] = BAND) -> np.ndarray:

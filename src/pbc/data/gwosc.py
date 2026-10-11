@@ -7,6 +7,14 @@ from pathlib import Path
 
 import numpy as np
 
+EVENT_GPS = 1126259462.4  # GWOSC event record, GWTC-1 v3
+PUBLISHED_CHIRP_MASS_SOURCE = 28.6  # solar masses, GWTC-1
+PUBLISHED_REDSHIFT = 0.09
+FILES = {
+    "H1": "H-H1_GWOSC_4KHZ_R1-1126259447-32.txt.gz",
+    "L1": "L-L1_GWOSC_4KHZ_R1-1126259447-32.txt.gz",
+}
+
 _HEADER = re.compile(
     r"# Gravitational wave strain for (?P<event>\S+) for (?P<detector>\w+)"
 )
