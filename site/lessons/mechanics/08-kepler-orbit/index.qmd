@@ -357,6 +357,52 @@ lower energy means a smaller $a$ in $a = -GM/2\varepsilon$, hence a shorter
 period by Kepler's third law, so that orbit falls steadily ahead of the real
 one.
 
+The two statements can be held in one picture. The conserved vectors are the
+angular momentum $\mathbf h$, which points out of the plane of the orbit and
+cannot turn, and the eccentricity vector $\mathbf e$, which points to the
+perihelion and is the one that a symplectic method lets turn:
+
+```{python}
+#| label: fig-orbit-conserved-vectors
+#| fig-cap: "The exact orbit, left, keeps the direction of the eccentricity vector e and the angular momentum h for ever. A symplectic method, right, keeps h and the size and shape of the ellipse, but turns e, so the whole ellipse turns a little with every orbit; the dotted ellipse is the exact one."
+#| fig-status: conceptual
+#| fig-alt: "Two panels, each with an ellipse, a dot at one focus, a red arrow from the dot to the near end of the ellipse for the eccentricity vector, and a circle with a dot in the lower left corner for the angular momentum pointing out of the page. In the left panel the arrow points along the horizontal axis. In the right panel the ellipse and the arrow are turned by a small angle against the dotted exact ellipse."
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pbc.authoring import diagrams
+
+fig, axes = plt.subplots(1, 2, figsize=(6.4, 3.2))
+eccentricity, semi_latus = 0.6, 1.0
+turn_simulated = np.radians(25.0)
+theta = np.linspace(0.0, 2.0 * np.pi, 300)
+radius = semi_latus / (1.0 + eccentricity * np.cos(theta))
+for ax, name, turn in zip(axes, ("Exact orbit", "Simulated orbit, turned"), (0.0, turn_simulated), strict=True):
+    diagrams.frame(ax, (-2.9, 1.3), (-2.1, 1.9))
+    ax.plot(radius * np.cos(theta), radius * np.sin(theta), color="#57606a", linestyle=":", linewidth=1.2)
+    ax.plot(
+        radius * np.cos(theta + turn),
+        radius * np.sin(theta + turn),
+        color="#00429d",
+        linewidth=1.6,
+    )
+    diagrams.circle(ax, (0.0, 0.0), 0.07, colour="#1f2328", filled=True)
+    diagrams.arrow(ax, (0.0, 0.0), (1.0 * np.cos(turn), 1.0 * np.sin(turn)), colour=1)
+    diagrams.text(ax, (1.1 * np.cos(turn) + 0.15, 1.1 * np.sin(turn) + 0.1), "$\\mathbf{e}$", colour=1)
+    diagrams.circle(ax, (-2.6, -1.8), 0.17, colour=2)
+    diagrams.circle(ax, (-2.6, -1.8), 0.04, colour=2, filled=True)
+    diagrams.text(ax, (-2.3, -1.8), "$\\mathbf{h}$", ha="left", colour=2)
+    diagrams.text(ax, (-2.9, 1.6), name, ha="left")
+fig.tight_layout()
+plt.show()
+```
+
+The sketch exaggerates the turn so that it can be seen; the size of the
+real one is measured in the worked example on precession. The picture says
+what the measurement is a measurement of: the angle between the two arrows
+$\mathbf e$, accumulated over the orbits, while $\mathbf h$ stays put.
+
+
 ## The program {#code}
 
 The reusable code lives in the module `pbc.mechanics.orbit` of the
