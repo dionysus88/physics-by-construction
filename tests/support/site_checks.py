@@ -26,7 +26,7 @@ from pbc.authoring.design import CONTROL_CONTRAST, contrast_ratio
 from pbc.authoring.progress import STORAGE_KEY
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
-from pbc.data.status import allowed_statuses
+from pbc.data.status import allowed_statuses, artifact_types, needs_artifact
 from support.site_server import SiteServer
 
 DESKTOP = {"width": 1280, "height": 800}
@@ -107,6 +107,26 @@ def _name(site_dir: Path, page: Path) -> str:
 # --- Checks on the files -----------------------------------------------------
 
 
+def _artifact_problems(
+    card: dict, dataset: str, status: str, artifact: str | None
+) -> list[str]:
+    if artifact is None and needs_artifact(card):
+        return [
+            f"a figure of {dataset} does not say which artifact it shows; the"
+            " card holds measurements and a modelled artifact"
+        ]
+    if artifact is not None and artifact not in artifact_types(card):
+        return [f"the card of {dataset} has no artifact of type {artifact}"]
+    allowed = allowed_statuses(card, artifact)
+    if status in allowed:
+        return []
+    shown = dataset if artifact is None else f"the {artifact} of {dataset}"
+    return [
+        f"a figure of {shown} is labelled {status!r}; its card"
+        f" allows {', '.join(sorted(allowed))}"
+    ]
+
+
 def check_figure_datasets(
     site_dir: Path, registry_dir: Path = REGISTRY_DIR
 ) -> list[Violation]:
@@ -115,17 +135,42 @@ def check_figure_datasets(
     The lesson filter puts the dataset of a ``fig-dataset`` cell on the status
     label of the caption. A figure of a measured sample is ``measured``,
     ``calibrated``, or ``processed``, never ``simulated``, and a dataset that
-    has no card is an error (ADR 007).
+    has no card is an error (ADR 007). A figure of a model fitted to a dataset
+    (``fig-model-of``) is ``simulated``.
+
+    This compares what a page declares. That a figure made from a dataset
+    declares it is the task of the source check (``support.data_use``); a built
+    page no longer tells where the pixels of a figure came from.
     """
     violations = []
     for page in html_pages(site_dir):
         for _, attributes in _parse(page).elements:
             if "figure-status" not in attributes.get("class", "").split():
                 continue
+            status = attributes.get("data-status", "")
+            model_of = attributes.get("data-model-of")
+            if model_of is not None:
+                if not (registry_dir / f"{model_of}.yaml").is_file():
+                    violations.append(
+                        Violation(
+                            "figure-dataset",
+                            _name(site_dir, page),
+                            f"no card for {model_of}",
+                        )
+                    )
+                elif status != "simulated" or "data-dataset" in attributes:
+                    violations.append(
+                        Violation(
+                            "figure-dataset",
+                            _name(site_dir, page),
+                            f"a figure of a model of {model_of} is labelled"
+                            f" {status!r} or also names a dataset; it is"
+                            " 'simulated' and shows no data",
+                        )
+                    )
             dataset = attributes.get("data-dataset")
             if dataset is None:
                 continue
-            status = attributes.get("data-status", "")
             card = registry_dir / f"{dataset}.yaml"
             if not card.is_file():
                 violations.append(
@@ -135,13 +180,14 @@ def check_figure_datasets(
                         f"no card for {dataset}",
                     )
                 )
-            elif status not in (allowed := allowed_statuses(load_card(card))):
-                violations.append(
-                    Violation(
-                        "figure-dataset",
-                        _name(site_dir, page),
-                        f"a figure of {dataset} is labelled {status!r}; its card"
-                        f" allows {', '.join(sorted(allowed))}",
+            else:
+                violations.extend(
+                    Violation("figure-dataset", _name(site_dir, page), detail)
+                    for detail in _artifact_problems(
+                        load_card(card),
+                        dataset,
+                        status,
+                        attributes.get("data-artifact"),
                     )
                 )
     return violations

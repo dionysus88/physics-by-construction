@@ -17,7 +17,12 @@ from pbc.data.fit import fit_curve
 from pbc.data.flume import read_elevation
 from pbc.data.gwosc import read_strain
 from pbc.data.series import Series
-from pbc.data.status import FIGURE_STATUSES, allowed_statuses, status_of
+from pbc.data.status import (
+    FIGURE_STATUSES,
+    allowed_statuses,
+    needs_artifact,
+    status_of,
+)
 from pbc.data.touchstone import read_touchstone
 from pbc.data.uncertainty import (
     K95,
@@ -105,6 +110,61 @@ def test_selection_interpolation_and_masks_are_disclosed():
     clean = holes.drop_masked()
     assert clean.x.tolist() == [0, 2, 3] and "removed 1 masked" in clean.steps[0]
     assert make_series().drop_masked().is_raw, "nothing removed, nothing to disclose"
+
+
+def test_interpolation_propagates_the_uncertainty_of_both_samples():
+    s = Series(
+        np.array([0.0, 1.0, 3.0]),
+        np.array([0.0, 2.0, 2.0]),
+        "raw-measured",
+        sigma=np.array([0.3, 0.4, 1.2]),
+    )
+
+    onto = s.interpolate_to(np.array([0.0, 0.5, 1.0, 1.5, 3.0, 4.0]))
+
+    # At a sample the uncertainty is the sample's own.
+    assert onto.sigma[[0, 2, 4]] == pytest.approx([0.3, 0.4, 1.2])
+    # Half way between independent samples: sqrt(0.5^2 s0^2 + 0.5^2 s1^2),
+    # not the mean of the two.
+    assert onto.sigma[1] == pytest.approx(0.25)
+    assert onto.sigma[1] < (0.3 + 0.4) / 2
+    # A quarter of the way: weights 0.75 and 0.25.
+    assert onto.sigma[3] == pytest.approx(np.hypot(0.75 * 0.4, 0.25 * 1.2))
+    assert np.isnan(onto.sigma[5]) and np.isnan(onto.y[5])
+
+
+def test_interpolation_skips_a_masked_sample_also_in_the_uncertainty():
+    s = Series(
+        np.array([0.0, 1.0, 2.0]),
+        np.array([0.0, np.nan, 4.0]),
+        "raw-measured",
+        sigma=np.array([0.6, 9.0, 0.8]),
+    )
+
+    onto = s.interpolate_to(np.array([1.0]))
+
+    assert onto.y[0] == pytest.approx(2.0)
+    assert onto.sigma[0] == pytest.approx(0.5)
+
+
+def test_the_statuses_of_a_card_follow_the_artifact_that_is_shown():
+    card = {
+        "artifacts": [
+            {"type": "processed-measured"},
+            {"type": "modelled-reference"},
+        ]
+    }
+
+    assert needs_artifact(card)
+    assert not needs_artifact({"artifacts": [{"type": "raw-measured"}]})
+    assert not needs_artifact({"artifacts": [{"type": "synthetic-test"}]})
+    assert allowed_statuses(card, "processed-measured") == {"processed"}
+    assert allowed_statuses(card, "modelled-reference") == {"simulated"}
+    assert allowed_statuses(card, "raw-measured") == set()
+    assert allowed_statuses({"artifacts": [{"type": "raw-measured"}]}) == {
+        "measured",
+        "processed",
+    }
 
 
 def test_a_series_refuses_inconsistent_shapes_and_an_even_window():

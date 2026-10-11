@@ -428,7 +428,44 @@ of a live provider, so tool results on the page are recomputed, not recorded
    artifact types and figure statuses, sample and download instructions, the
    no-LLM path), and a figure cell names its dataset with `#| fig-dataset:`;
    the source check and the built-site check compare the figure status with
-   the artifact types of that card.
+   the artifact types of that card. A card that holds measurements and a modelled or
+   synthetic artifact (the flume dataset has both) does not decide the
+   status by itself, so a figure of such a dataset also names the artifact
+   it shows with `#| fig-artifact:` and is held to the status of that
+   artifact: its measurements are never `simulated`. A figure of a model
+   fitted to a dataset shows no data: it is `simulated` and names the
+   dataset with `#| fig-model-of:`.
+
+   *What the check establishes, and what it does not.* A figure cannot be
+   trusted to declare its own dataset, so the source check decides which
+   figure cells are made from one (`tests/support/data_use.py`). It follows
+   names through the executed Python cells of the lesson without running
+   them: a name is derived from data when it is bound to something that uses
+   a reader or loader of `pbc.data`, the sample or download directory, a
+   `pbc` module outside that package that imports such a reader (itself or
+   through the `pbc` modules it imports), a path that
+   names `data/samples` or `data/downloads`, or another derived name. A
+   figure cell that mentions such a name and has neither `fig-dataset` nor
+   `fig-model-of` fails the build; a measured dataset's figure labelled
+   `simulated` therefore fails whether or not it names the dataset. Names
+   count for the whole lesson whatever the order of its cells, which errs
+   towards asking for a declaration.
+
+   This is an analysis of names, not a proof about pixels. It does not see
+   data that reaches a figure without a name the lesson binds: a file opened
+   by a path that names neither directory (a copy elsewhere, a path put
+   together from parts), dynamic access (`getattr`, `importlib`, `exec`,
+   `globals()`), a library outside `pbc` that reads a sample itself, state a
+   library keeps between cells, and cells in a language other than Python.
+   It also takes two declarations at their word, and leaves them to the
+   scientific review: `fig-model-of`, that the figure draws only the model
+   and none of the measurements, and `fig-artifact`, that the figure shows
+   the artifact it names and not another artifact of the same card.
+   The built-site check compares only what a page declares; a built page no
+   longer tells where a figure came from. The guarantee is therefore: every
+   figure whose cell is linked by names to a registered dataset declares it
+   and carries a status the card allows. It is not: no figure on the site
+   can misstate its origin.
 4. **Lesson.** The page discloses preprocessing and calibration, constructs
    the model, shows measured-versus-model panels with residuals or
    uncertainties, keeps measurements distinct from modelled references,

@@ -31,21 +31,42 @@ def status_of(artifact_type: str, steps: tuple[str, ...] = ()) -> str:
     return status
 
 
-def allowed_statuses(card: dict) -> set[str]:
+def _statuses_of_type(kind: str) -> set[str]:
+    status = STATUS_OF_ARTIFACT[kind]
+    # A figure of a raw or calibrated artifact selects or scales.
+    return {status, "processed"} if status in ("measured", "calibrated") else {status}
+
+
+def artifact_types(card: dict) -> set[str]:
+    """The known artifact types on ``card``."""
+    kinds = {artifact.get("type") for artifact in card.get("artifacts") or []}
+    return {kind for kind in kinds if kind in STATUS_OF_ARTIFACT}
+
+
+def needs_artifact(card: dict) -> bool:
+    """Whether a figure of the dataset has to say which artifact it shows.
+
+    A card that holds measurements and a modelled or synthetic artifact
+    allows ``simulated`` for the one and not for the other, so the dataset
+    alone does not decide the status of a figure.
+    """
+    statuses = {STATUS_OF_ARTIFACT[kind] for kind in artifact_types(card)}
+    return "simulated" in statuses and len(statuses) > 1
+
+
+def allowed_statuses(card: dict, artifact_type: str | None = None) -> set[str]:
     """Statuses a figure from the dataset of ``card`` may carry.
 
     A raw or calibrated artifact also allows ``processed``, since a figure
     selects or scales. ``conceptual`` is never allowed for a figure of the data
-    itself, and ``simulated`` only for a card with a modelled or synthetic
-    artifact.
+    itself, and ``simulated`` only for a modelled or synthetic artifact. With
+    ``artifact_type`` the answer is for a figure of that artifact alone; it is
+    empty when the card has no such artifact.
     """
+    kinds = artifact_types(card)
+    if artifact_type is not None:
+        kinds &= {artifact_type}
     allowed: set[str] = set()
-    for artifact in card.get("artifacts") or []:
-        kind = artifact.get("type")
-        if kind not in STATUS_OF_ARTIFACT:
-            continue
-        status = STATUS_OF_ARTIFACT[kind]
-        allowed.add(status)
-        if status in ("measured", "calibrated"):
-            allowed.add("processed")
+    for kind in kinds:
+        allowed |= _statuses_of_type(kind)
     return allowed
