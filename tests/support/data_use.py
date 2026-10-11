@@ -40,6 +40,7 @@ TOOLS = frozenset(
         "card",
         "check",
         "fit",
+        "pipeline",
         "plotting",
         "series",
         "status",

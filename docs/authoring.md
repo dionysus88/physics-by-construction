@@ -1229,6 +1229,40 @@ reasons).
 To add a dataset, copy the card of a spiked one, read the record and the
 files, and write the dossier; do not copy the rights answers of another card.
 
+## Analysis pipelines
+
+A lesson that reports numbers from an analysis (a sweep, a statistic with its
+uncertainty) builds the analysis as a function and collects its results in a
+`Report` of `pbc.data.pipeline`. The report lists quantities in a fixed order,
+each with its unit, an optional standard uncertainty, and the number of
+decimals it is shown with. The build compares the report as shown with a
+committed expectation:
+
+```python
+from pbc.data.pipeline import EXPECTED_DIR, check_report
+
+check_report(report, EXPECTED_DIR / "projectile-range.txt")  # raises ReportMismatch
+```
+
+- `sweep(name, values, func)` evaluates a function that returns named results
+  at each value; `estimate(repetitions)` is a mean with its standard error;
+  `Report.rows()` gives the pairs for a result table.
+- The comparison is on the rendered text, so a change below the displayed
+  precision passes and a change of a shown digit fails, naming the line.
+  Choose the decimals well above round-off so another machine shows the same
+  text.
+- An expectation lives in `reports/expected/<name>.txt`, not in the lesson
+  directory (which holds only its page). Write it with
+  `uv run python -m pbc.data.reports --update`, read the diff, and commit it;
+  `uv run python -m pbc.data.reports` says which reports differ. Register a
+  new report in `pbc.data.reports.REPORTS`.
+- A function that draws random numbers takes a seed. An expectation records
+  that the analysis still gives the numbers someone accepted; whether they are
+  right is shown by tests against something independent of the code.
+- A module of `pbc.data` that reads a sample is a data source for the figure
+  check; `pipeline.py` reads nothing and is listed among the tools in
+  `tests/support/data_use.py`.
+
 ## Link maintenance
 
 External links live in the reference register, `site/references.yaml`

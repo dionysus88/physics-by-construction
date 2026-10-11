@@ -1,0 +1,28 @@
+Waves over a submerged bar, gauge 5, wave condition 1
+window: 5.0 s
+window end: 14.0 s
+repetitions: 5
+RMS elevation, mean of repetitions: 8.19 +/- 0.01 mm
+wave period, mean of repetitions: 1.50 s
+period resolution of the window: 0.25 s
+RMS elevation, spread over the window ends: 0.38 mm
+RMS elevation, window end 8 s: 8.57 mm
+wave period, window end 8 s: 1.52 s
+RMS elevation, window end 10 s: 8.42 mm
+wave period, window end 10 s: 1.51 s
+RMS elevation, window end 12 s: 8.31 mm
+wave period, window end 12 s: 1.50 s
+RMS elevation, window end 14 s: 8.19 mm
+wave period, window end 14 s: 1.50 s
+i-VoF (OpenFOAM): RMS elevation: 8.06 mm
+i-VoF (OpenFOAM): RMS elevation, model minus measurement: -0.13 mm
+i-VoF (OpenFOAM): RMS elevation, model minus measurement in standard errors: -12.5
+i-VoF (OpenFOAM): wave period: 1.50 s
+M-sigma (MIKE 3): RMS elevation: 7.98 mm
+M-sigma (MIKE 3): RMS elevation, model minus measurement: -0.21 mm
+M-sigma (MIKE 3): RMS elevation, model minus measurement in standard errors: -20.2
+M-sigma (MIKE 3): wave period: 1.50 s
+D-SPH (DualSPHysics): RMS elevation: 7.97 mm
+D-SPH (DualSPHysics): RMS elevation, model minus measurement: -0.22 mm
+D-SPH (DualSPHysics): RMS elevation, model minus measurement in standard errors: -21.2
+D-SPH (DualSPHysics): wave period: 1.50 s
