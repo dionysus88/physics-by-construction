@@ -249,6 +249,40 @@ EULER = "PhysicsByConstruction.Mechanics.EulerOscillator"
 lean_evidence(KINEMATICS, EULER)
 ```
 
+Between a statement on paper and a theorem on this page there are five steps,
+and the lesson depends on each:
+
+```{python}
+#| label: fig-theorem-pipeline
+#| fig-cap: "From a statement to a page. The hypotheses are part of the statement and are written out, not assumed. Lean accepts the file only if the proof builds, CI records the commit and the versions that built it, and the page reads its listings from that file. The machine checks the proof and the build record; the page is generated from that file and checked by the site build. Whether the statement is the right one to prove is a judgement of the author and the reader."
+#| fig-status: conceptual
+#| fig-alt: "A row of five boxes joined by arrows: statement, hypotheses, Lean, CI record, page. A bracket under the statement and hypotheses boxes is labelled judged by a person. A bracket under the Lean and CI record boxes is labelled checked by a machine."
+import matplotlib.pyplot as plt
+
+from pbc.authoring import diagrams
+
+fig, ax = diagrams.canvas(6.4, 2.6, (-0.2, 12.8), (-1.2, 2.4))
+steps = ("statement", "hypotheses", "Lean", "CI record", "page")
+for i, name in enumerate(steps):
+    x = 1.1 + 2.6 * i
+    diagrams.state_box(ax, (x, 1.2), name, width=2.0, height=0.9, colour=0 if i < 2 else 1)
+    if i:
+        diagrams.arrow(ax, (x - 2.6 + 1.05, 1.2), (x - 1.05, 1.2), colour="#57606a")
+diagrams.line(ax, [(0.0, 0.3), (0.0, 0.0), (4.8, 0.0), (4.8, 0.3)], colour=0)
+diagrams.text(ax, (2.4, -0.45), "judged by a person", colour=0)
+diagrams.line(ax, [(5.3, 0.3), (5.3, 0.0), (10.0, 0.0), (10.0, 0.3)], colour=1)
+diagrams.text(ax, (7.65, -0.45), "checked by a machine", colour=1)
+fig.tight_layout()
+plt.show()
+```
+
+The diagram is a sketch of the process, and nothing in it is computed. It
+answers a question the section raises: if the compiler checks the proof, what
+is left for the reader to check? The statement and its hypotheses. A true
+theorem of a model that does not describe the oscillator proves nothing about
+the oscillator, and the assumptions list above is there so that this
+judgement can be made.
+
 ### Constant acceleration
 
 The first theorem. Its two hypotheses are the position and the velocity of
