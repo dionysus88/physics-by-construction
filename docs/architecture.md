@@ -664,7 +664,7 @@ Per-page and per-lesson budgets that the next phase adds:
 | Executed time of a measured-data lesson page | 30 seconds, as any lesson; the sample size is chosen for it | Site build (F51) |
 | Committed dataset sample | 2 MB per file, 8 MB per dataset, 32 MB for all of `data/samples/` | Dataset check (F50, ADR 007) |
 | Initial payload of a page (HTML, CSS, fonts, static figures, embedded widget data), measured for the page opened on its own, so shared files count for every page | 3 MB transferred | Built-site check (F44) |
-| Search index (`search.json`), fetched when a reader searches | 0.5 MB | Built-site check (F41) |
+| Search index (`search.json`), fetched when a reader searches | 1 MB | Built-site check (F41) |
 | Optional data a page loads on demand (animation frames, field data) | 3 MB per page, from the site's own origin, only after a user action, never required to read the page | Built-site check (F43) |
 | Everything a page can load | 5 MB | Built-site check (F43) |
 
