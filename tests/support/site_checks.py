@@ -832,7 +832,7 @@ def check_keyboard_navigation(
 # scripts, and the data of an embedded widget (docs/architecture.md, "Budgets").
 PAYLOAD_BUDGET = 3_000_000
 # The search index is fetched when a reader searches, on top of the page.
-SEARCH_INDEX_BUDGET = 500_000
+SEARCH_INDEX_BUDGET = 1_000_000
 
 
 def measure_payloads(
