@@ -81,7 +81,10 @@ def test_verify_job_runs_checks_only_through_verify_sh():
 
 
 def test_verify_job_has_the_agreed_timeout():
-    assert load(CI)["jobs"]["verify"]["timeout-minutes"] == 30
+    # 45 minutes since 2026-10-11, by the owner: runs took 27 to 29 minutes
+    # and were cancelled at the 30 minutes of ADR 003. F58 brings the
+    # verification back within its budget (docs/architecture.md, "Budgets").
+    assert load(CI)["jobs"]["verify"]["timeout-minutes"] == 45
 
 
 def test_built_site_is_uploaded_when_a_check_failed():
