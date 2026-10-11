@@ -1,0 +1,291 @@
+---
+title: "Lean exercises on your machine"
+description: >-
+  Three theorems of constant acceleration and of an impulse between two
+  particles, given as Lean 4 stubs to complete locally, with hints, and with
+  the solutions that CI compiles, read from the repository.
+lesson:
+  id: lean-exercises-on-your-machine
+  strand: lean
+  order: 4
+  difficulty: 2
+  course: mechanics
+  methods: [lean]
+  outcomes:
+    - Complete a Lean 4 stub on your own machine and check it with the pinned toolchain
+    - Prove an identity of constant acceleration and a momentum balance by substitution and algebra
+    - Say why the site shows a stub as not verified and a solution as checked
+  related: []
+  format: 2
+  prerequisites:
+    lessons: [proving-what-the-simulation-showed]
+    outside:
+      - "Logic: reading a statement that says if these hypotheses hold, then this conclusion holds"
+      - "Algebra: expanding and factorising polynomials in several variables"
+  lean-modules:
+    - PhysicsByConstruction.Exercises.ConstantAcceleration
+    - PhysicsByConstruction.Exercises.Impulse
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+The first Lean lesson showed finished proofs. Reading a proof is not writing
+one: the tactics only make sense once you have been stuck with a goal that
+will not close. This lesson gives you three theorems to prove yourself, in
+the same Lean project that checks the proofs of the other lessons.
+
+The site does not run Lean for you, and there is no editor on this page. You
+work in a clone of the repository, with the pinned toolchain, and the compiler
+tells you whether a proof is finished. What the site adds is the statement, a
+sequence of hints that you open one at a time, and a solution that CI compiles
+on every change.
+
+## Assumptions
+
+1. **The model is that of the kinematics lesson.** Position and velocity at
+   time $t$ are the two formulas of constant acceleration, taken as the
+   hypotheses `hx` and `hv`. Nothing is assumed about a program.
+2. **A non-zero acceleration where the statement divides by it.** The
+   hypothesis `ha : a ≠ 0` is part of the statement: with $a = 0$ the speed
+   does not change and the distance cannot be recovered from it.
+3. **Non-zero masses in the impulse exercise.** `hm₁` and `hm₂` let the
+   impulse $J$ be turned into a change of velocity, $J / m$.
+4. **Real numbers, not floating-point numbers.** As in the other Lean lessons.
+
+## How an exercise works {#explanation}
+
+Each exercise is a file of the repository, `lean/Exercises/<Name>.lean`. It
+states one or more theorems and ends each proof with `sorry`, Lean's word for
+"proof missing". Lean accepts the file and warns, for every `sorry`: the
+theorem is stated and nothing is proved. You replace the `sorry` with tactics
+until the warning is gone.
+
+The stubs are not in the library that the other lessons display. The library
+may not contain `sorry`, and the check that guarantees it
+(`./scripts/check-lean.sh`) would fail on a stub. The stubs therefore live in
+`lean/Exercises/`, outside the library, and the check treats them in a different
+way. For each stub it requires a module of the library, in
+`lean/PhysicsByConstruction/Exercises/`, with the same name and the same
+theorem statements, and a proof without `sorry` that it compiles and audits
+like every other proof. A stub without a solution, or with a statement that
+differs from its solution's, fails the check (the decision record on exercise
+stubs is [ADR 011]{.given}).
+
+So on this page a stub is shown in a box marked **not verified**, because it
+proves nothing, and a solution is shown like any proof of the project, read
+from the file that was compiled.
+
+To work on an exercise, open the `lean/` directory of your clone in an editor
+with Lean support, edit the file, and check it:
+
+::: {.not-verified}
+```console
+$ cd lean
+$ lake env lean Exercises/ConstantAcceleration.lean
+```
+:::
+
+## The exercises {#code}
+
+```{python}
+#| echo: false
+from pbc.authoring import lean_evidence, lean_excerpt, reproduce_this
+from pbc.authoring.exercises import lean_stub
+
+ACCELERATION = "PhysicsByConstruction.Exercises.ConstantAcceleration"
+IMPULSE = "PhysicsByConstruction.Exercises.Impulse"
+
+lean_evidence(ACCELERATION, IMPULSE)
+```
+
+The box above states what compiled the *solutions*. The stubs shown in the
+exercises below are the files `lean/Exercises/ConstantAcceleration.lean` and
+`lean/Exercises/Impulse.lean`, which the same check compiled with nothing but
+their `sorry` warnings.
+
+## Worked examples
+
+A theorem covers every choice of the numbers, and a run covers a few. Before
+you prove a statement, it is worth seeing what it says about one choice. The
+cell evaluates both sides of the first two statements for a particle thrown up
+at [20 m/s]{.given} and slowed by gravity, and the momentum balance for two carts.
+
+```{python}
+import numpy as np
+
+a, v0, x0, t = -9.81, 20.0, 0.0, 1.5  # m/s^2, m/s, m, s
+x = x0 + v0 * t + a * t**2 / 2
+v = v0 + a * t
+print(f"x - x0                 = {x - x0:.4f} m")
+print(f"(v^2 - v0^2) / (2 a)   = {(v**2 - v0**2) / (2 * a):.4f} m")
+print(f"t                      = {t:.4f} s")
+print(f"(v - v0) / a           = {(v - v0) / a:.4f} s")
+
+m1, m2, u1, u2, J = 0.5, 1.5, 2.0, -1.0, 0.8  # kg, kg, m/s, m/s, N s
+w1, w2 = u1 - J / m1, u2 + J / m2
+print(f"momentum before        = {m1 * u1 + m2 * u2:.4f} kg m/s")
+print(f"momentum after         = {m1 * w1 + m2 * w2:.4f} kg m/s")
+```
+
+```{python}
+#| label: fig-two-sides
+#| fig-status: simulated
+#| fig-cap: "Both sides of the first statement, the distance covered and the change of the squared speed divided by 2a, against time for the thrown particle."
+#| fig-alt: "Plot of distance in metres against time in seconds from 0 to 3. A thick blue solid curve of the distance covered rises, bends over near 2 seconds and falls. A white dashed curve of the change of the squared speed divided by 2a lies exactly on it, so the two cannot be told apart."
+import matplotlib.pyplot as plt
+
+times = np.linspace(0.0, 3.0, 61)
+distance = v0 * times + a * times**2 / 2
+speed = v0 + a * times
+fig, ax = plt.subplots(figsize=(6.4, 3.4))
+ax.plot(times, distance, color="#00429d", linewidth=3, label="x - x0")
+ax.plot(times, (speed**2 - v0**2) / (2 * a), color="white", linestyle="--",
+        linewidth=1.2, label="(v^2 - v0^2) / (2 a)")
+ax.set_xlabel("time (s)")
+ax.set_ylabel("distance (m)")
+ax.legend(loc="lower center")
+plt.show()
+```
+
+The two sides agree to the digits shown. That is an instance of each
+statement, not a proof of it: the proof is what you write in Lean.
+
+## Limits {#limits}
+
+- **The site cannot check your proof.** There is no Lean in the page. The
+  compiler on your machine is the judge; a proof that compiles there, with
+  the toolchain pinned in `lean/lean-toolchain`, is complete.
+- **Not graded and not recorded.** Nothing you do is sent anywhere or
+  stored by the site.
+- **The solutions are public.** They are in the repository. The hints are a
+  courtesy for a reader who wants to find the proof alone.
+- **Statements, not physics.** A theorem here says what follows from the
+  hypotheses; whether a real motion has constant acceleration is a question
+  for measurement.
+
+::: {.exercise .self-check}
+Why is `ha : a ≠ 0` a hypothesis of `displacement_from_speeds` and not
+something the proof can derive?
+
+::: {.solution}
+Because the statement is false without it. With $a = 0$ the speed never
+changes, so $v^2 - v_0^2 = 0$ for every distance, and in Lean division by
+zero is zero, so the right-hand side is zero while $x - x_0 = v_0 t$ is not.
+A hypothesis is the place where the theorem says what it needs.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**The distance from the speeds.** Prove that, with constant acceleration, the
+distance covered is the change of the squared speed divided by $2a$.
+
+```{python}
+#| echo: false
+lean_stub("ConstantAcceleration", "displacement_from_speeds")
+```
+
+::: {.hint}
+The two hypotheses give $x$ and $v$ as expressions. Remove the variables
+`x` and `v` first.
+:::
+
+::: {.hint}
+The `subst` tactic does that, for both hypotheses at once.
+:::
+
+::: {.hint}
+The goal now has a division by $2a$. The tactic `field_simp` clears it, using
+`ha`, and `ring` closes the remaining identity of polynomials.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+lean_excerpt(ACCELERATION, "displacement_from_speeds")
+```
+
+After the substitution both sides are rational expressions in the same
+variables; `field_simp` multiplies out the denominator and `ring` checks the
+identity.
+:::
+:::
+
+::: {.exercise}
+**The time from the speeds.** Prove that the time taken is the change of speed
+divided by the acceleration.
+
+```{python}
+#| echo: false
+lean_stub("ConstantAcceleration", "time_from_speeds")
+```
+
+::: {.hint}
+Only one hypothesis is needed, and it is the one about `v`.
+:::
+
+::: {.hint}
+The same three tactics as in the first exercise work: substitute, clear the
+division, and close with `ring`.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+lean_excerpt(ACCELERATION, "time_from_speeds")
+```
+:::
+:::
+
+::: {.exercise}
+**Momentum under an impulse.** Two particles on a line exchange an impulse:
+the first loses $J$, the second gains it. Prove that the total momentum is the
+same before and after.
+
+```{python}
+#| echo: false
+lean_stub("Impulse", "impulse_momentum")
+```
+
+::: {.hint}
+The hypotheses `h₁` and `h₂` define the new velocities. Substitute them.
+:::
+
+::: {.hint}
+The goal now contains each mass times the impulse divided by that same mass.
+They cancel only because the masses are not zero: that is what `hm₁` and `hm₂`
+are for, and what `field_simp` uses.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+lean_excerpt(IMPULSE, "impulse_momentum")
+```
+
+Compare with the collision lesson, which proves the same conservation for a
+rule with a direction and a sum over axes; here the impulse is given, and the
+proof is the cancellation alone.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "lean/Exercises/ConstantAcceleration.lean",
+        "lean/Exercises/Impulse.lean",
+        "lean/PhysicsByConstruction/Exercises/ConstantAcceleration.lean",
+        "lean/PhysicsByConstruction/Exercises/Impulse.lean",
+    ],
+    tests=["tests/unit/test_lean_exercises.py"],
+)
+```
