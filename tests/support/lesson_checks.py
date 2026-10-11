@@ -25,7 +25,7 @@ from typing import Any
 
 import yaml
 
-from pbc.authoring import glossary, is_numeric_console_block
+from pbc.authoring import evidence, glossary, is_numeric_console_block
 from pbc.authoring import path as learning_path
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
@@ -1468,3 +1468,16 @@ def check_glossary(repository: Path) -> list[Violation]:
                 )
             )
     return violations
+
+
+# --- The evidence map ---------------------------------------------------------
+
+
+def check_evidence(repository: Path) -> list[Violation]:
+    """Every claim of every lesson names evidence, and each name is an
+    executed cell of the lesson, a register or card key, a Lean theorem, or a
+    recorded run (pbc.authoring.evidence)."""
+    return [
+        Violation("evidence", problem.page, problem.message)
+        for problem in evidence.problems(evidence.read_all(repository), repository)
+    ]

@@ -260,7 +260,7 @@ of the method and the step, not of the physics. [Explicit Euler on linear
 drag converges to the terminal velocity only for $\Delta t < 2\tau$, and
 alternates around it for $\Delta t > \tau$.]{.claim
 type="numerically-verified" scope="linear drag, explicit Euler"
-evidence="exercise 1 of this lesson"} The first exercise runs into it on
+evidence="large-step-velocity"} The first exercise runs into it on
 purpose.
 
 ## The program {#code}
@@ -658,6 +658,7 @@ the overshoot halving every step. With $\Delta t = 5$ s the factor is
 $-1.5$: the same alternation, but growing by half every step, without bound.
 
 ```{python}
+#| label: large-step-velocity
 runs = {step: simulate(rest, falling, step, 10) for step in (3.0, 5.0)}
 table(
     [(i, runs[3.0].v[i, 0], runs[5.0].v[i, 0]) for i in range(11)],

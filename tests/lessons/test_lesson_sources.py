@@ -68,3 +68,8 @@ def test_the_reference_register_follows_its_schema_and_is_used(repository: Path)
 def test_every_outside_prerequisite_has_a_glossary_entry(repository: Path):
     violations = lesson_checks.check_glossary(repository)
     assert not violations, describe(violations)
+
+
+def test_every_claim_names_evidence_that_exists(repository: Path):
+    violations = lesson_checks.check_evidence(repository)
+    assert not violations, describe(violations)
