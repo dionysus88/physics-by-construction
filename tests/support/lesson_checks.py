@@ -27,6 +27,9 @@ import yaml
 
 from pbc.authoring import glossary, is_numeric_console_block
 from pbc.authoring import path as learning_path
+from pbc.data import REGISTRY_DIR
+from pbc.data.card import load_card
+from pbc.data.status import allowed_statuses
 from support.site_checks import Violation
 
 # --- The format ---------------------------------------------------------------
@@ -1034,6 +1037,20 @@ def _figure_cells(lesson: Lesson) -> Iterator[tuple[Cell, dict[str, Any]]]:
                 yield cell, options
 
 
+# A figure cell that reads a registered sample or uses a data reader or
+# adapter is made from a dataset and has to name it (ADR 007).
+_DATA_USE = re.compile(
+    r"\bpbc\.data\b|\b(?:SAMPLES_DIR|DOWNLOADS_DIR|read_strain|read_touchstone"
+    r"|read_elevation|strain_series|transmission_series|measured_elevation"
+    r"|modelled_elevation)\b"
+)
+
+
+def _dataset_card(dataset: str) -> dict | None:
+    path = REGISTRY_DIR / f"{dataset}.yaml"
+    return load_card(path) if path.is_file() else None
+
+
 def _texts_of(value: Any) -> list[str]:
     return [
         item
@@ -1114,6 +1131,28 @@ def _format_2_problems(
                 f"figure cell '{options.get('label') or _first_line(cell.code)}' has no"
                 f" 'fig-status' of {', '.join(FIGURE_STATUSES)}",
             )
+        dataset = options.get("fig-dataset")
+        if dataset is None and _DATA_USE.search(cell.code):
+            yield (
+                "figure-dataset",
+                f"figure cell '{options.get('label') or _first_line(cell.code)}' uses"
+                " a data reader or sample but has no 'fig-dataset'; name its dataset"
+                " so that the status can be checked against the card",
+            )
+        if dataset is not None:
+            card = _dataset_card(str(dataset))
+            if card is None:
+                yield (
+                    "figure-dataset",
+                    f"'fig-dataset' names {dataset!r}, which has no card in"
+                    " data/registry",
+                )
+            elif options.get("fig-status") not in allowed_statuses(card):
+                yield (
+                    "figure-dataset",
+                    f"a figure of {dataset} cannot be {options.get('fig-status')!r};"
+                    f" its card allows {', '.join(sorted(allowed_statuses(card)))}",
+                )
         for key in ("fig-alt", "fig-cap"):
             for value in _texts_of(options.get(key)):
                 for word in value.split():

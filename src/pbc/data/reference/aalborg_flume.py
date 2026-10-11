@@ -14,7 +14,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pbc.data.adapters import measured_elevation, modelled_elevation
 from pbc.data.flume import Elevation, read_elevation
+from pbc.data.plotting import add_credit, measured_vs_model
 
 WAVE_CONDITION = 1
 GAUGE = 5
@@ -27,7 +29,6 @@ MODELS = {  # label: (folder in the archive, file)
     "M-sigma (MIKE 3)": ("Msigma", f"Msigma_WC{WAVE_CONDITION}_surfaceElevation_A.csv"),
     "D-SPH (DualSPHysics)": ("DSPH", f"DSPH_WC{WAVE_CONDITION}_surfaceElevation_A.csv"),
 }
-COLORS = ["#D55E00", "#009E73", "#CC79A7"]
 
 
 def sample_name(source: str) -> str:
@@ -105,53 +106,26 @@ def dominant_period(time: np.ndarray, values: np.ndarray, start: float, stop: fl
 
 def make_figure(data_dir: Path) -> plt.Figure:
     experiment, models = load(data_dir)
-    t = experiment.time
-    mean = experiment.column(GAUGE, "mean")
-    unc = experiment.column(GAUGE, "expanded unc")
-    fig, (top, bottom) = plt.subplots(
-        2, 1, figsize=(9, 7), sharex=True, constrained_layout=True
+    fig, (top, bottom) = measured_vs_model(
+        measured_elevation(experiment, GAUGE),
+        {name: modelled_elevation(model) for name, model in models.items()},
+        window=WINDOW,
+        figsize=(9, 7),
     )
-    top.fill_between(
-        t,
-        mean - unc,
-        mean + unc,
-        color="#0072B2",
-        alpha=0.3,
-        label="95 % expanded unc.",
-    )
-    top.plot(t, mean, color="#0072B2", lw=1.5, label="measured, mean of 5 repetitions")
-    for (name, model), color in zip(models.items(), COLORS, strict=True):
-        top.plot(model.time, model.values[:, 0], color=color, lw=1, ls="--", label=name)
-        rms = window_rms(experiment, model) * 1e3
-        bottom.plot(
-            t,
-            residual(experiment, model) * 1e3,
-            color=color,
-            lw=1,
-            label=f"{name}: RMS {rms:.2f} mm in the window",
-        )
-    for axis in (top, bottom):
-        axis.axvspan(*WINDOW, color="0.5", alpha=0.12, lw=0)
-    top.set_ylabel("surface elevation [m]")
     top.set_title(
-        f"Wave condition {WAVE_CONDITION}, wave gauge {GAUGE}: processed measurement "
-        "(solid) and modelled references (dashed)"
+        f"Gauge {GAUGE}, wave condition {WAVE_CONDITION}: measurement (solid), "
+        "modelled references (dashed)"
     )
-    top.legend(fontsize=8, ncols=2)
-    bottom.set_ylabel("model minus measured mean [mm]")
-    bottom.set_xlabel("time [s]")
     bottom.set_title(
-        "Simulated minus measured (model interpolated to 150 Hz); shaded: comparison "
-        "window, outside it start-up transients and run ends dominate"
+        "Model minus measurement (model interpolated to 150 Hz); shaded: comparison "
+        "window"
     )
-    bottom.legend(fontsize=8)
     top.set_xlim(0, SAMPLE_END)
-    fig.text(
-        0.01,
-        -0.02,
+    add_credit(
+        fig,
         "Data: Andersen, Eldrup, Ferri, Verao Fernandez, Aalborg University, Zenodo "
         "10.5281/zenodo.15049542, CC BY 4.0. Subset of the published files; "
-        "interpolation for the residual is ours.",
-        fontsize=7,
+        "interpolation for the residual is ours. Band: one standard uncertainty "
+        "of the mean (the file gives the 95 % expanded one).",
     )
     return fig

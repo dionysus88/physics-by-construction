@@ -1135,6 +1135,30 @@ def test_an_unknown_format_is_reported(make_repository: Repository):
             "fig-status",
         ),
         (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+                "#| fig-dataset: gw150914-strain\n"
+            },
+            "figure-dataset",
+            "cannot be 'simulated'",
+        ),
+        (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: processed\n"
+                "#| fig-dataset: no-such-dataset\n"
+            },
+            "figure-dataset",
+            "no card",
+        ),
+        (
+            {
+                "#| fig-status: simulated\n": "#| fig-status: simulated\n"
+                "from pbc.data.touchstone import read_touchstone\n"
+            },
+            "figure-dataset",
+            "no 'fig-dataset'",
+        ),
+        (
             {"A straight line that rises": "A line with slope 0.5 that rises"},
             "typed-number",
             "0.5",
@@ -1158,6 +1182,19 @@ def test_a_violation_of_format_2_is_reported(
 
     assert rule in rules(violations), details(violations)
     assert text in details(violations)
+
+
+def test_a_figure_of_a_dataset_with_a_status_its_card_allows_passes(
+    make_format_2: Repository,
+):
+    repository = make_format_2(
+        {
+            "#| fig-status: simulated\n": "#| fig-status: processed\n"
+            "#| fig-dataset: gw150914-strain\n"
+        }
+    )
+
+    assert "figure-dataset" not in rules(format_2_checks(repository))
 
 
 def test_given_values_and_math_are_not_hand_typed_numbers(make_format_2: Repository):

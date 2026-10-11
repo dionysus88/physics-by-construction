@@ -24,6 +24,9 @@ from playwright.sync_api import Browser, BrowserContext, Page, Response, Route
 
 from pbc.authoring.design import CONTROL_CONTRAST, contrast_ratio
 from pbc.authoring.progress import STORAGE_KEY
+from pbc.data import REGISTRY_DIR
+from pbc.data.card import load_card
+from pbc.data.status import allowed_statuses
 from support.site_server import SiteServer
 
 DESKTOP = {"width": 1280, "height": 800}
@@ -102,6 +105,46 @@ def _name(site_dir: Path, page: Path) -> str:
 
 
 # --- Checks on the files -----------------------------------------------------
+
+
+def check_figure_datasets(
+    site_dir: Path, registry_dir: Path = REGISTRY_DIR
+) -> list[Violation]:
+    """A figure made from a dataset carries a status its card allows.
+
+    The lesson filter puts the dataset of a ``fig-dataset`` cell on the status
+    label of the caption. A figure of a measured sample is ``measured``,
+    ``calibrated``, or ``processed``, never ``simulated``, and a dataset that
+    has no card is an error (ADR 007).
+    """
+    violations = []
+    for page in html_pages(site_dir):
+        for _, attributes in _parse(page).elements:
+            if "figure-status" not in attributes.get("class", "").split():
+                continue
+            dataset = attributes.get("data-dataset")
+            if dataset is None:
+                continue
+            status = attributes.get("data-status", "")
+            card = registry_dir / f"{dataset}.yaml"
+            if not card.is_file():
+                violations.append(
+                    Violation(
+                        "figure-dataset",
+                        _name(site_dir, page),
+                        f"no card for {dataset}",
+                    )
+                )
+            elif status not in (allowed := allowed_statuses(load_card(card))):
+                violations.append(
+                    Violation(
+                        "figure-dataset",
+                        _name(site_dir, page),
+                        f"a figure of {dataset} is labelled {status!r}; its card"
+                        f" allows {', '.join(sorted(allowed))}",
+                    )
+                )
+    return violations
 
 
 def check_images(site_dir: Path) -> list[Violation]:

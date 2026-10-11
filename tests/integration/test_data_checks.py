@@ -301,6 +301,23 @@ def test_the_data_package_imports_no_network_module():
                 assert name.split(".")[0] not in NETWORK_MODULES, f"{path}: {name}"
 
 
+DATA_CARD_HELPER = ROOT / "src/pbc/authoring/datalab.py"
+
+
+def test_the_page_helper_that_names_the_download_command_only_prints_it():
+    """The data card tells a learner how to download the full data; the build
+    never runs that command and the helper imports nothing that could."""
+    tree = ast.parse(DATA_CARD_HELPER.read_text())
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    assert not imported & (NETWORK_MODULES | {"subprocess", "os", "shutil"})
+    assert "fetch-data" in DATA_CARD_HELPER.read_text()
+
+
 def test_no_lesson_and_no_verification_step_names_a_portal_or_the_download_script():
     sources = [
         *ROOT.glob("site/**/*.qmd"),
@@ -318,6 +335,8 @@ def test_no_lesson_and_no_verification_step_names_a_portal_or_the_download_scrip
             continue
         if path.is_relative_to(ROOT / "src/pbc/data"):
             continue  # its captions name the sources; see the import test above
+        if path == DATA_CARD_HELPER:
+            continue  # tells the reader the download command; see the test below
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")

@@ -82,6 +82,38 @@ ax.legend()
 plt.show()
 ```
 
+## Measured data
+
+The pattern of a measured-data lab (docs/authoring.md, "Measured data"): the
+data card of the dataset, rendered from its card, and a figure made from the
+committed sample whose status the build checks against that card.
+
+```{python}
+#| echo: false
+from pbc.authoring import data_card
+
+data_card("npl-onwafer-sparameters")
+```
+
+```{python}
+#| label: fig-measured-transmission
+#| fig-cap: "Transmission of a calibrated 3 dB attenuator against frequency."
+#| fig-status: calibrated
+#| fig-dataset: npl-onwafer-sparameters
+#| fig-alt: "Line plot of transmission in decibels against frequency in gigahertz. The curve stays close to a constant value slightly below zero across the band and falls slowly towards high frequency."
+from pbc.data import SAMPLES_DIR
+from pbc.data.adapters import transmission_series
+from pbc.data.plotting import series_with_band
+from pbc.data.touchstone import read_touchstone
+
+network = read_touchstone(
+    SAMPLES_DIR / "npl-onwafer-sparameters" / "coaxial_3dB_attenuator_0601_CORR.s2p"
+)
+fig, ax = series_with_band(transmission_series(network), "3 dB attenuator", figsize=(6.4, 3.6))
+ax.set_title("Transmission of a calibrated attenuator")
+plt.show()
+```
+
 ## Lesson constructs
 
 These are the constructs of the lesson format, one of each.
