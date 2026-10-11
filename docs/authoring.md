@@ -471,6 +471,15 @@ ax.plot(t, y, color=FIGURE_COLOURS[1], linestyle="--", label="Euler")
 
 Colour never tells two series apart alone; vary the line style or the marker.
 
+**Conceptual diagrams.** A diagram that shows an idea, not a result, is
+drawn by an executed cell with the helpers of `pbc.authoring.diagrams`:
+`canvas` (or `frame`, for a figure of several panels) makes a frameless
+axes in data units, and `arrow`, `state_box`, `circle`, `line`, and `text`
+draw on it with the figure colours. The cell has `#| fig-status: conceptual`,
+alt text that conveys the insight, and a caption that states it. The diagram
+is a sketch: the sentence after it says so and says what question it
+answers. Nothing is stored as an image file.
+
 **Components.** `rendering-check.qmd` holds one sample of each; copy its markup.
 
 | Component | Markup |
