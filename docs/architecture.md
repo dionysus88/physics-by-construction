@@ -122,10 +122,11 @@ src/pbc/                 Importable Python package with all reusable lesson code
                          modules (`projectile_lab`, `review_lab`: three reviewers, F18)
   authoring/             Helpers lessons use to display code, proofs, tables, diagrams,
                          references, and claim labels by reference
-  data/                  The dataset card schema and check, the minimal readers and
-                         reference figures of the F50 spikes; F51 generalises them into
-                         readers, calibration, uncertainty, fitting, and the science-first
-                         plotting helpers of measured-data labs
+  data/                  The dataset card schema and check; the readers (GWOSC text,
+                         Touchstone, flume CSV) and `adapters.py` that wrap them as `Series`;
+                         `status`, `series`, `uncertainty`, `calibration`, `fit`, and the
+                         science-first `plotting` helpers of measured-data labs (F51); the
+                         reference figures of the F50 spikes, made with those helpers
 data/                    Real datasets as declared inputs (F50, ADR 007)
   registry/<dataset>.yaml   One metadata card per surveyed dataset, including negative findings
   samples/<dataset>/        Small, version-pinned, rights-cleared samples under the size cap
@@ -414,7 +415,21 @@ of a live provider, so tool results on the page are recomputed, not recorded
 2. **Sample and card.** On a go, a rights-cleared sample under the cap is
    committed with its card and a parsing test. Data that cannot be committed
    stays a documented download; the page then links to the original.
-3. **Lesson.** The page discloses preprocessing and calibration, constructs
+3. **Foundations (F51).** `pbc.data` carries what every lab shares. A `Series`
+   remembers the artifact type of its source and every step applied, so its
+   status (`measured`, `calibrated`, `processed`, `simulated`) cannot stay
+   `measured` after smoothing, selection, or interpolation. `pbc.data.fit`
+   fits a model and reports standard errors, the reduced chi-square, and
+   which parameters the data cannot tell apart. `pbc.data.plotting` draws
+   measured-versus-model panels with residuals, series with uncertainty bands,
+   and signed colour scales, and `check_figure` reports a missing status
+   label, unit, title, legend, residual panel, or "false colour" note. On a
+   page, `data_card(dataset)` renders the card (source, licence, attribution,
+   artifact types and figure statuses, sample and download instructions, the
+   no-LLM path), and a figure cell names its dataset with `#| fig-dataset:`;
+   the source check and the built-site check compare the figure status with
+   the artifact types of that card.
+4. **Lesson.** The page discloses preprocessing and calibration, constructs
    the model, shows measured-versus-model panels with residuals or
    uncertainties, keeps measurements distinct from modelled references,
    fitted curves, reconstructed signals, and agent conclusions, types every
@@ -556,7 +571,7 @@ There is no application runtime. The only executing code is:
 | Toolchain | Pin | Installed by |
 |---|---|---|
 | Python | `.python-version`, `pyproject.toml`, `uv.lock` | `uv` (frozen sync) |
-| Python packages | NumPy, SciPy, Matplotlib, PyYAML (lesson code and authoring); pytest, Ruff (quality); Jupyter kernel (execution); Playwright with an axe-core binding (built-site checks). LLM provider SDK only as an optional extra (F09). Readers for approved data formats are ordinary locked dependencies when a library is needed; F50 added none: the spike samples are read from the plain-text strain product and by a minimal in-repository Touchstone parser (`src/pbc/data/`). HDF5, MAT, or FITS readers are added only when F51 or a lab with a go decision needs them. | `uv` |
+| Python packages | NumPy, SciPy, Matplotlib, PyYAML (lesson code and authoring); pytest, Ruff (quality); Jupyter kernel (execution); Playwright with an axe-core binding (built-site checks). LLM provider SDK only as an optional extra (F09). Readers for approved data formats are ordinary locked dependencies when a library is needed; F50 added none: the spike samples are read from the plain-text strain product and by a minimal in-repository Touchstone parser (`src/pbc/data/`). F51 kept that parser (Issue #66; recorded in `docs/datasets/npl-onwafer-sparameters.md`) and added no dependency. HDF5, MAT, or FITS readers are added only by a lab with a go decision that needs them. | `uv` |
 | Quarto | `quarto-cli` version in `uv.lock`; the package fetches the matching Quarto release | `uv` |
 | Lean 4 | `lean/lean-toolchain` | `elan` |
 | Mathlib | Tagged revision in the lakefile, resolved in `lean/lake-manifest.json` | `lake`, with the Mathlib cache |
@@ -834,7 +849,7 @@ work of the roadmap features named:
   every lesson, descriptive rather than interpretive captions, and
   hand-typed approximate numbers in prose in several lessons (F28, F29, F30,
   F31, F35, F36).
-- Cards exist for the 25 surveyed datasets and three samples are committed (F50); no lesson uses data, and the readers are minimal until F51.
+- Cards exist for the 25 surveyed datasets and three samples are committed (F50); the shared analysis and plotting core is in `pbc.data` (F51); no lesson uses data yet, the sample page `rendering-check` shows the data card and a measured figure.
 - The `verify` job exceeds its wall-clock budget by about three and a half
   minutes with eleven lessons (F58).
 - The first release has no tag yet; `docs/release-readiness.md` lists the

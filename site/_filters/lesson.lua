@@ -240,7 +240,15 @@ local function figure_status(el)
     error("figure with unknown status '" .. status .. "'")
   end
   el.attributes["fig-status"] = nil
-  local label = pandoc.Span({ pandoc.Str(status) }, pandoc.Attr("", { "figure-status" }, { { "data-status", status } }))
+  -- A figure made from a dataset names its card, so that the built-site check
+  -- can compare the status with the artifact types of that card.
+  local attributes = { { "data-status", status } }
+  local source = el.attributes["fig-dataset"]
+  if source ~= nil then
+    el.attributes["fig-dataset"] = nil
+    table.insert(attributes, { "data-dataset", source })
+  end
+  local label = pandoc.Span({ pandoc.Str(status) }, pandoc.Attr("", { "figure-status" }, attributes))
   return el:walk({
     Figure = function(figure)
       local caption = figure.caption.long[1]

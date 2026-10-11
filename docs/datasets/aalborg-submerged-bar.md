@@ -42,7 +42,7 @@ uv run python -m pbc.data.reference aalborg-submerged-bar --out aalborg.png
 
 The code is `src/pbc/data/reference/aalborg_flume.py`. To use the full download instead: `./scripts/fetch-data.sh aalborg-submerged-bar`, unzip, and run `extract_sample` on the extracted `Andersen_etal_2025` folder, then pass its output with `--data-dir`.
 
-**Status label: processed measurement and simulated references** (the top panel mixes them on purpose, each labelled in its legend and its title; the residual panel is *simulated minus measured*, the models linearly interpolated to the experiment's 150 Hz, which is our processing).
+**Status label: processed** (the status of the measurement; the top panel draws the simulated references with it on purpose, each labelled `[simulated]` in its legend and dashed, and the band is one standard uncertainty, the file's 95 % expanded one divided by 1.96; the residual panel is *simulated minus measured*, the models linearly interpolated to the experiment's 150 Hz, which is our processing).
 
 **Caption.** *A regular wave measured at one gauge and three CFD solvers' predictions of it. Inside the shaded window, after the start-up and before any run ends, the solvers follow the measured mean to within 0.5-0.9 mm on a wave 12 mm high.*
 
