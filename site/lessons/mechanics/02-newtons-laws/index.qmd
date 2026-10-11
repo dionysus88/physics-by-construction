@@ -140,6 +140,40 @@ $$
 \end{aligned}
 $$
 
+The weight does not change, but the drag follows the velocity, so the net
+force does not stay the same during a fall. The sketch shows three moments
+of one fall.
+
+```{python}
+#| label: fig-forces-on-a-falling-particle
+#| fig-cap: "Forces on a falling particle. The weight stays the same; the drag grows with the velocity, so the net force shrinks to zero."
+#| fig-status: conceptual
+#| fig-alt: "Sketch of the same falling particle at three moments, from left to right: just released, speeding up, and at terminal speed. A solid arrow for the weight points down and has the same length each time. A dashed arrow for the drag points up and is absent at release, medium in the middle, and as long as the weight on the right. A dotted arrow for the velocity points down and grows in the same way as the drag."
+import matplotlib.pyplot as plt
+
+from pbc.authoring.diagrams import INK, arrow, canvas, circle, text
+
+weight_colour, drag_colour, velocity_colour = 0, 1, 2
+fig, ax = canvas(6.4, 3.8, (0, 10), (-0.1, 5.6))
+moments = ((1.8, "just released", 0.0), (5.0, "speeding up", 0.5), (8.2, "terminal speed", 1.0))
+for x, moment, share in moments:
+    circle(ax, (x, 3.2), 0.12, colour=INK, filled=True)
+    text(ax, (x, 5.2), moment)
+    arrow(ax, (x, 3.0), (x, 1.4), colour=weight_colour)
+    if share:
+        arrow(ax, (x, 3.4), (x, 3.4 + 1.6 * share), colour=drag_colour, linestyle="--")
+        arrow(ax, (x + 0.6, 3.2), (x + 0.6, 3.2 - 1.6 * share), colour=velocity_colour, linestyle=":")
+text(ax, (1.8, 1.05), "weight", colour=weight_colour)
+text(ax, (4.7, 4.75), "drag", colour=drag_colour, ha="right")
+text(ax, (5.8, 2.9), "velocity", colour=velocity_colour, ha="left")
+text(ax, (5.0, 0.3), "weight (solid) is the same every time; drag (dashed) grows with the velocity (dotted)")
+plt.show()
+```
+
+The arrow lengths are drawn by eye, not measured. At release the net force
+is the weight alone; when the drag arrow is as long as the weight arrow the
+net force is zero and the velocity stops changing: the terminal speed.
+
 ### The exact solution for linear drag
 
 Write $\tau = m/b$, which has the dimension of a time. The velocity equation

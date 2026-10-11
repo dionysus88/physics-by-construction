@@ -144,6 +144,39 @@ curve, not only against the exact position at one instant, and the check
 asks nothing of the method but one number per step. A simulation that
 leaves the ellipse has changed the energy, which the physics does not do.
 
+```{python}
+#| label: fig-oscillator-energy-ellipse
+#| fig-cap: "The exact motion in phase space is one ellipse of constant energy, traversed clockwise."
+#| fig-status: conceptual
+#| fig-alt: "Sketch of an ellipse in the plane of position, horizontal, and velocity, vertical. Arrows on the ellipse point clockwise: to the right above the horizontal axis and to the left below it. Dots mark the two ends of the ellipse on the position axis, labelled turning point with all the energy in the spring, and the top of the ellipse, labelled passing the centre with all the energy in motion."
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
+
+from pbc.authoring import FIGURE_COLOURS
+from pbc.authoring.design import PAGE
+from pbc.authoring.diagrams import INK, arrow, canvas, circle, text
+
+fig, ax = canvas(6.4, 4.4, (-5.8, 7.4), (-3.4, 3.9))
+arrow(ax, (-5.2, 0.0), (6.9, 0.0), colour=PAGE["muted"])
+arrow(ax, (-5.2, 0.0), (-5.2, 3.6), colour=PAGE["muted"])
+text(ax, (6.9, -0.18), "position $x$", colour=PAGE["muted"], ha="right")
+text(ax, (-5.1, 3.6), "velocity $v$", colour=PAGE["muted"], ha="left")
+ax.add_patch(Ellipse((0, 0), 6.4, 4.4, fill=False, edgecolor=FIGURE_COLOURS[0], linewidth=1.6))
+arrow(ax, (-0.6, 2.2), (0.6, 2.2), colour=FIGURE_COLOURS[0])
+arrow(ax, (0.6, -2.2), (-0.6, -2.2), colour=FIGURE_COLOURS[0])
+for point in ((3.2, 0.0), (0.0, 2.2), (-3.2, 0.0), (0.0, -2.2)):
+    circle(ax, point, 0.12, colour=INK, filled=True)
+text(ax, (3.6, 0.7), "turning point:\nall energy in the spring", ha="left", colour=1)
+text(ax, (0.0, 2.75), "passing the centre: all energy in motion", colour=1)
+text(ax, (-1.2, -1.2), "one orbit,\none energy", colour=0)
+plt.show()
+```
+
+The ellipse is the curve $\tfrac{1}{2} m v^2 + \tfrac{1}{2} k x^2 = E$,
+drawn without a scale. At the ends of the position axis the energy sits in
+the spring; at the top and the bottom it is kinetic. The simulated orbits
+below are compared with this curve.
+
 ### What explicit Euler does to it
 
 The update rule of the previous lessons, with the acceleration
