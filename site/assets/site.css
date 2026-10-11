@@ -268,6 +268,12 @@ main blockquote {
   overflow-wrap: anywhere;
 }
 
+/* A data card names its source by its address, which has no space to break
+   at and would run off a phone screen: let the values of the card wrap. */
+.data-card dd {
+  overflow-wrap: anywhere;
+}
+
 /* Widgets (docs/authoring.md, "Widgets"). A widget enhances the static
    figure inside its [data-enhancement] element: the script replaces the image
    with a drawing in the image's box and fills .widget-controls. The space for
