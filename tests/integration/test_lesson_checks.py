@@ -1580,3 +1580,97 @@ def test_a_missing_glossary_is_reported(make_repository: Repository):
     violations = lesson_checks.check_glossary(repository)
 
     assert [v.rule for v in violations] == ["glossary"]
+
+
+# --- The evidence map ---------------------------------------------------------
+
+_CLAIM = '{.claim type="numerically-verified" evidence="fig-line"}'
+_THEOREM_FILE = (
+    "theorem velocity_after_step (v a t : Real) : v + a * t = v + a * t := rfl\n"
+)
+_REPLAY = "{}\n"
+
+
+def evidence_files() -> dict[str, str]:
+    return {
+        "lean/PhysicsByConstruction/Mechanics/Step.lean": _THEOREM_FILE,
+        "data/registry/sample-card.yaml": "id: sample-card\n",
+        f"{LESSON}/replay-agent.json": _REPLAY,
+    }
+
+
+def test_claims_with_existing_evidence_pass_the_evidence_check(
+    make_format_2: Repository,
+):
+    repository = make_format_2(
+        {
+            'evidence="fig-line"': (
+                'evidence="fig-line euler-error, velocity_after_step'
+                ' sample-card replay-agent"'
+            )
+        },
+        files=evidence_files(),
+    )
+
+    assert lesson_checks.check_evidence(repository) == []
+
+
+@pytest.mark.parametrize(
+    "change, text",
+    [
+        (
+            {
+                '{.claim type="numerically-verified" evidence="fig-line"}': (
+                    '{.claim type="numerically-verified"}'
+                )
+            },
+            "has no 'evidence'",
+        ),
+        ({'evidence="fig-line"': 'evidence=""'}, "has no 'evidence'"),
+        ({'evidence="fig-line"': 'evidence="the table above"'}, "'the', 'table'"),
+        ({'evidence="fig-line"': 'evidence="fig-nowhere"'}, "'fig-nowhere'"),
+        ({'evidence="fig-line"': 'evidence="no_such_theorem"'}, "'no_such_theorem'"),
+        ({'evidence="fig-line"': 'evidence="replay"'}, "'replay'"),
+        ({'type="numerically-verified"': 'type="plausible"'}, "no valid type"),
+        # A cell that does not run is no evidence.
+        (
+            {"#| label: fig-line\n": "#| label: fig-line\n#| eval: false\n"},
+            "'fig-line'",
+        ),
+    ],
+)
+def test_a_claim_without_existing_evidence_is_reported(
+    make_format_2: Repository, change: dict[str, str], text: str
+):
+    violations = lesson_checks.check_evidence(
+        make_format_2(change, files=evidence_files())
+    )
+
+    assert rules(violations) == {"evidence"}, details(violations)
+    assert text in details(violations)
+
+
+def test_evidence_of_another_lesson_is_not_a_cell_of_this_one(
+    make_format_2: Repository,
+):
+    other = _VALID.replace("id: sample", "id: other").replace("fig-line", "fig-other")
+    repository = make_format_2(
+        {'evidence="fig-line"': 'evidence="fig-other"'},
+        files={**evidence_files(), "site/lessons/mechanics/02-other/index.qmd": other},
+    )
+
+    assert "'fig-other'" in details(lesson_checks.check_evidence(repository))
+
+
+def test_a_claim_in_a_div_is_checked_too(make_format_2: Repository):
+    repository = make_format_2(
+        {
+            "[The position changes at the rate $v$.]"
+            '{.claim type="numerically-verified" evidence="fig-line"}\n': (
+                '::: {.claim type="numerically-verified"}\n'
+                "The position changes at the rate $v$.\n:::\n"
+            )
+        }
+    )
+
+    assert "has no 'evidence'" in details(lesson_checks.check_evidence(repository))

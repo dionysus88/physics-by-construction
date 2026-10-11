@@ -385,6 +385,7 @@ simulated state, divides each by the previous one, and compares all
 `{python} f"{n_periods * steps_per_period}"` ratios with the derived factor.
 
 ```{python}
+#| label: euler-energy-ratios
 energies = energy(euler, mass, k)
 ratios = energies[1:] / energies[:-1]
 factor = euler_energy_growth(mass, k, dt)
@@ -404,7 +405,7 @@ the prediction is `{python} f"{factor ** len(ratios):.3f}"`.
 [Every ratio of successive energies equals the derived factor to
 round-off.]{.claim type="numerically-verified"
 scope="explicit Euler on the harmonic oscillator, any step"
-evidence="the energy cell of this section"} This is a stronger statement than
+evidence="euler-energy-ratios"} This is a stronger statement than
 a small error. The program does exactly what the algebra says, including when
 the step is large, and the energy of the simulated oscillator can be written
 down for any step without running it. On a logarithmic axis the energy is a

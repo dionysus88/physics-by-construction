@@ -21,6 +21,9 @@
 -- fig-status option gets a status label that opens the caption; a div
 -- with the class go-deeper and a ref attribute is rendered from the entry of
 -- that key in site/references.yaml. Every label is plain text in the page.
+-- Every claim gets the identifier claim-N, N counting the claims of the page
+-- in document order from 1, so that the evidence map can link to it
+-- (pbc.authoring.evidence numbers the claims of the source the same way).
 
 local NOT_VERIFIED = "not-verified"
 local LABEL = "not-verified-label"
@@ -398,7 +401,18 @@ local function div(el)
   return not_verified_div(el)
 end
 
+local claims = 0
+
+local function number_claim(el)
+  if el.classes:includes("claim") then
+    claims = claims + 1
+    el.identifier = "claim-" .. claims
+    return el
+  end
+end
+
 return {
+  { traverse = "topdown", Span = number_claim, Div = number_claim },
   { Pandoc = exercises },
   { Div = div, Span = function(el) return claim_span(el) or not_verified_span(el) end },
 }
