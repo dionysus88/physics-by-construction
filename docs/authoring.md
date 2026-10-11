@@ -1173,7 +1173,10 @@ An agent may help a learner explore, but its conclusions are never data.
    artifact type of its source;
 3. changes the series only through `Series.select`, `smooth`,
    `interpolate_to`, and `drop_masked`, each of which records a step the page
-   states in plain words (`Series.disclosure()`); the status becomes
+   states in plain words (`Series.disclosure()`). `interpolate_to` propagates the uncertainty of the two
+   neighbouring samples as independent; where they share an error, such as
+   a common calibration offset, say on the page that the interpolated
+   uncertainty is a lower bound; the status becomes
    `processed` after the first one, so smoothed data cannot be shown as raw;
 4. draws with `pbc.data.plotting`: `measured_vs_model` (the measurement with
    its band, the models dashed and apart, the residuals), `series_with_band`,
@@ -1182,9 +1185,17 @@ An agent may help a learner explore, but its conclusions are never data.
    with `#| fig-dataset: <dataset>` next to `#| fig-status:`; the source check
    rejects a status the card's artifact types do not allow (a measured
    dataset's figure is never `simulated`), and the built-site check does the
-   same on the built page. A figure made from a model of the data is
-   `simulated` and, for a dataset with no modelled artifact, has no
-   `fig-dataset`;
+   same on the built page. For a dataset whose card holds measurements and a
+   modelled artifact, add `#| fig-artifact: <artifact type>`: the status
+   has to be that of the artifact the figure shows, so the measurements of
+   such a dataset are not `simulated` either. A figure that draws only a model fitted to the
+   data, and none of the measurements, is `simulated` and names the dataset
+   with `#| fig-model-of: <dataset>` instead. Leaving both out does not avoid
+   the check: it follows the names of the lesson from the readers, loaders,
+   and sample directories to the figure cell, also through earlier cells,
+   and fails a figure that is made from a dataset and names none. What that
+   analysis cannot see is listed in `docs/architecture.md` ("Measured-data
+   lab"); a reviewer checks those cases by reading;
 5. fits with `pbc.data.fit.fit_curve` and reports `FitResult.stderr`,
    `reduced_chi2`, and `warnings`. A parameter the data cannot tell apart is
    reported as not identified, with an infinite standard error, and the page

@@ -312,3 +312,6 @@ def test_the_measured_data_pattern_shows_the_card_the_labels_and_the_no_llm_path
         "calibrated",
         "processed",
     )
+    model = page.locator("figcaption .figure-status[data-model-of]").first
+    assert model.get_attribute("data-status") == "simulated"
+    assert model.get_attribute("data-dataset") is None

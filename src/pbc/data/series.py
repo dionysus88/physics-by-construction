@@ -90,17 +90,34 @@ class Series:
         )
 
     def interpolate_to(self, x_new: np.ndarray) -> Series:
-        """Linear interpolation onto ``x_new``; NaN outside the series."""
+        """Linear interpolation onto ``x_new``; NaN outside the series.
+
+        A value between two samples is ``(1 - a) y0 + a y1``. The samples are
+        taken as independent, so its standard uncertainty is
+        ``sqrt((1 - a)^2 s0^2 + a^2 s1^2)``: equal to the sample's own at a
+        sample, and smaller in between. Samples that share an error (a common
+        calibration offset, say) are correlated; for those this understates
+        the uncertainty, by at most the difference to the linear interpolation
+        of ``s0`` and ``s1``, and the lesson has to say so.
+        """
         valid = np.isfinite(self.y)
-        y = np.interp(x_new, self.x[valid], self.y[valid], left=np.nan, right=np.nan)
+        x, y_valid = self.x[valid], self.y[valid]
+        x_new = np.asarray(x_new, dtype=float)
+        y = np.interp(x_new, x, y_valid, left=np.nan, right=np.nan)
         sigma = None
         if self.sigma is not None:
-            sigma = np.interp(
-                x_new, self.x[valid], self.sigma[valid], left=np.nan, right=np.nan
-            )
+            s = self.sigma[valid]
+            if len(x) == 1:
+                sigma = np.where(x_new == x[0], s[0], np.nan)
+            else:
+                upper = np.clip(np.searchsorted(x, x_new, side="right"), 1, len(x) - 1)
+                lower = upper - 1
+                a = (x_new - x[lower]) / (x[upper] - x[lower])
+                sigma = np.sqrt(((1 - a) * s[lower]) ** 2 + (a * s[upper]) ** 2)
+                sigma = np.where(np.isfinite(y), sigma, np.nan)
         return self._derived(
             "linearly interpolated onto a new grid",
-            x=np.asarray(x_new),
+            x=x_new,
             y=y,
             sigma=sigma,
         )
