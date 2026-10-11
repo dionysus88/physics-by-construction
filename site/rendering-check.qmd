@@ -114,6 +114,28 @@ ax.set_title("Transmission of a calibrated attenuator")
 plt.show()
 ```
 
+A figure of a model fitted to the dataset shows no data; it is simulated and
+names the dataset it was fitted to:
+
+```{python}
+#| label: fig-modelled-transmission
+#| fig-cap: "A constant-loss model fitted to the transmission of the attenuator."
+#| fig-status: simulated
+#| fig-model-of: npl-onwafer-sparameters
+#| fig-alt: "Line plot of modelled transmission in decibels against frequency in gigahertz: one horizontal line slightly below zero across the band."
+import numpy as np
+
+measured = transmission_series(network)
+loss = float(np.mean(measured.y))
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(measured.x, np.full_like(measured.x, loss), linestyle="--")
+ax.set_xlabel(f"{measured.x_name} ({measured.x_unit})")
+ax.set_ylabel(f"{measured.y_name} ({measured.y_unit})")
+ax.set_title("Constant-loss model of the attenuator")
+plt.show()
+```
+
 ## Lesson constructs
 
 These are the constructs of the lesson format, one of each.

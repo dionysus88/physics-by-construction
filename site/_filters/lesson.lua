@@ -247,6 +247,20 @@ local function figure_status(el)
   if source ~= nil then
     el.attributes["fig-dataset"] = nil
     table.insert(attributes, { "data-dataset", source })
+    -- Which artifact of the dataset the figure shows, for a card that holds
+    -- measurements and a modelled artifact.
+    local artifact = el.attributes["fig-artifact"]
+    if artifact ~= nil then
+      el.attributes["fig-artifact"] = nil
+      table.insert(attributes, { "data-artifact", artifact })
+    end
+  end
+  -- A figure of a model fitted to a dataset names it too: it is simulated,
+  -- and the check holds it to that.
+  local model_of = el.attributes["fig-model-of"]
+  if model_of ~= nil then
+    el.attributes["fig-model-of"] = nil
+    table.insert(attributes, { "data-model-of", model_of })
   end
   local label = pandoc.Span({ pandoc.Str(status) }, pandoc.Attr("", { "figure-status" }, attributes))
   return el:walk({
