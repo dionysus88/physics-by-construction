@@ -475,6 +475,7 @@ relative energy drift of the energy lesson, and the relative spread of the
 angular momentum.
 
 ```{python}
+#| label: four-methods-two-orbits
 import numpy as np
 from scipy.constants import Julian_year, au
 
@@ -556,7 +557,7 @@ The elements the state gives are a semi-major axis of
 `{python} f"{ellipse.apoapsis:.2f}"` AU. [The two symplectic methods conserve the
 angular momentum to round-off at a step of a hundredth of an orbit, while explicit Euler and
 the classical Runge-Kutta method do not.]{.claim type="numerically-verified"
-scope="the example orbit at this step" evidence="the table above"} This is the new result, as
+scope="the example orbit at this step" evidence="four-methods-two-orbits"} This is the new result, as
 the derivation says. The energy behaves as on the oscillator and the pendulum,
 and the position error after two orbits ranks the methods by their order, as
 before: the classical Runge-Kutta method is the method for an accurate position
@@ -595,6 +596,7 @@ precession that the next example measures. The next cell confirms the orders
 by halving the step.
 
 ```{python}
+#| label: observed-orders
 step_counts = [200, 400, 800, 1600, 3200]
 errors = {
     integrator.name: np.array([position_error(run(integrator, n, 2)) for n in step_counts])
@@ -622,7 +624,7 @@ table(
 [Velocity Verlet shows its second order at once, and the classical
 Runge-Kutta method approaches its fourth from above as the step becomes small
 enough for the fast perihelion passage.]{.claim type="numerically-verified"
-scope="the example orbit, two orbits" evidence="the order table above"}
+scope="the example orbit, two orbits" evidence="observed-orders"}
 The first-order methods take longer to settle. Explicit Euler is nowhere near
 its asymptotic regime at these steps: at the finest step its error is still
 `{python} f"{errors['explicit Euler'][-1] / ellipse.semi_major_axis:.1f}"` times the semi-major axis, because the energy it
@@ -639,6 +641,7 @@ asks which ellipse the body is on: the semi-major axis from the energy and the
 direction of the perihelion from the eccentricity vector.
 
 ```{python}
+#| label: thousand-orbits
 n_orbits, steps_per_orbit = 1000, 100
 long_runs = {integrator.name: run(integrator, steps_per_orbit, n_orbits) for integrator in (verlet, rk4)}
 
@@ -720,19 +723,20 @@ wide after a thousand orbits as after one, its angular momentum is exact to
 round-off, and the semi-major axis stays within
 `{python} f"{100 * (long_stats['velocity Verlet']['axis_max'] - 1):.1f}"` per cent
 of the truth for the whole run.]{.claim type="numerically-verified"
-scope="the example orbit at this step" evidence="the table above and fig-orbit-thousand"}
+scope="the example orbit at this step" evidence="thousand-orbits fig-orbit-thousand"}
 What it gets wrong is the direction of the ellipse, which turns at a steady
 rate and has gone round `{python} f"{abs(long_stats['velocity Verlet']['turned']) / 360:.1f}"`
 times. [The classical Runge-Kutta method holds the direction but loses energy at
 every step, so its ellipse shrinks by
 `{python} f"{100 * (1 - long_stats['Runge-Kutta 4']['axis_min']):.1f}"` per cent in a thousand orbits, and
 with it the period.]{.claim type="numerically-verified" scope="the example
-orbit at this step" evidence="the table above and fig-orbit-thousand"}
+orbit at this step" evidence="thousand-orbits fig-orbit-thousand"}
 That orbit is a different orbit by then. The energy of the symplectic method is
 trustworthy; its position after a thousand orbits is not, and the precession
 is the measure of how much it is not. The cell measures it against the step.
 
 ```{python}
+#| label: precession-against-step
 rows, previous = [], None
 for n in (100, 200, 400):
     final = run(verlet, n, 50)
@@ -753,7 +757,7 @@ table(
 
 [The precession falls by a factor of four when the step halves.]{.claim
 type="numerically-verified" scope="velocity Verlet, the example orbit"
-evidence="the precession table above"} It is a second-order error, like
+evidence="precession-against-step"} It is a second-order error, like
 everything else about the method, and a run that needs the perihelion to
 stay put to a given angle over a given number of orbits chooses its step from
 this table. The position error of a symplectic method grows linearly in time,
@@ -771,6 +775,7 @@ lesson, against the one-body simulation with the reduced mass and
 $G(m_1 + m_2)$. The centre of mass starts at rest at the origin.
 
 ```{python}
+#| label: two-body-simulation
 from pbc.mechanics.particles import centre_of_mass, interacting, reduced_mass, stack, unstack
 
 star_mass, heavy_planet = 1.0, 1.0e-3  # solar masses
@@ -826,7 +831,7 @@ plt.show()
 
 [The two simulations agree, as they must: the same method and the same step
 applied to the same equations in two forms.]{.claim type="numerically-verified"
-scope="velocity Verlet, five orbits" evidence="the table above"} The star
+scope="velocity Verlet, five orbits" evidence="two-body-simulation"} The star
 moves on an ellipse a thousand times smaller than the planet's, opposite to
 it, at between `{python} f"{star_speed.min():.0f}"` and
 `{python} f"{star_speed.max():.0f}"` metres per second. That motion is visible in the star's light, as a

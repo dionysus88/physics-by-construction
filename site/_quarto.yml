@@ -43,6 +43,8 @@ website:
         href: path/index.qmd
       - text: Glossary
         href: glossary.qmd
+      - text: Evidence
+        href: evidence.qmd
       - text: About
         href: about.qmd
       - text: Set up

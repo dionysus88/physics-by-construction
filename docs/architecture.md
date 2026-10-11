@@ -110,6 +110,7 @@ site/                    Quarto project: the website source
   lessons/<strand>/<nn>-<slug>/index.qmd   One directory per lesson
   glossary.qmd           Glossary page, generated from glossary.yaml and the lessons (F42)
   glossary.yaml          Glossary entries; lessons reference them by term (F42)
+  evidence.qmd           Evidence map: every claim with its evidence, generated from the lesson sources (F19)
   references.yaml        Reference register of curated external links (next phase, F28, ADR 009)
   widgets/               Self-hosted JavaScript widgets (ES modules)
   assets/                Styles, fonts, vendored Lean syntax definition
@@ -236,7 +237,7 @@ each major concept, the progressive depth the requirements ask for:
 | Limits | `limits` | yes | What the result does not show: failure modes, what the proof or the measurement does not cover. May be one paragraph. |
 | Self-check | One `.exercise.self-check` div; it is an exercise for the solution markup and the checks, but is titled "Self-check." and takes no number | yes | One concise conceptual question with its solution, distinct from the exercises. |
 | Go deeper | `.go-deeper` div naming register keys | no | Curated external references at the relevant concept, each with a short reason to visit, rendered from the reference register (ADR 009). Never a substitute for a missing core explanation. |
-| Claim labels | `.claim` span or div with `type` (the build renders the label as a `data-type` span), optional `scope`, and optional `evidence` | yes where a scientific claim is made | One of the four claim types defined below; renders a visible label. `evidence` names the cell label, register or card key, or Lean theorem that supports the claim; reserved by F28 and filled by the editorial passes, validated only by the evidence map (F19). |
+| Claim labels | `.claim` span or div with `type` (the build renders the label as a `data-type` span), optional `scope`, and `evidence` | yes where a scientific claim is made | One of the four claim types defined below; renders a visible label and the identifier `claim-N` (N counts the claims of the page). `evidence` names, separated by spaces or commas, the executed cell labels of the lesson, register or card keys, Lean theorems, or recorded agent runs that support the claim; every claim has it, and the evidence map (F19, `pbc.authoring.evidence`) lists every claim with links to its evidence and fails the build for a claim without it or with a name that exists nowhere. |
 | Figure status | `#| fig-status:` on every figure cell | yes | One of `measured`, `calibrated`, `processed`, `simulated`, `conceptual`; renders with the caption. |
 
 The claim type names the kind of evidence behind the claim, not the kind of

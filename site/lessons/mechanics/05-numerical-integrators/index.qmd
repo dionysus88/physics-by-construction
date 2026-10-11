@@ -416,6 +416,7 @@ counting how often each calls the acceleration, and
 tabulates the last state, the energy relative to the start, and the count.
 
 ```{python}
+#| label: state-after-three-periods
 from pbc.mechanics.dynamics import State, newton, simulate
 from pbc.mechanics.oscillator import angular_frequency, energy, harmonic_motion, spring
 
@@ -480,7 +481,7 @@ table(
 The angular frequency is $\omega$ = `{python} f"{omega:.0f}"` rad/s, and the period
 is `{python} f"{period:.3f}"` s. [Explicit Euler has multiplied the energy by `{python} f"{final['explicit Euler']:.1f}"`
 in three periods.]{.claim type="numerically-verified" scope="the oscillator at
-this step" evidence="the table above"} The other three end close to the exact
+this step" evidence="state-after-three-periods"} The other three end close to the exact
 state. Velocity Verlet has the energy back to
 `{python} f"{abs(final['velocity Verlet'] - 1):.1e}"` of the start although it did
 not conserve it along the way, and Runge-Kutta is
@@ -534,6 +535,7 @@ per period over two periods and tabulates the error and the observed order for
 each method.
 
 ```{python}
+#| label: error-orders
 def state_error(trajectory):
     """Largest distance from the exact state in the plane (x, v / omega), in m."""
     exact = harmonic_motion(released, mass, k, trajectory.t)
@@ -570,7 +572,7 @@ table(
 
 [The observed orders settle at the orders of the explanation: one, one, two,
 and four.]{.claim type="numerically-verified" scope="the oscillator, two
-periods" evidence="the accuracy table above and fig-integrators-convergence"}
+periods" evidence="error-orders fig-integrators-convergence"}
 The two first-order methods approach one from above, because at the coarser
 steps their errors contain the higher powers of $\omega\,\Delta t$ as well,
 and they do so from very different starting points: at the same step symplectic
@@ -732,6 +734,7 @@ Euler would multiply the energy by ten to the power
 and is left out.
 
 ```{python}
+#| label: long-run-energy-bands
 long_runs, long_lowest = {}, {}
 rows = []
 for integrator in INTEGRATORS[1:]:
@@ -760,7 +763,7 @@ table(
 
 [The symplectic methods are still within their bands, which are no wider after
 a thousand periods than after one.]{.claim type="numerically-verified"
-scope="the oscillator at this step" evidence="the table above"} Runge-Kutta has
+scope="the oscillator at this step" evidence="long-run-energy-bands"} Runge-Kutta has
 lost a measurable fraction of the energy and keeps losing it at the same rate.
 For a run that is long compared with the period, it is the symplectic methods
 that can be trusted with the energy, and velocity Verlet is the one with a
@@ -781,6 +784,7 @@ The cell predicts the steps per period that way, runs each method at that
 step, and counts the calls.
 
 ```{python}
+#| label: calls-for-one-millimetre
 tolerance = 1e-3  # m
 
 cost = {}
@@ -810,7 +814,7 @@ what it says. [For one millimetre over two periods, Runge-Kutta needs
 `{python} cost['velocity Verlet']`, symplectic Euler
 `{python} cost['symplectic Euler']`, and explicit Euler
 `{python} cost['explicit Euler']`.]{.claim type="numerically-verified"
-scope="the oscillator, tolerance of one millimetre" evidence="the table above"}
+scope="the oscillator, tolerance of one millimetre" evidence="calls-for-one-millimetre"}
 The ratios only grow for a tighter tolerance: for one more digit explicit Euler
 needs ten times the calls and Runge-Kutta fewer than twice.
 

@@ -10,6 +10,7 @@ from pbc.authoring.design import (
     FIGURE_COLOURS,
     FIGURE_STATUSES,
 )
+from pbc.authoring.evidence import EvidencePage, evidence_page
 from pbc.authoring.excerpt import Excerpt, excerpt
 from pbc.authoring.glossary import Glossary, GlossaryPage, glossary_page
 from pbc.authoring.graph import Edge, PrerequisiteGraph
@@ -42,6 +43,7 @@ __all__ = [
     "STRANDS",
     "BuildCommit",
     "Edge",
+    "EvidencePage",
     "Excerpt",
     "Glossary",
     "GlossaryPage",
@@ -57,6 +59,7 @@ __all__ = [
     "ResultTable",
     "WidgetScript",
     "build_commit",
+    "evidence_page",
     "excerpt",
     "glossary_page",
     "home_content",

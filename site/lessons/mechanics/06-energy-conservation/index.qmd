@@ -440,6 +440,7 @@ columns of the table are the series of the explanation, with one and with two
 terms.
 
 ```{python}
+#| label: period-table
 import numpy as np
 from scipy.constants import g
 
@@ -510,7 +511,7 @@ The small-angle period is `{python} f"{t0:.4f}"` s. [The simulation reproduces
 the exact period to the four digits shown at every amplitude]{.claim
 type="numerically-verified" scope="classical Runge-Kutta method, all five
 amplitudes of the table"
-evidence="the period table above"}, so the force model and the period
+evidence="period-table"}, so the force model and the period
 formula agree, and the amplitude dependence is real and large: at a right
 angle the period is `{python} f"{pendulum_period(length, np.pi / 2) / t0:.2f}"`
 times the small-angle one, and near the top it is
@@ -618,6 +619,7 @@ swings at [50, 100, 200, and 400 steps per small-angle period]{.given}, and the
 observed order is the logarithm to base two of the ratio of successive drifts.
 
 ```{python}
+#| label: drift-orders
 step_counts = [50, 100, 200, 400]
 drifts = {
     integrator.name: np.array(
@@ -650,7 +652,7 @@ the classical Runge-Kutta method falls by about
 `{python} f"{drifts['Runge-Kutta 4'][1] / drifts['Runge-Kutta 4'][2]:.0f}"`
 when the step halves]{.claim type="numerically-verified"
 scope="pendulum at the amplitude of the example, over the four steps of the table"
-evidence="the convergence table above"}: the observed order of that method is
+evidence="drift-orders"}: the observed order of that method is
 about `{python} f"{np.log2(drifts['Runge-Kutta 4'][1] / drifts['Runge-Kutta 4'][2]):.1f}"`,
 more than its order. For the oscillator the previous lesson derived that one
 step multiplies the energy by a factor that differs from one by a power of
@@ -670,6 +672,7 @@ release, the state at the height of a right angle, and the bottom. It does so
 at the step of the runs, at half that step, and at a quarter of it.
 
 ```{python}
+#| label: step-energy-gain
 dt = t0 / 100
 total = mass * g * length * (1 - np.cos(np.radians(amplitude)))  # energy of the release, J
 rows = []
@@ -697,7 +700,7 @@ table(
 
 [The formula gives the energy gain of one step to the leading order]{.claim
 type="numerically-verified" scope="explicit Euler on the pendulum, three
-states of the motion of the examples" evidence="the table above"}: the relative
+states of the motion of the examples" evidence="step-energy-gain"}: the relative
 difference is at most `{python} f"{max(abs(r[k]) for r in rows for k in (3, 5, 7)):.0e}"` over the table, and falls
 as the step falls, from `{python} f"{rows[1][3]:.1e}"` to
 `{python} f"{rows[1][7]:.1e}"` at the state of the right angle, as the
@@ -716,6 +719,7 @@ passage through the bottom, and reports how far behind or ahead of the
 exact period the passages fall as the swings go by.
 
 ```{python}
+#| label: period-lag
 rows = []
 for integrator in INTEGRATORS[1:]:
     trajectory = runs[integrator.name]
@@ -744,7 +748,7 @@ bottom_speed = np.sqrt(2 * g * length * (1 - np.cos(np.radians(amplitude))))
 
 [The lag grows in proportion to the number of swings for every
 method]{.claim type="numerically-verified" scope="the three stable methods,
-the amplitude and the step of the example" evidence="the lag table above"}:
+the amplitude and the step of the example" evidence="period-lag"}:
 the simulated period differs from the exact one by a fixed fraction, and
 the error accumulates. For velocity Verlet the energy band is
 `{python} f"{drifts['symplectic Euler'][1] / drifts['velocity Verlet'][1]:.0f}"`
