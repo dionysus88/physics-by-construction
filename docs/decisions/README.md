@@ -48,3 +48,4 @@ Do not create ADRs for trivial implementation details.
 | [008](008-courses-and-methods-over-stable-strands.md) | Courses by subject and cross-cutting methods as metadata facets over the existing strands, whose identifiers and addresses stay |
 | [009](009-external-references-outside-verification.md) | Curated external references come from a register with selection evidence; link validity is a maintenance check outside verification |
 | [010](010-coding-agent-exercises-on-the-learners-machine.md) | Coding-agent exercises run only on the learner's machine under a sandbox profile; the site verifies the code, never the agent |
+| [011](011-lean-exercise-stubs-outside-the-checked-library.md) | Lean exercise stubs live in `lean/Exercises/`, outside the checked library; their solutions are library modules and a check pairs them |

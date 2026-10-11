@@ -34,16 +34,45 @@ EXPORT_VERSION = 1
 _SEPARATORS = (",", ":")
 
 
-def progress_markup(page: str, lesson: Lesson | None) -> str:
+RECOMMENDATIONS_ID = "recommendations"
+
+
+def recommendations_markup() -> str:
+    """The place where the script shows what to do next: an enhancement with
+    the sentence that readers without scripts see in its place."""
+    return (
+        f'<div id="{RECOMMENDATIONS_ID}" class="recommendations-panel"'
+        ' data-enhancement=""><p>With scripts, this place suggests what to do'
+        " next, with the reason, from the progress saved in your browser."
+        " Without them, follow the learning path.</p></div>"
+    )
+
+
+def progress_markup(
+    page: str, lesson: Lesson | None, path: LearningPath | None = None
+) -> str:
     """The HTML that makes the page ``page`` (relative to the website
     project) load the learner-state script: a JSON data element and the
     module tag, with relative URLs. ``lesson`` is the lesson the page is, or
-    ``None`` for the learning path page."""
+    ``None`` for the learning path page. With ``path``, the data element also
+    holds the lessons of the learning path, with their pages relative to
+    ``page``, for the recommendations of ``site/learner/recommend.js``: the
+    browser works them out from the page and never fetches anything."""
     depth = page.count("/")
-    data = {
+    data: dict[str, object] = {
         "lesson": lesson.id if lesson else None,
         "explanation": page_href(page, PATH_PAGE, EXPLANATION_ANCHOR),
     }
+    if path is not None:
+        data["path"] = [
+            {
+                "id": item.id,
+                "title": item.title,
+                "href": page_href(page, item.page),
+                "prerequisites": list(item.prerequisites),
+            }
+            for item in path.lessons
+        ]
     payload = json.dumps(data, separators=_SEPARATORS).replace("<", "\\u003c")
     panel = (
         '<div id="learner-panel" class="learner-panel" data-enhancement="">'
@@ -52,8 +81,9 @@ def progress_markup(page: str, lesson: Lesson | None) -> str:
         if lesson
         else ""
     )
+    suggestions = recommendations_markup() if lesson and path is not None else ""
     return (
-        f"{panel}"
+        f"{panel}{suggestions}"
         f'<script type="application/json" id="{DATA_ID}">{payload}</script>'
         f'<script type="module" src="{"../" * depth}{escape(SCRIPT)}"></script>'
     )

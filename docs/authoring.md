@@ -365,6 +365,22 @@ lean_excerpt(MODULE, "velocity_sq_of_constant_acceleration")
 A code block of Lean that is not an excerpt, such as the shape of a
 declaration, is not verified and carries the marker of the section above.
 
+### Lean exercises
+
+An exercise for the learner to complete on their own machine is a pair of
+files (ADR 011): the stub `lean/Exercises/<Name>.lean`, whose theorems end in
+`sorry`, and the checked solution
+`lean/PhysicsByConstruction/Exercises/<Name>.lean`, which states the same
+theorems with the same text and proves them. Mark the region of each theorem
+with the same `-- ANCHOR: <theorem>` in both files. `./scripts/check-lean.sh`
+fails on a stub without a solution, on a differing statement, on a stub
+without `sorry`, and on a stub that does not compile.
+
+On a page, show the stub with `lean_stub(name, anchor)` from
+`pbc.authoring.exercises`, which marks it "not verified", and the solution with
+`lean_excerpt`. Put the hints in `.hint` divs as for any exercise, and list the
+solution modules in `lesson.lean-modules`.
+
 ## Numbers
 
 Every result on the page is computed by the build.
@@ -838,7 +854,35 @@ storage, and it lives in `site/learner/`, not in `site/widgets/`, whose scripts
 may not store anything. It contains no request, no other origin, and no storage
 but local storage. What it adds to a page sits in a `data-enhancement` element
 that the page has without it (`#learner-panel`, `#self-check-controls`,
-`#progress-controls`), so that nothing required depends on scripts.
+`#progress-controls`, `#recommendations`), so that nothing required depends on
+scripts.
+
+### Recommendations
+
+The learning path and every lesson page suggest what to do next, with the
+reason of each suggestion. The rules are in `site/learner/recommend.js`, a pure
+module that reads no storage and no page; `progress.js` shows its result in
+`#recommendations`. The rules use only the prerequisite graph and the stored
+results, which the page carries as data (`pbc.authoring.progress.progress_markup`
+puts the lessons, with links relative to the page, in the JSON element), so that
+computing them makes no request. With no stored result there is no suggestion
+and the page is the plain learning path.
+
+In rank order, a lesson gets the first rule that applies, and at most three
+suggestions are shown, ties in the order of the path:
+
+1. **prerequisite**: the reader completed a lesson that builds on this lesson,
+   which is not completed.
+2. **retry**: the reader checked an answer to its self-check and has not got it
+   right.
+3. **next**: the lesson is not completed and all its prerequisites are.
+
+The reader can ignore a suggestion. The record then holds an optional
+`"ignored": ["<lesson id>"]` (still version 1: absent means none), and the
+button "Show ignored suggestions again" removes it; the clear-data control
+removes it with the rest. A new rule is a new entry of `RULES` with a test in
+`tests/e2e/test_recommendations.py`. Whether the suggestions are useful cannot
+be shown by those tests; judge it by following the path as a learner.
 
 ## Widgets
 

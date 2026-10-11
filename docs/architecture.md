@@ -10,7 +10,7 @@ boundaries every feature must respect.
   2026-10-06, re-approved with the change cycle `physics-next-phase` on
   2026-10-09). Where this document and the requirements disagree, the
   requirements win and the disagreement is a defect in this document.
-- Decisions with a durable record: `docs/decisions/001` to `010`.
+- Decisions with a durable record: `docs/decisions/001` to `011`.
 - Planning base commits: `502ced0` for the bootstrap planning, when the
   repository held only the workflow template; `2f011ea` for the change cycle
   `physics-next-phase` (`docs/changes/physics-next-phase.md`), when F01 to
@@ -140,6 +140,8 @@ tests/
 lean/                    One Lake project for all proofs
   lean-toolchain, lakefile.toml, lake-manifest.json
   PhysicsByConstruction/<Course>/<Topic>.lean
+  PhysicsByConstruction/Exercises/<Name>.lean   Checked solutions of the exercise stubs (F21, ADR 011)
+  Exercises/<Name>.lean  Exercise stubs with `sorry`, outside the library glob (F21, ADR 011)
 scripts/verify.sh        Existing single verification entry point
 scripts/verify.conf      Existing list of required checks; project checks are added here
 scripts/check-links.sh   On-demand link maintenance check, never a required check (next phase, F39, ADR 009)
@@ -460,7 +462,7 @@ Progress, self-check results, and recommendations are computed in the browser
 and written to browser local storage under a versioned, site-specific key.
 There is no request that carries them anywhere.
 
-Delivered by F13 (progress and self-checks; recommendations are F14):
+Delivered by F13 (progress and self-checks) and F14 (recommendations):
 
 - **Format.** A self-check of a lesson may hold choices with feedback; without
   scripts it is an exercise with a solution that opens in the page
@@ -474,6 +476,11 @@ Delivered by F13 (progress and self-checks; recommendations are F14):
   that clears it.
 - **Export.** The build writes `path.json`, the learning path as data, for
   client-side use. It holds no learner state.
+- **Recommendations (F14).** `site/learner/recommend.js` holds the rules, a
+  pure function of the prerequisite graph and the stored results; the page
+  carries the graph as data, so computing them makes no request. Each
+  suggestion states its reason and can be ignored (an optional `ignored` list
+  in the same record). No server, model, or analytics is involved.
 - **Boundary.** `site/learner/progress.js` is the only script that uses
   browser storage. It makes no request. Built-site checks scan it, record the
   requests and writes of a page while a self-check is completed, and fail on a
@@ -499,7 +506,7 @@ shown.
 | I9 | The deployed site is the artifact the verify run built for that `main` commit. The deploy job does not build. | Workflow structure (F01); ADR 003. |
 | I10 | Toolchains are pinned: Python version and `uv.lock`; Lean toolchain and Mathlib revision; Quarto version; the browser build through the Playwright version in `uv.lock`; GitHub Actions by commit SHA; any JavaScript dependency by version and checksum. | Lock files; frozen installs in verification (F01). |
 | I11 | Builds are deterministic: the same commit produces byte-identical output. | Determinism check (F01). |
-| I12 | Lean proofs contain no `sorry`, `admit`, or project-declared `axiom`. Physical assumptions are theorem hypotheses or structure fields, so the page shows them. | Lean build check (F01, F08). |
+| I12 | Lean proofs contain no `sorry`, `admit`, or project-declared `axiom`. Physical assumptions are theorem hypotheses or structure fields, so the page shows them. The one exception is the exercise stubs of `lean/Exercises/`, outside the checked library, each paired with a solution in the library and shown as "not verified". | Lean build check and exercise pairing check (F01, F08, F21); ADR 011. |
 | I13 | Lean proofs are about physics models. Nothing on the site claims the Python code is formally verified or that a proof establishes the physical accuracy of a measurement. | Review; authoring guide (F08, F56). |
 | I14 | Agents in the harness can call only allowlisted functions with validated arguments. No shell, file, or network capability. Credentials come only from environment variables and are never printed or logged. | Harness design and tests (F09); ADR 004. |
 | I15 | Pull requests from forks get a read-only token and no secrets. Workflows use `pull_request`, never `pull_request_target`, and never trigger on Issues. | Workflow review and test (F01, F12). |
