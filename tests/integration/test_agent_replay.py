@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from pbc.agents import load_recording
+from pbc.agents.design_lab import RIGS, replay_rig
 from pbc.agents.hunter_lab import HUNTS, replay_hunt
 from pbc.agents.projectile_lab import RECORD_COMMAND, REPLAY_FILE, replay_fixture
 
@@ -120,4 +121,45 @@ def test_the_hunt_fixtures_hold_no_credential_and_are_recorded_runs(name):
 def test_the_hunt_lesson_holds_only_the_page_and_its_two_fixtures():
     kept = {p.name for p in HUNT_LESSON.iterdir() if p.name != "index_files"}
     fixtures = {hunt.fixture for hunt in HUNTS.values()}
+    assert kept - {"index.html"} == {"index.qmd", *fixtures}
+
+
+DESIGN_LESSON = (
+    ROOT / "site" / "lessons" / "agents-llm" / "04-an-experimental-design-agent"
+)
+
+
+@pytest.mark.parametrize("name", sorted(RIGS))
+def test_the_design_rigs_replay_with_no_network_and_no_credential(name, monkeypatch):
+    """Issue #128: replay passes without credentials, and the assessment is the
+    one the build computed."""
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("the replay opened a network connection")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    monkeypatch.setattr(socket, "getaddrinfo", refuse)
+    for variable in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(variable, raising=False)
+    _, transcript, assessment = replay_rig(name, DESIGN_LESSON)
+    assert transcript.steps
+    expected = {"full": "discriminated", "slow": "inconclusive"}[name]
+    assert assessment.outcome == expected
+
+
+@pytest.mark.parametrize("name", sorted(RIGS))
+def test_the_design_fixtures_hold_no_credential_and_are_not_placeholders(name):
+    path = DESIGN_LESSON / RIGS[name].fixture
+    assert not CREDENTIAL.search(path.read_text())
+    recording = load_recording(path)
+    assert recording.model.strip()
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", recording.recorded)
+    assert not recording.placeholder
+    assert "placeholder" not in recording.model.lower()
+
+
+def test_the_design_lesson_holds_only_the_page_and_its_two_fixtures():
+    kept = {p.name for p in DESIGN_LESSON.iterdir() if p.name != "index_files"}
+    fixtures = {rig.fixture for rig in RIGS.values()}
     assert kept - {"index.html"} == {"index.qmd", *fixtures}
