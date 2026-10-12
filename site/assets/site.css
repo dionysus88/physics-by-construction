@@ -358,7 +358,29 @@ main blockquote {
   text-align: right;
 }
 
-.widget-panel :focus-visible {
+/* The export of a comparator: a button, a download link, and the values as
+   text. The text appears only when asked for. */
+.widget-export {
+  margin-top: 1rem;
+}
+
+.widget-export button,
+.widget-controls > button {
+  min-height: 2.5rem;
+  margin-right: 1rem;
+}
+
+.widget-export textarea {
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  margin-top: 0.5rem;
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.85rem;
+}
+
+.widget-panel :focus-visible,
+.widget-controls > button:focus-visible {
   outline: 3px solid var(--pbc-focus);
   outline-offset: 2px;
 }

@@ -32,7 +32,7 @@ from pbc.authoring.path import (
 from pbc.authoring.repository import BuildCommit, build_commit
 from pbc.authoring.reproduce import Reproduction, reproduce_this
 from pbc.authoring.tables import ResultTable, is_numeric_console_block, table
-from pbc.authoring.widgets import WidgetScript, widget_data, widget_module
+from pbc.authoring.widgets import WidgetScript, widget_asset, widget_data, widget_module
 
 __all__ = [
     "CLAIM_TYPES",
@@ -75,6 +75,7 @@ __all__ = [
     "lesson_header",
     "reproduce_this",
     "table",
+    "widget_asset",
     "widget_data",
     "widget_module",
 ]

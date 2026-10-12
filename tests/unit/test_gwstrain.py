@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from scipy import signal
 
 from pbc.data import SAMPLES_DIR
 from pbc.data.gwosc import FILES, read_strain
@@ -37,6 +38,26 @@ def test_whitened_noise_has_one_level_across_the_quiet_segment(strains):
     early = noise_sigma(white, seg.time, (0.5, 1.0))
     late = noise_sigma(white, seg.time, (1.0, 1.6))
     assert early == pytest.approx(late, rel=0.3)
+
+
+def test_the_whitener_equals_filtering_the_whitened_series_in_time(strains):
+    # The band-pass is applied in the transform that whitens. Away from the
+    # ends that is the Butterworth filter run forward and backward over the
+    # whitened series; at the ends a filter in time invents samples.
+    seg = cut_segment(strains["H1"], 2.0)
+    whitener = make_whitener(strains["H1"], seg, BAND)
+    spectrum = np.fft.rfft(seg.strain * whitener.window)
+    white = np.fft.irfft(spectrum / whitener.amplitude, n=len(seg.strain))
+    in_time = signal.sosfiltfilt(whitener.sos, white) * np.sqrt(2 / seg.sample_rate)
+
+    out = whitener(seg.strain)
+
+    inner = np.abs(seg.time) <= 1.6
+    scale = np.max(np.abs(in_time[inner]))
+    assert np.max(np.abs(out - in_time)[inner]) < 1e-9 * scale
+    assert np.max(np.abs(out - in_time)) > 1e-3 * scale, (
+        "the ends are expected to differ"
+    )
 
 
 def test_the_whitener_is_linear(strains):
@@ -144,3 +165,20 @@ def test_the_lab_fit_of_the_sample_is_inside_the_stated_range(strains):
     assert 0.7 < fit.reduced_chi2 < 1.3
     assert fit.mc_low <= fit.mc <= fit.mc_high + 1.0
     assert not fit.at_edge
+
+
+def test_injection_into_off_source_noise_is_recovered_near_the_truth(strains):
+    # Control: a chirp of 35 solar masses added to a stretch with no event.
+    from pbc.data.gwinjection import inject_and_fit
+
+    (out,) = inject_and_fit(
+        strains,
+        [-8.0],
+        truth_mc=35.0,
+        truth_tc=0.03,
+        delays={"H1": 0.0, "L1": -0.007},
+        peak={"H1": 1.3, "L1": 1.0},
+        band=BAND,
+    )
+    assert out.mc == pytest.approx(35.0, abs=2.5)
+    assert not out.at_edge
