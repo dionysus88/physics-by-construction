@@ -295,3 +295,46 @@ The owner's conditions with the approval:
   groups of the checks.
 - A run without `--only` is unchanged: it runs every check and is the only
   run that records a verification.
+
+## Step 3 as built, 2026-10-12
+
+Three trial runs of the planned jobs (draft pull request 140, closed) changed
+the design in two places. The owner approved the second on 2026-10-12
+("option B").
+
+1. **`integration` does not need the build.** One test imported the modules
+   of the Lean project and relied on `lean-build` having run before it in the
+   same job. It now builds the modules it imports, which takes no time after
+   `lean-build` and makes the test independent of the order of checks.
+2. **A comparison of bytes runs in the `build` job.** With the reproduction
+   of the lessons in jobs of their own, five lessons differed from the built
+   site in the second trial (one digit in a page, four figures or data
+   files) and passed in the first; in the third the second build of
+   `determinism` differed. The runners of two jobs can have different
+   processors. `determinism` and the reproduction test (marked
+   `same_machine`, check `site-checks-reproduction`) are therefore in the
+   group `build`. The two lesson parts of step 2 and their lists are gone:
+   without the reproduction the other tests of `test_lessons.py` take half a
+   minute and run in `site-checks-other`. With them goes the rule for a
+   lesson that no list names (deviation 1 of step 2), which has nothing left
+   to decide.
+
+Jobs as built: `code`, `workflow` (the group `default`, with `--all`),
+`integration`, `build`, `e2e` in three parts (`pages-1`, `pages-2`, `other`),
+`verify`, `deploy`.
+
+Time: the trial runs took 12 to 14.5 minutes with the comparisons beside the
+build. With the comparisons in the `build` job the longest path is that job
+(preparation, Lean, two site builds, the reproduction) and then an `e2e`
+job; step 4 measures it. It is expected above the 12 minutes of ADR 003, and
+the remainder is left to the feature that makes verification proportional to
+what a pull request changes.
+
+**Acceptance criterion 1, revised by the owner on 2026-10-12.** The review of
+step 3 found that the design with the comparisons in the `build` job does not
+deliver the 12 minutes that criterion 1 of the Issue asks, and that no one
+had waived it. The owner chose to keep the design and revise the criterion:
+F58 measures and records the run time on three consecutive pull requests; the
+12 minutes become a criterion of the feature that makes verification
+proportional to what a pull request changes (planning change
+`final-curriculum`). The Issue and ADR 012, decision 8, say so.

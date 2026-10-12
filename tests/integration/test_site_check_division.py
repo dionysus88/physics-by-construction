@@ -101,13 +101,48 @@ def test_every_check_from_before_the_division_is_still_a_check():
     assert len(names) == len(set(names)) and divided
 
 
-def test_every_part_has_a_group_of_its_own():
+def test_a_part_is_in_the_group_of_the_build_or_in_a_group_of_its_own():
+    # The part that compares bytes with the built site runs with the build,
+    # on one machine. Every other part can run beside the others.
     groups = verify_conf.groups()
-    own = [groups[name] for name in groups if name.startswith(PREFIX)]
-    assert len(own) == len(set(own))
+    assert groups["site-build"] == "build"
+    assert groups["determinism"] == "build"
+    assert groups[f"{PREFIX}reproduction"] == "build"
+    own = [
+        groups[name]
+        for name in groups
+        if name.startswith(PREFIX) and groups[name] != "build"
+    ]
+    assert len(own) == len(set(own)) and len(own) >= 2
     others = {groups[name] for name in groups if not name.startswith(PREFIX)}
     assert not others & set(own)
     assert verify_conf.DEFAULT_GROUP not in own
+
+
+def test_the_part_on_the_machine_of_the_build_is_what_compares_bytes(parts):
+    # Exactly the tests that are marked for it, and every one of them.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/e2e",
+            "-m",
+            "same_machine",
+            "--co",
+            "-q",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    marked = _collected(result)
+    assert marked
+    assert sorted(parts[f"{PREFIX}reproduction"]) == sorted(marked)
+    for name, tests in parts.items():
+        if name != f"{PREFIX}reproduction":
+            assert not set(tests) & set(marked), name
 
 
 def test_every_check_has_one_group_and_verify_sh_lists_those_groups():
@@ -133,26 +168,26 @@ def test_every_check_has_one_group_and_verify_sh_lists_those_groups():
 def test_one_test_can_be_selected_from_a_part(parts):
     # Rerunning one failing test with the command of its check works: what the
     # selection leaves out is not reported as missing from the division.
-    for name in ("site-checks-lessons-2", "site-checks-pages-2"):
-        test = parts[name][0]
-        file = test.split("::")[0]
-        command = verify_conf.command(name).replace(f" {file} ", f" '{test}' ")
-        assert command != verify_conf.command(name)
-        result = subprocess.run(
-            ["bash", "-c", f"{command} --collect-only -q"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert _collected(result) == [test]
+    name = "site-checks-pages-2"
+    test = parts[name][0]
+    file = test.split("::")[0]
+    command = verify_conf.command(name).replace(f" {file} ", f" '{test}' ")
+    assert command != verify_conf.command(name)
+    result = subprocess.run(
+        ["bash", "-c", f"{command} --collect-only -q"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert _collected(result) == [test]
 
 
 @pytest.mark.parametrize(
     ("arguments", "message"),
     [
-        (["tests/e2e/test_lessons.py", "--shard", "3/2"], "expected <part>/<parts>"),
-        (["tests/e2e/test_lessons.py", "--shard", "1/3"], "divided in 2 parts"),
+        (["tests/e2e/test_built_site.py", "--shard", "3/2"], "expected <part>/<parts>"),
+        (["tests/e2e/test_built_site.py", "--shard", "1/3"], "divided in 2 parts"),
         (["tests/e2e/test_home.py", "--shard", "1/2"], "has no division"),
     ],
 )
