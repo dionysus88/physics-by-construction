@@ -14,7 +14,7 @@ in `docs/workflow.md`.
 | `site/path/index.qmd` | The learning path page, generated from the lesson front matter when the site is built |
 | `site/_site/` | The built site. Written by `scripts/build-site.sh`, ignored by Git |
 | `src/pbc/` | The Python package with the reusable lesson code: `mechanics/` for the mechanics course (`chirp.py` holds the Newtonian-order chirp of two bodies that spiral together, for the gravitational-wave lab, F60), `verification/` for the checks of the scientific validation contract (`docs/validation-contract.md`) and the gallery of faulty steppers the verification lesson catches, `authoring/` for the helpers pages use to show Python and Lean code by reference, to show numeric results as tables, to write "Reproduce this", and to generate the learning path page and lesson headers; `authoring/path.py` defines the strands and the difficulty scale; `authoring/graph.py` lays out the prerequisite graph of the path page as inline SVG |
-| `src/pbc/data/` | Real datasets as declared inputs (ADR 007): `card.py` is the card schema, `check.py` the dataset check, `gwosc.py`, `touchstone.py`, and `flume.py` the readers, `adapters.py` their results as `Series`, `status.py`, `series.py`, `uncertainty.py`, `calibration.py`, `fit.py`, and `plotting.py` the analysis and figure core of measured-data labs (F51), `pipeline.py` the sweep, the repeated-result estimate, and the report with its comparison against a committed expectation, `gwstrain.py` the processing of the gravitational-wave strain (noise spectrum, whitening, the delay between the detectors, the fit of the chirp, the best chirp at fixed masses) for the lab of F60, `comparison.py` the data of the waveform comparator of F43, `flume_analysis.py` and `reports.py` the measured problem and the registry of the reports of the pipeline lesson (F47; the simulated problem is `mechanics/analysis.py`), `reference/` the reference figure of each spiked dataset (`python -m pbc.data.reference`) |
+| `src/pbc/data/` | Real datasets as declared inputs (ADR 007): `card.py` is the card schema, `check.py` the dataset check, `gwosc.py`, `touchstone.py`, and `flume.py` the readers, `adapters.py` their results as `Series`, `status.py`, `series.py`, `uncertainty.py`, `calibration.py`, `fit.py`, and `plotting.py` the analysis and figure core of measured-data labs (F51), `pipeline.py` the sweep, the repeated-result estimate, and the report with its comparison against a committed expectation, `gwstrain.py` the processing of the gravitational-wave strain (noise spectrum, whitening, the delay between the detectors, the fit of the chirp, the best chirp at fixed masses) for the lab of F60, `comparison.py` the data of the waveform comparator of F43, `inverse.py` the recovery of known parameters, the profile of the chi-square, and the verdict on a fit (F23; a computing tool, not a reader), `gwinjection.py` the injection of a known chirp into off-source strain (F23), `flume_analysis.py` and `reports.py` the measured problem and the registry of the reports of the pipeline lesson (F47; the simulated problem is `mechanics/analysis.py`), `reference/` the reference figure of each spiked dataset (`python -m pbc.data.reference`) |
 | `data/registry/<dataset>.yaml` | One card per surveyed dataset: source, rights, artifact types, schema, estimates, and the go, defer, reject, or survey-only decision |
 | `reports/expected/` | The committed expectations of the reports that the pipeline lesson regenerates at build time (`python -m pbc.data.reports`, with `--update` to write them on purpose) |
 | `data/samples/<dataset>/` | The committed samples of datasets with a go decision, under the caps of 2 MB per file, 8 MB per dataset, 32 MB in all; `data/downloads/` is the ignored target of `scripts/fetch-data.sh` |
@@ -27,7 +27,7 @@ in `docs/workflow.md`.
 
 | Path | Purpose |
 |---|---|
-| `scripts/verify.sh` | Runs the checks in `scripts/verify.conf`, and the workflow self-tests when a workflow file changed or with `--all`; records a pass and skips a repeated run with `--reuse`; used by humans, agents, and CI |
+| `scripts/verify.sh` | Runs the checks in `scripts/verify.conf`, and the workflow self-tests when a workflow file changed or with `--all`; records a pass and skips a repeated run with `--reuse`; used by humans, agents, and CI. `--only <group>` runs the checks of named groups for a CI with parallel jobs; such a partial run records nothing |
 | `scripts/verify.conf` | The required verification checks of the project |
 | `scripts/verify-workflow.conf` | The self-tests of the workflow scripts and the workflow files they guard |
 | `scripts/preflight.sh` | First check: reports every missing prerequisite of the one-time setup with a fix hint |
@@ -48,6 +48,28 @@ in `docs/workflow.md`.
 | `.github/workflows/ci.yml` | CI: prepares the runner, runs `./scripts/verify.sh --all`, and on `main` deploys the verified site |
 | `.github/dependabot.yml` | Update proposals for Python packages and GitHub Actions |
 | `.github/ISSUE_TEMPLATE/lesson-proposal.yml` | The Issue form for lesson proposals |
+
+## Where each topic is described
+
+One place is authoritative for each topic; the others summarize it and link
+to it. When a script changes, change the authoritative place, and check the
+summaries. The files in the repository describe the version a project has;
+the website describes the current template.
+
+| Topic | Authoritative | Summarized in |
+|---|---|---|
+| What the template is, in short | `README.md` | The introduction of the website |
+| GitHub settings: rulesets, required checks, code owners, permissions | `docs/repository-setup.md` | "Getting started" and "Configuration and security" on the website |
+| Commands, options, and how to resume or recover | `docs/development.md` and the usage text of each script | Selected commands on the website and in the README |
+| Steps, artifacts, approvals, and what stops a step | `docs/workflow.md` | The workflow page of the website |
+| Principles: where state lives, roadmap versus Issues, plans versus Issues | "Principles" in `docs/workflow.md` | `AGENTS.md`, briefly |
+| What makes a check or a review worth having | `docs/evaluation.md` | "Configuration and security" on the website |
+| What each file is for | This file | The repository tree on the website |
+| A complete run | `docs/example.md` | Linked, not repeated |
+| Rules and boundaries for agents | `AGENTS.md`, `.agents/policies/`, `.agents/prompts/` | Never replaced by a page of the website |
+| Reporting a security problem | `SECURITY.md` | Linked from the website |
+| Research, history, and proposals | The website (`documentation/`) | Not repeated in `docs/` |
+| Requirements, architecture, roadmap, and decisions of a project | The project's own `docs/` | The website explains only how they come about |
 
 ## Rules and configuration
 
@@ -76,9 +98,8 @@ in `docs/workflow.md`.
 | `docs/development.md` | The one-time setup, verification, and every workflow command | Template and you |
 | `docs/authoring.md`, `docs/lesson-template.qmd` | How to write a lesson, and the page a new lesson starts from | You |
 | `docs/content-proposals.md` | How a lesson is proposed, assessed, drafted, and merged, for contributors and the maintainer | You |
-| `docs/workflow.md` | The workflow in flow, artifact, and reference views | Template |
+| `docs/workflow.md` | The workflow in flow, artifact, reference, and principles views | Template |
 | `docs/example.md` | A complete run with a sample project | Template |
-| `docs/agentic-workflow.md` | Principles: persistent state, roadmap versus Issues, plans versus Issues | Template |
 | `docs/evaluation.md` | Review criteria, finding severities, and the testing principle | Template |
 | `docs/deployment.md`, `docs/operations.md` | Deployment and operations of the project | You |
 | `docs/release-readiness.md` | The record of the MVP release checks that CI cannot make | You |
@@ -87,6 +108,7 @@ in `docs/workflow.md`.
 
 | Script | Purpose |
 |---|---|
+| `scripts/check-docs.sh` | Checks that the tracked Markdown files name files that exist: relative links, and paths in backticks into a tracked directory. `--later` names paths that come later. The template runs it in its verification; a project can add it to `scripts/verify.conf` |
 | `scripts/start-planning.sh` | Project Grill, requirements approval, and project planning in a planning worktree |
 | `scripts/review-planning.sh` | Independent, read-only review of the planning documents |
 | `scripts/revise-planning.sh` | The planner's decision per planning finding, then the revision |
