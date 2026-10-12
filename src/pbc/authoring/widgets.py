@@ -10,6 +10,7 @@ its own. The two helpers here write the data and the script tag.
 import json
 from dataclasses import dataclass
 from html import escape
+from pathlib import Path
 
 from pbc.authoring.path import _page_being_built
 
@@ -75,3 +76,29 @@ def widget_module(module: str) -> WidgetScript:
     _site, page = _page_being_built()
     depth = page.count("/")
     return WidgetScript(module_markup(module, depth))
+
+
+# Quarto moves the directory of a page's supporting files, ``<page>_files``,
+# into the built site beside the page and keeps what a cell wrote there. The
+# on-demand data of a widget goes into a directory of its own below it.
+ASSET_DIRECTORY = "index_files/figure-html"
+
+
+def widget_asset(name: str, data: object) -> str:
+    """Write ``data`` as the on-demand file ``name`` (``<name>.json``) of the
+    page being built and return its URL relative to the page.
+
+    A widget loads this file from the site's own origin after the reader asks
+    for it (``data-ondemand`` on the widget, docs/authoring.md, "Widgets");
+    nothing in the page requires it. The file counts toward the on-demand
+    budget of the page.
+    """
+    if not name.replace("-", "").isalnum() or not name.islower():
+        raise ValueError(f"an on-demand file name is lower case words, got {name!r}")
+    json.dumps(data, allow_nan=False)  # fail here, not in the browser
+    directory = Path.cwd().resolve() / ASSET_DIRECTORY
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{name}.json").write_text(
+        json.dumps(data, separators=_SEPARATORS, allow_nan=False), encoding="utf-8"
+    )
+    return f"{ASSET_DIRECTORY}/{name}.json"

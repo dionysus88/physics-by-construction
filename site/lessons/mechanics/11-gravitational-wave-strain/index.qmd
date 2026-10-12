@@ -464,6 +464,8 @@ fdot_at_end = float(chirp.chirp_rate(f_at_end, mc_fit))
 check_mc = float(chirp.chirp_mass_from_rate(f_at_end, fdot_at_end))
 ```
 
+::: {#waveform-comparator data-widget="waveform-comparator" data-enhancement="" data-ondemand="index_files/figure-html/chirp-masses.json"}
+
 ```{python}
 #| label: fig-measured-vs-model
 #| fig-cap: "The whitened Hanford strain (solid, with one standard deviation of the noise as a band) and the fitted Newtonian chirp (dashed) around the event, with the residuals below. The model is a fit to the data in the shaded window and is drawn apart from it."
@@ -489,6 +491,14 @@ problems = check_figure(fig, residuals=True)
 plt.show()
 ```
 
+::: {.widget-controls}
+With scripts, a button below the figure loads the whitened strain and the best
+chirp of a range of chirp masses, and a slider moves between them with the
+error metrics of each. Without scripts the figure shows the best fit, and the
+profile figure further down gives the chi-square of the others.
+:::
+:::
+
 The solid curve is the whitened measurement, and every step that produced it
 is named: `{python} measured.disclosure()`. The dashed curve is the model, a
 fit and not a measurement, drawn apart. Inside the shaded window the model
@@ -499,6 +509,35 @@ detectors, as it should be near one if the model and the noise estimate
 describe the data. Outside the window, after the event time, the model is
 not fitted and the data go on with a signal that the Newtonian model cannot
 describe.
+
+```{python}
+#| echo: false
+from pbc.authoring import widget_asset
+from pbc.data.comparison import waveform_comparison
+from pbc.data.gwstrain import models_at_masses
+
+COMPARED_MASSES = np.unique(np.append(np.arange(24.0, 46.0, 2.0), round(mc_fit, 3)))
+white_fit = {name: make_whitener(strains[name], seg[name], BAND) for name in strains}
+compared = models_at_masses(
+    time_fit, data_fit, white_fit, {"H1": 0.0, "L1": corr["lag"]}, COMPARED_MASSES,
+    window=PRIMARY_WINDOW, sigma=sigma_fit, mc_start=mc_fit, t_c_start=primary.t_c,
+)
+widget_asset(
+    "chirp-masses",
+    waveform_comparison(
+        time_fit, data_fit["H1"], compared, "H1", sigma=sigma_fit,
+        window=PRIMARY_WINDOW, show=(-0.25, 0.05), quantity="whitened strain",
+        unit="1", best=round(mc_fit, 3),
+    ),
+)
+```
+
+```{python}
+#| echo: false
+from pbc.authoring import widget_module
+
+widget_module("waveform-comparator.js")
+```
 
 The spectrogram can be checked against the fitted model in frequency as well:
 the table lists, for a few times, the frequency of the strongest cell of the
@@ -752,12 +791,16 @@ reproduce_this(
     code=[
         "src/pbc/mechanics/chirp.py",
         "src/pbc/data/gwstrain.py",
+        "src/pbc/data/comparison.py",
+        "src/pbc/authoring/widgets.py",
+        "site/widgets/waveform-comparator.js",
         "src/pbc/data/gwosc.py",
         "src/pbc/data/reference/gw150914.py",
     ],
     tests=[
         "tests/unit/test_chirp.py",
         "tests/unit/test_gwstrain.py",
+        "tests/unit/test_comparison.py",
         "tests/unit/test_data_samples.py",
     ],
 )

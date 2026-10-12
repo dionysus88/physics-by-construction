@@ -1341,11 +1341,19 @@ WIDGETS = "widgets"
 # origin, or for anything the browser keeps for the next visit. The XML
 # namespace of SVG is a name, not a request, and is removed first.
 _NAMESPACES = ("http://www.w3.org/2000/svg", "http://www.w3.org/1999/xhtml")
+_REQUEST = re.compile(
+    r"\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon"
+    r"|new\s+(?:Shared)?Worker\b|\bimportScripts\b|\bimport\s*\("
+)
+# A widget may load its on-demand data with ``fetch`` (see "On-demand data"
+# below); every other way to reach the network stays out. That the fetch
+# happens only after a user action, from the site's own origin, is shown by
+# ``check_ondemand_loads_after_action``, not by this scan.
+_REQUEST_OTHER_THAN_FETCH = re.compile(
+    _REQUEST.pattern.replace(r"\bfetch\s*\(|", "", 1)
+)
 _FORBIDDEN_IN_WIDGETS = {
-    "request": re.compile(
-        r"\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon"
-        r"|new\s+(?:Shared)?Worker\b|\bimportScripts\b|\bimport\s*\("
-    ),
+    "request": _REQUEST_OTHER_THAN_FETCH,
     "other origin": re.compile(r"(?:https?:)?//[\w.-]+\.\w+|https?://", re.IGNORECASE),
     "browser storage": re.compile(
         r"localStorage|sessionStorage|indexedDB|document\s*\.\s*cookie"
@@ -1356,7 +1364,8 @@ _FORBIDDEN_IN_WIDGETS = {
 
 def check_widget_sources(site_dir: Path) -> list[Violation]:
     """The scripts in the widgets directory of the built site contain no
-    request, no other origin, and no use of browser storage.
+    request other than a ``fetch`` of its on-demand data, no other origin, and
+    no use of browser storage.
 
     A static scan of the source is a floor, not proof: the browser check
     ``check_widgets_store_nothing`` watches what the widgets do.
@@ -1504,6 +1513,155 @@ def check_widgets_store_nothing(
     return violations
 
 
+# --- On-demand data ----------------------------------------------------------
+
+# Optional data a page loads after a user action (docs/architecture.md,
+# "Budgets"): animation frames, field data, the series of a comparator. A
+# widget names the files in ``data-ondemand`` (space-separated URLs relative
+# to the page); the page is complete without them.
+ONDEMAND_ATTRIBUTE = "data-ondemand"
+# The button of that element that asks for the data.
+LOAD_ATTRIBUTE = "data-loads-ondemand"
+ONDEMAND_BUDGET = 3_000_000  # bytes per page
+EVERYTHING_BUDGET = 5_000_000  # bytes: the initial payload and the on-demand data
+
+
+def _ondemand_attributes(page: Path) -> list[str]:
+    document = _parse(page)
+    return [
+        value
+        for _tag, attributes in document.elements
+        for name, value in attributes.items()
+        if name == ONDEMAND_ATTRIBUTE
+    ]
+
+
+def ondemand_files(site_dir: Path) -> dict[str, list[tuple[str, Path | None]]]:
+    """The on-demand files each page of the built site names, as
+    ``(url, file in the built site or None when it is not there)``. A page
+    that names none is left out."""
+    found: dict[str, list[tuple[str, Path | None]]] = {}
+    for page in html_pages(site_dir):
+        entries = []
+        for value in _ondemand_attributes(page):
+            for url in value.split():
+                target = (page.parent / unquote(urlsplit(url).path)).resolve()
+                inside = target.is_relative_to(site_dir.resolve())
+                entries.append((url, target if inside and target.is_file() else None))
+        if entries:
+            found[_name(site_dir, page)] = entries
+    return found
+
+
+def check_ondemand_budget(
+    site_dir: Path,
+    initial: dict[str, int] | None = None,
+    budget: int = ONDEMAND_BUDGET,
+    everything: int = EVERYTHING_BUDGET,
+) -> list[Violation]:
+    """Every on-demand file a page names exists in the built site, is a
+    relative address of the site's own origin, and the files of a page are
+    within ``budget`` bytes; with the initial payloads (``initial``, by page,
+    from ``measure_payloads``), everything a page can load is within
+    ``everything`` bytes."""
+    violations = []
+    for name, entries in ondemand_files(site_dir).items():
+        total = 0
+        for url, file in entries:
+            parts = urlsplit(url)
+            if parts.scheme or parts.netloc or url.startswith("/"):
+                violations.append(
+                    Violation(
+                        "ondemand-origin", name, f"{url!r} is not a relative address"
+                    )
+                )
+            elif file is None:
+                violations.append(
+                    Violation(
+                        "ondemand-missing", name, f"{url!r} is not in the built site"
+                    )
+                )
+            else:
+                total += file.stat().st_size
+        if total > budget:
+            violations.append(
+                Violation(
+                    "ondemand-budget", name, f"loads {total:,} bytes, over {budget:,}"
+                )
+            )
+        if (
+            initial is not None
+            and name in initial
+            and initial[name] + total > everything
+        ):
+            violations.append(
+                Violation(
+                    "ondemand-total",
+                    name,
+                    f"can load {initial[name] + total:,} bytes, over {everything:,}",
+                )
+            )
+    return violations
+
+
+def check_ondemand_loads_after_action(
+    browser: Browser, server: SiteServer, site_dir: Path
+) -> list[Violation]:
+    """A page requests its on-demand files only after a user action: loading
+    the page and waiting for it to settle requests none of them, and pressing
+    the button of the element that names them (``data-loads-ondemand``)
+    requests them, and only from the site's own origin."""
+    violations = []
+    base = urlsplit(server.url)
+    for name, entries in ondemand_files(site_dir).items():
+        url = urljoin(server.url, name)
+        wanted = {urljoin(url, entry).split("#")[0] for entry, file in entries if file}
+        with _context(browser, server, lambda url: None, viewport=DESKTOP) as context:
+            requested: list[str] = []
+            context.on(
+                "request", lambda request, log=requested: log.append(request.url)
+            )
+            page = context.new_page()
+            page.goto(url, wait_until="networkidle")
+            page.wait_for_timeout(200)
+            early = [r for r in requested if r.split("#")[0] in wanted]
+            violations += [
+                Violation(
+                    "ondemand-early", name, f"{r!r} was requested before an action"
+                )
+                for r in early
+            ]
+            buttons = page.locator(f"[{ONDEMAND_ATTRIBUTE}] button[{LOAD_ATTRIBUTE}]")
+            if buttons.count() == 0:
+                violations.append(
+                    Violation(
+                        "ondemand-no-action",
+                        name,
+                        f"no button with {LOAD_ATTRIBUTE} asks for the data",
+                    )
+                )
+            else:
+                before = len(requested)
+                buttons.first.click()
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(200)
+                after = requested[before:]
+                if not any(r.split("#")[0] in wanted for r in after):
+                    violations.append(
+                        Violation(
+                            "ondemand-not-loaded", name, "the button loaded nothing"
+                        )
+                    )
+                violations += [
+                    Violation("ondemand-origin", name, f"{r!r} is another origin")
+                    for r in after
+                    if urlsplit(r).scheme in ("http", "https")
+                    and urlsplit(r).netloc != base.netloc
+                ]
+            page.close()
+    return violations
+
+
 # --- Learner state -----------------------------------------------------------
 
 LEARNER = "learner"
@@ -1513,7 +1671,7 @@ LEARNER = "learner"
 # other place the browser can keep data are out; ``localStorage`` itself is
 # what the script is for.
 _FORBIDDEN_IN_LEARNER_SCRIPT = {
-    "request": _FORBIDDEN_IN_WIDGETS["request"],
+    "request": _REQUEST,
     "other origin": _FORBIDDEN_IN_WIDGETS["other origin"],
     "other storage": re.compile(
         r"sessionStorage|indexedDB|document\s*\.\s*cookie"
