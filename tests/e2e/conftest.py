@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from support import lesson_checks, shards
+from support import shards
 from support.paths import BUILT_SITE, REPO_ROOT, SITE_SOURCE
 from support.site_server import SiteServer, configured_base_path
 
@@ -46,24 +46,9 @@ def pytest_collection_modifyitems(
         table = shards.table()
         left_out: list[pytest.Item] = []
         for file, tests in by_file.items():
-            described = [
-                (
-                    getattr(test, "originalname", None) or test.name,
-                    getattr(test, "callspec", None)
-                    and test.callspec.params.get("lesson"),
-                )
-                for test in tests
-            ]
-            known = {
-                "lesson": [
-                    page.relative_to(SITE_SOURCE).with_suffix(".html").as_posix()
-                    for page in lesson_checks.lesson_pages(REPO_ROOT)
-                ],
-                "test": [
-                    name for name in vars(tests[0].module) if name.startswith("test")
-                ],
-            }
-            numbers = shards.part_of(file, described, table, parts, known)
+            names = [getattr(test, "originalname", None) or test.name for test in tests]
+            known = [name for name in vars(tests[0].module) if name.startswith("test")]
+            numbers = shards.part_of(file, names, table, parts, known)
             left_out += [t for t, n in zip(tests, numbers, strict=True) if n != part]
     except shards.ShardError as error:
         raise pytest.UsageError(str(error)) from None

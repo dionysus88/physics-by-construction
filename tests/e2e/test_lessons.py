@@ -382,6 +382,10 @@ def _clone_of_the_working_tree(target: Path) -> Path:
     return target
 
 
+# Compares bytes with the built site, and numerical output can differ in the
+# last digit between processors: it runs on the machine that built the site
+# (ADR 012).
+@pytest.mark.same_machine
 @pytest.mark.parametrize("lesson", LESSONS)
 def test_reproduce_commands_regenerate_the_page_within_the_time_budget(
     page: Page, server: SiteServer, site_dir: Path, tmp_path: Path, lesson: str

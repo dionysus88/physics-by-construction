@@ -61,5 +61,8 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 minversion = "9.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
+markers = [
+    "same_machine: compares bytes with the built site, so it runs on the machine that built it (ADR 012)",
+]
 # Shared test helpers live in tests/support.
 pythonpath = ["tests"]
