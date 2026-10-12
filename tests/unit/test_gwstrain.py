@@ -144,3 +144,20 @@ def test_the_lab_fit_of_the_sample_is_inside_the_stated_range(strains):
     assert 0.7 < fit.reduced_chi2 < 1.3
     assert fit.mc_low <= fit.mc <= fit.mc_high + 1.0
     assert not fit.at_edge
+
+
+def test_injection_into_off_source_noise_is_recovered_near_the_truth(strains):
+    # Control: a chirp of 35 solar masses added to a stretch with no event.
+    from pbc.data.gwinjection import inject_and_fit
+
+    (out,) = inject_and_fit(
+        strains,
+        [-8.0],
+        truth_mc=35.0,
+        truth_tc=0.03,
+        delays={"H1": 0.0, "L1": -0.007},
+        peak={"H1": 1.3, "L1": 1.0},
+        band=BAND,
+    )
+    assert out.mc == pytest.approx(35.0, abs=2.5)
+    assert not out.at_edge
