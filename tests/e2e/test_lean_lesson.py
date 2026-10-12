@@ -21,6 +21,7 @@ KINEMATICS = "PhysicsByConstruction.Mechanics.Kinematics"
 EULER = "PhysicsByConstruction.Mechanics.EulerOscillator"
 COLLISION = "PhysicsByConstruction.Mechanics.Collision"
 SYMPLECTIC = "PhysicsByConstruction.Mechanics.SymplecticEuler"
+CHIRP = "PhysicsByConstruction.Mechanics.Chirp"
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,22 @@ LESSONS = {
             }
         ),
         ("hnewton", "hm", "hk", "hdt", "hx'", "hv'"),
+    ),
+    "L5": LeanLesson(
+        "The chirp law, proved",
+        "lessons/lean/05-the-chirp-law-proved/index.html",
+        (CHIRP,),
+        frozenset(
+            {
+                f"{CHIRP}:orbitEnergy",
+                f"{CHIRP}:shrink_rate_of_energy_loss",
+                f"{CHIRP}:chirp_rate_cubed",
+                f"{CHIRP}:chirp_mass_from_rate",
+                f"{CHIRP}:coalescence_countdown",
+            }
+        ),
+        ("hloss", "hK", "hMc5", "hG", "hc", "hm₁", "hm₂"),
+        min_theorems=3,
     ),
 }
 

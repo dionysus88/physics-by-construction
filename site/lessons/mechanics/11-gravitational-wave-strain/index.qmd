@@ -16,7 +16,7 @@ lesson:
     - Derive the frequency and the rate of change of frequency of a shrinking circular orbit from Kepler's third law and an energy loss
     - Read a measured strain through the processing it needs, saying at each step what was changed
     - Fit the Newtonian chirp to the whitened strain, report the chirp mass with its uncertainty, and say what the model leaves out
-  related: []
+  related: [chirp-law-proved]
   format: 2
   prerequisites:
     lessons: [kepler-orbit]
