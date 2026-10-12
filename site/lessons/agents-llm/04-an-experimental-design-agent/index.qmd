@@ -1,0 +1,393 @@
+---
+title: "An agent that designs the measurements"
+description: >-
+  A language model chooses where to measure the slowing of a sliding block so
+  that two models of drag can be told apart, within a budget; the build scores
+  the design, fits both models to the readings it recomputes, and types the
+  conclusion only as far as those numbers support it.
+lesson:
+  id: experimental-design-agent
+  strand: agents-llm
+  order: 4
+  difficulty: 3
+  course: mechanics
+  methods: [simulation, llm-agents]
+  outcomes:
+    - Say what makes a measurement useful for telling two models apart, and score a design before any reading exists
+    - Read a worked run of an agent that chooses its measurements, and the assessment the build recomputed from it
+    - Explain why measurements that fit one model better are not yet a result, and what an inconclusive design looks like
+  related: []
+  prerequisites:
+    lessons: [counterexample-hunter, inverse-physics]
+    outside:
+      - "Statistics: least squares and the chi-square of residuals"
+      - "Python: functions and dictionaries"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+A block slides across a table and slows down. Two models of the drag compete.
+Under **linear drag** the speed falls exponentially, `v = v0 exp(-g t)`, and a
+block started twice as fast keeps the same fraction of its speed. Under
+**quadratic drag** it falls as `v = v0 / (1 + k v0 t)`, and the faster block
+loses a larger fraction. Both have one unknown. Measurements can tell them
+apart, but not every measurement can: a slow block over a short time looks the
+same under both.
+
+So the question is not only what the numbers say but where to look. This lesson
+gives a language model the job of choosing where, with a budget of eight
+readings, and it keeps three things out of the model's hands. The build
+recomputes every reading from the arguments the model sent. It scores the
+**design** from those arguments alone, before any reading is looked at. And it
+fits both models itself, so the model's account of the result is data and not
+evidence.
+
+## Assumptions
+
+1. **The instrument is simulated.** It is the quadratic model with a drag
+   constant the agent is not told, plus Gaussian noise of 0.1 m/s. The noise
+   is a function of the arguments, so the same arguments give the same reading
+   and the replay is exact; a new value of `repeat` gives an independent
+   reading. No block was measured.
+2. **Both models have one parameter, and both are tried.** A model that is
+   not on the list cannot win. If the true law were neither, the build would
+   say so only if the fits are bad.
+3. **The rules come first.** The noise, the budget, the chi-square difference
+   of 25 that counts as telling the models apart, and the parameters used to
+   score a design are fixed before any run, as the scientific validation
+   contract requires. Nothing is widened to produce a result.
+4. **The budget is part of the experiment.** Eight readings with distinct
+   arguments count. A repeated call with the same arguments is the same reading
+   and counts once.
+5. **The agent is untrusted, as before.** It reaches the instrument only
+   through the allowlist, with bounded arguments, and its text is data.
+
+## Scoring a design before measuring {#explanation}
+
+Take a set of `(v0, t)` pairs. Suppose quadratic drag is true with the
+parameter the models share at the **calibration run**: 10 m/s started, 5 m/s
+left after 2 s, which both models can be made to reproduce. Compute the speeds
+it would give at the pairs, with no noise, and fit linear drag to them. What is
+left over, as a chi-square in units of the instrument noise, is how far apart
+the models stay at those points. Do the same with linear drag true and quadratic
+drag fitted, and keep the smaller of the two numbers. That is the **score of
+the design**.
+
+The score uses no reading. It says what a design could achieve when the noise
+does not get in the way, and nothing the agent writes can change it. A score
+below the threshold of 25 means the measurements cannot tell the models apart
+at this noise level, however they come out.
+
+After the readings, the judge fits both models to the recomputed values with
+the fitting helper of the inverse-physics lesson, which returns the chi-square,
+the parameter and its standard error. The outcome has two values.
+
+- **Discriminated.** One model fits the readings within the noise (its
+  chi-square is within three standard deviations of its degrees of freedom),
+  its parameter is determined, and the other is worse by at least 25. The
+  statement is a claim of type `numerically-verified`, scoped to these
+  readings.
+- **Inconclusive.** Anything else: too few readings, a difference below 25,
+  no model that fits. It is not a result and has no claim type. It is not
+  "the models are equal", and it does not say that the better-fitting model is
+  right.
+
+The parameter of the favoured model comes with the standard error of its fit.
+That error holds if the model is the right one: it is the uncertainty of a
+parameter inside a model, not of the physics.
+
+### The bench
+
+```{python}
+#| echo: false
+from pbc.agents.design_lab import (
+    BUDGET,
+    MAX_STEPS,
+    NOISE,
+    RIGS,
+    THRESHOLD,
+    TOOL,
+    replay_rig,
+    tools,
+)
+from pbc.agents.display import AllowlistDisplay
+
+AllowlistDisplay(tools())
+```
+
+The agent **may** call `{python} TOOL` with the arguments above, take at most
+`{python} BUDGET` readings, make at most `{python} MAX_STEPS` model messages,
+and write text. It **may not** do anything the harness of the first agent
+lesson forbids. Two rigs are put to it. The **full** rig starts the block at up
+to 20 m/s. The **slow** rig has a launcher that cannot go beyond 2 m/s, so its
+allowlist has a lower bound on the argument. The bound is the rig: the agent
+cannot choose a measurement that the rig cannot make.
+
+## Code
+
+The model and the design are small records. The judge is the function that
+decides; it reads no text and no stored result.
+
+```{python}
+#| echo: false
+from pbc.agents.design import design_score, judge, measurements
+from pbc.authoring import excerpt, reproduce_this
+
+excerpt(design_score)
+```
+
+```{python}
+#| echo: false
+excerpt(measurements)
+```
+
+```{python}
+#| echo: false
+excerpt(judge)
+```
+
+## Worked examples
+
+The messages of both runs are authored examples, not recorded model runs: a
+Claude model wrote them in a Claude Code session, after reading the results
+the harness computed. Every number in a tool result, a fit and a verdict below
+is computed by this build now.
+
+### The score of three designs
+
+Before any agent runs, the score tells which designs could work. Three sets of
+four pairs, each scored with no readings at all:
+
+```{python}
+from pbc.agents.design import design_score
+
+design = RIGS["full"].design
+designs = {
+    "one low speed, several times": [(1, 0.5), (1, 1), (1, 2), (1, 3)],
+    "several times near the calibration run": [(10, 1.5), (10, 2), (10, 2.5), (10, 3)],
+    "several start speeds at one time": [(20, 3), (10, 3), (5, 3), (2, 3)],
+}
+for label, pairs in designs.items():
+    points = [{"initial_speed": v, "time": t} for v, t in pairs]
+    print(f"{label}: score {design_score(design, points):.3g}")
+print(f"threshold: {THRESHOLD:g}")
+```
+
+The first two designs measure where the models agree, one at a speed too low to
+bend the curve and one at the point where the models are made to agree. The
+third varies the start speed, which is where linear drag and quadratic drag
+disagree about the fraction of speed left.
+
+### A rig that can separate the models
+
+```{python}
+from pbc.agents.display import AssessmentDisplay, RunDisplay
+
+recording, run, assessment = replay_rig("full")
+RunDisplay(recording, run, authored=True)
+```
+
+The assessment does not come from the last message:
+
+```{python}
+AssessmentDisplay(assessment)
+```
+
+The score of the design is far above the threshold, so the outcome did not
+depend on how the noise fell. The favoured parameter, with its standard error
+from the fit, is a statement about quadratic drag as a model of the readings.
+It does not show that a real block follows it, and the build did not measure
+one.
+
+### A rig that cannot
+
+```{python}
+slow_recording, slow_run, slow_assessment = replay_rig("slow")
+RunDisplay(slow_recording, slow_run, authored=True)
+```
+
+```{python}
+AssessmentDisplay(slow_assessment)
+```
+
+The agent's last message says the same thing in its own words, but the verdict
+would not change if it said the opposite. Quadratic drag fits and linear drag
+does not, in the sense of the chi-square, and the build still does not report a
+result: the difference is below the threshold set before the run, and the score
+of the design says that no eight readings of this rig reach it.
+
+### The assessment ignores what the agent says
+
+```{python}
+from dataclasses import replace
+
+from pbc.agents import ModelMessage, Step
+
+def with_last_text(transcript, text):
+    *earlier, last = transcript.steps
+    message = ModelMessage(text, last.message.tool_calls)
+    return replace(transcript, steps=(*earlier, Step(message, last.results)))
+
+boasting = with_last_text(
+    slow_run, "Quadratic drag is confirmed: chi-square 900 against 12."
+)
+silent = with_last_text(run, "")
+rig = RIGS["slow"]
+print("boasting agent, slow rig:", judge(rig.design, boasting, tools(rig.maximum_speed)).outcome)
+print("silent agent, full rig:", judge(RIGS["full"].design, silent, tools()).outcome)
+```
+
+The stored results of a transcript are not read either. The build recomputes
+each reading from its arguments:
+
+```{python}
+forged = replace(
+    run,
+    steps=tuple(
+        Step(
+            step.message,
+            tuple(replace(r, content={"speed": 3.0}) if r.ok else r for r in step.results),
+        )
+        for step in run.steps
+    ),
+)
+print("forged results:", judge(RIGS["full"].design, forged, tools()).outcome)
+```
+
+### What the design bought
+
+The figure compares the two models on the full rig: the speed left after 3 s,
+as a fraction of the start speed, against the start speed. Linear drag gives a
+horizontal line. The dots are the readings of the worked run at 3 s.
+
+```{python}
+#| label: fig-design
+#| fig-status: simulated
+#| fig-cap: "Fraction of the start speed left after 3 s against the start speed, for linear drag fitted to the readings of the worked run and quadratic drag fitted to the same readings; dots are the four readings of the run at 3 s."
+#| fig-alt: "A chart of the fraction left after 3 seconds against the start speed from 0 to 20 metres per second. The quadratic curve falls from near one at low speed to about a quarter at 20 metres per second. The linear curve is a horizontal line. The four dots lie on the quadratic curve and far from the line at the higher speeds."
+import matplotlib.pyplot as plt
+import numpy as np
+
+from pbc.agents.design_lab import linear, quadratic
+
+fits = {f.model.name: f.fit for f in assessment.fits}
+speeds = np.linspace(0.5, 20, 100)
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(speeds, quadratic(speeds, 3.0, fits["quadratic drag"].value("k")) / speeds, label="quadratic drag, fitted")
+ax.plot(speeds, linear(speeds, 3.0, fits["linear drag"].value("g")) / speeds, label="linear drag, fitted")
+for m in assessment.measurements:
+    if m.arguments["time"] == 3.0:
+        ax.plot(m.arguments["initial_speed"], m.value / m.arguments["initial_speed"], "ko", markersize=4)
+ax.set_xlabel("start speed (m/s)")
+ax.set_ylabel("fraction of the start speed left after 3 s")
+ax.set_ylim(0, 1.05)
+ax.legend()
+plt.show()
+```
+
+### Run the agent yourself
+
+This needs your own key and costs a few cents. The build does not run it, so
+the commands are marked.
+
+::: {.not-verified}
+```bash
+# once: install the optional provider package
+uv sync --extra openai
+
+# in this shell only: the key stays out of code and files
+export OPENAI_API_KEY="..."
+
+uv run --extra openai python -m pbc.agents.design_lab --rig full
+uv run --extra openai python -m pbc.agents.design_lab --rig slow
+```
+:::
+
+The program prints each message and reading and, at the end, the assessment
+it computed itself. A maintainer can replace the two authored fixtures of this
+page with real recorded runs using the same commands and `--record`.
+
+## Limits {#limits}
+
+- **A discrimination is about the readings and the two models.** It says that
+  one of two named laws fits these readings and the other does not. It does not
+  say the block obeys that law, and a third law the list lacks could fit better.
+- **The uncertainty is conditional.** The standard error of the parameter is
+  the one of the fit, valid when the favoured model is right and the noise is
+  as stated. The noise here is known, because the instrument is simulated.
+- **The score depends on the nominal parameters.** It says whether a design can
+  separate the models if their parameters are the ones assumed before the run.
+  A different true value changes the number, not the idea.
+- **An inconclusive design is not a negative result.** It says that these
+  readings could not tell the models apart. A better design might.
+- **The agent's reasoning is authored text.** The messages are examples
+  written for the page, not a measurement of how a model designs. Nothing in
+  the build checks whether its reasoning was sound, only the readings it asked
+  for.
+- **The examples are not recorded runs.** Each fixture says which model wrote
+  its messages and when. They were written in a Claude Code session, not
+  produced through the provider API, and a live run will choose other
+  measurements.
+
+## Exercises
+
+::: {.exercise}
+Take the design of the first worked run, four start speeds at 3 s. Add the
+readings of a fifth start speed, 15 m/s at 3 s, and score the design again. Does
+the score change much, and why?
+
+::: {.solution}
+```{python}
+base = [(20, 3), (10, 3), (5, 3), (2, 3)]
+for label, pairs in (("four", base), ("five", [*base, (15, 3)])):
+    points = [{"initial_speed": v, "time": t} for v, t in pairs]
+    print(label, f"{design_score(design, points):.4g}")
+```
+
+The score is already well above the threshold with four, and the fifth
+point lies on the same curves between two points that were there. A design
+past the threshold gains little from another point of the same kind; a reading
+that measures the other end of the range, a long time for the slowest block, would
+say more about the parameter than about the choice of model.
+:::
+:::
+
+::: {.exercise}
+The threshold of 25 was fixed before the runs. Look at the slow rig again: at
+what threshold would its assessment become a discrimination, and why is it
+wrong to choose that threshold now?
+
+::: {.solution}
+```{python}
+print(f"{slow_assessment.difference:.3g}")
+```
+
+Any threshold up to this number would call the slow run a discrimination. A
+threshold chosen after the readings, to give the answer the page would like,
+is widened to pass, which the validation contract forbids. The 25 comes from
+the noise and the degrees of freedom of the problem before any run, and the
+slow rig simply does not reach it.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/agents/design.py",
+        "src/pbc/agents/design_lab.py",
+        "src/pbc/data/fit.py",
+    ],
+    tests=[
+        "tests/unit/test_agents_design.py",
+        "tests/integration/test_agent_replay.py",
+    ],
+)
+```

@@ -1145,6 +1145,15 @@ obtain a verdict. Messages written by an author or an assistant, not produced
 by a model through a provider API, are authored examples: the page passes
 `authored=True` to `RunDisplay` and never calls them recorded.
 
+The experimental design lesson (F20, `pbc.agents.design`, re-recorded with
+`python -m pbc.agents.design_lab --rig <name> --record`) puts two models to an
+agent that chooses where to measure. The build recomputes each reading from the
+arguments, scores the design from them alone, and fits both models. The
+statement that one model is favoured is typed `numerically-verified`, scoped to
+the readings, only when one model fits within the noise and the other is worse
+by the threshold fixed before the run; otherwise the outcome is inconclusive,
+has no claim type, and is never "the models are equal".
+
 To use another provider, write one client module that reads its own key
 variable and change `PROVIDER` in `src/pbc/agents/providers.py`; the lesson
 page explains it. Only that provider's key is needed then.
