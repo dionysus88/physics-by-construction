@@ -912,7 +912,8 @@ integrators" has the first one, the integrator explorer, in its section
   JavaScript loses nothing.
 - A widget is one dependency-free ES module in `site/widgets/`, loaded by a
   relative URL. No package manager, bundler, or third-party code. It makes no
-  request, loads nothing from another origin, and writes no cookie and
+  request (except the one load of its own on-demand data, see "On-demand
+  data"), loads nothing from another origin, and writes no cookie and
   nothing to browser storage. It does not animate, so the preference for
   reduced motion is respected by construction; if a widget ever animates,
   it must stop when `prefers-reduced-motion: reduce` matches.
@@ -983,6 +984,41 @@ One or two sentences for the reader without JavaScript.
 | Check | Reports |
 |---|---|
 | `site-checks` | A script in `widgets/` that contains a request, another origin, or a use of browser storage; a widget that, with its controls operated by keyboard, writes a cookie or anything to Web Storage, IndexedDB, the Cache API, or a service worker; content that appears only with scripts outside a `data-enhancement` element; the accessibility scan of the page; and the widget-specific tests in `tests/e2e/test_widgets.py` (fallback, keyboard operation, values against `pbc`, layout shift, reduced motion). |
+
+### On-demand data
+
+A component whose data is too large to embed (a series for many parameter
+values, the frames of a field) loads it after the reader asks for it. The
+first such component is the waveform comparator of the gravitational-wave
+strain lab, `site/widgets/waveform-comparator.js`: a measured series against
+model profiles (here, the chirp for a range of chirp masses) with the error
+metrics of each, a slider, and the displayed values as text.
+
+- A cell writes the file with `widget_asset(name, data)` from
+  `pbc.authoring`; it returns the URL relative to the page, and the file is
+  published beside the page (`index_files/figure-html/<name>.json`: Quarto
+  publishes that directory with the page, also when the page is rendered alone). The data is computed by `src/pbc`
+  (for the comparator, `pbc.data.comparison.waveform_comparison`), never by
+  the widget.
+- The element of the widget names the file in `data-ondemand` (space-separated
+  relative addresses). Until the reader presses a button inside that element,
+  the widget requests nothing; the static figure stays and the controls slot
+  holds one sentence and the button. A failed load leaves the figure and says
+  so.
+- Budget: 3 MB per page on demand, from the site's own origin, and 5 MB for
+  everything the page can load with the initial payload.
+- A component never alters a claimed observed value: it draws and lists the
+  numbers of the file as they are (no smoothing, resampling, or rounding of
+  its own), and a test shows that the drawn points are an affine map of the
+  embedded values and that the text export equals them.
+- Every state a component can show has the static figure as its keyframe, and
+  nothing animates.
+- One component per lab that needs it. A new component copies the pattern and
+  adds its tests in `tests/e2e/`, as `tests/e2e/test_comparator.py` does.
+
+| Check | Reports |
+|---|---|
+| `site-checks` | An on-demand file that is missing from the built site, is not a relative address, or whose page loads more than 3 MB (5 MB with the initial payload); a page that requests its on-demand data before an action, has no button (`data-loads-ondemand`) that asks for it, or whose button loads nothing or reaches another origin (`check_ondemand_budget`, `check_ondemand_loads_after_action`, run in `tests/e2e/test_comparator.py`). |
 
 When you add a widget, add the tests for it to `tests/e2e/test_widgets.py`
 the way the explorer's are written: displayed values against a fresh run of
