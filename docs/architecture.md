@@ -708,21 +708,20 @@ Budget (required by the requirements; rationale in ADR 003):
 Mathlib is never compiled from source in CI; if its cache cannot be fetched
 the job fails (ADR 003, decision 4).
 
-**Measured state (F10, 2026-10-08).** With eleven lessons the `verify` job
-takes about 15 minutes with warm caches; every per-check budget is met and
-the wall clock is over by about three and a half minutes. The first response
-of ADR 003 (reduce the cost of the offending checks) was applied in F10 and
-was not enough. The second response is therefore due and is the feature F58:
-split `verify` into parallel jobs that each run a named subset of the same
-`verify.conf` checks, behind one aggregate required check named `verify`, so
-the merge gate stays a single always-present status check and no check is
-declared only in workflow YAML. F58 is recommended before any feature that
-adds pages, because each page adds to the executed and checked time; it is
-not a dependency of those features, and the per-check budgets and the
-over-budget response of ADR 003 decision 6 stay the guard while the overrun
-lasts. Dropping a check,
-adding path filters, or moving a check to a schedule stays unavailable
-without a new ADR.
+**Measured state (F58, 2026-10-12).** With twenty-two lessons a run takes 18
+to 25 minutes in parallel jobs, against 31 to 43 minutes in the single job
+before; the runs are in `docs/release-readiness.md`, "Parallel jobs (F58)".
+Both responses of ADR 003, decision 6, are applied (F10 made checks cheaper,
+F58 runs them in parallel jobs behind the one required check, ADR 012), and
+the wall clock is still over the budget of 12 minutes: every lesson is
+executed three times in a run, and the comparisons of bytes with the built
+site have to run on the machine of the build. The project owner decided on
+2026-10-12 that the 12 minutes become an acceptance criterion of the feature
+that makes verification proportional to what a pull request changes (ADR
+012, decision 8). Until then every page adds to the executed and checked
+time, and the per-check budgets stay the guard. Dropping a check, adding
+path filters, or moving a check to a schedule stays unavailable without a
+new ADR.
 
 Per-page and per-lesson budgets that the next phase adds:
 
