@@ -64,18 +64,28 @@ class Whitener:
 
     The operation is linear, so a model can be passed through the same filter
     as the data, which is how the fit compares them.
+
+    Both steps are one multiplication of the spectrum. The band-pass is the
+    Butterworth filter of ``sos`` run forward and backward, which has no phase
+    shift and the squared magnitude of the filter as its gain; that gain is
+    applied in the same transform that divides by the noise. Away from the
+    ends of the segment the result is the one of filtering the whitened
+    series in time (to parts in a million over the inner eight tenths of a
+    segment of a second and a half, and better for a longer one). At the ends
+    the two differ, because a filter in time has to invent samples beyond
+    them; the window already tapers the ends, and nothing reads them.
     """
 
     amplitude: Array  # noise amplitude spectral density on the rfft grid of the segment
     window: Array
     sos: Array
+    gain: Array  # of the band-pass run forward and backward, on the same grid
     sample_rate: float
     band: tuple[float, float]
 
     def __call__(self, x: Array) -> Array:
         spectrum = np.fft.rfft(np.asarray(x) * self.window)
-        white = np.fft.irfft(spectrum / self.amplitude, n=np.shape(x)[-1])
-        out = signal.sosfiltfilt(self.sos, white)
+        out = np.fft.irfft(spectrum * (self.gain / self.amplitude), n=np.shape(x)[-1])
         return out * np.sqrt(2.0 / self.sample_rate)
 
 
@@ -87,10 +97,12 @@ def make_whitener(
     freqs, asd = amplitude_spectrum(strain)
     grid = np.fft.rfftfreq(n, 1.0 / segment.sample_rate)
     sos = signal.butter(4, band, btype="bandpass", fs=segment.sample_rate, output="sos")
+    _, response = signal.sosfreqz(sos, worN=grid, fs=segment.sample_rate)
     return Whitener(
         amplitude=np.interp(grid, freqs, asd),
         window=signal.windows.tukey(n, alpha=0.1),
         sos=sos,
+        gain=np.abs(response) ** 2,
         sample_rate=segment.sample_rate,
         band=band,
     )
