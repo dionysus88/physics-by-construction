@@ -685,7 +685,7 @@ Budget (required by the requirements; rationale in ADR 003):
 |---|---|
 | Typical pull request, warm caches, wall clock | 12 minutes or less |
 | Cold caches (for example after a Mathlib bump) | 25 minutes or less |
-| Job timeout | 30 minutes |
+| Job timeout | 45 minutes (30 in ADR 003; raised by the owner on 2026-10-11, until F58 brings the verification back within its budget) |
 | Unit tests | 2 minutes or less |
 | Lean build after the Mathlib cache is in place | 3 minutes or less |
 | One lesson page, executed | 30 seconds or less |
@@ -786,7 +786,7 @@ Choices the requirements left to planning, and where they are settled:
 |---|---|---|
 | Site technology | Quarto, build-time execution, MathML equations | ADR 001 |
 | Generated artifacts: regenerate or commit | Regenerate on every build, never commit. Agent replay fixtures and dataset samples are committed verification inputs, checked on every build | ADR 002, 004, 007 |
-| CI time budget | 12 minutes typical, 30 minute timeout; parallel jobs behind one aggregate check when exceeded | This document; ADR 003; F58 |
+| CI time budget | 12 minutes typical, 45 minute timeout (30 in ADR 003, raised on 2026-10-11 until F58); parallel jobs behind one aggregate check when exceeded | This document; ADR 003; F58 |
 | Python packages | NumPy, SciPy, Matplotlib, PyYAML, pytest, Ruff; minimal data readers of F50 in `pbc.data` (no new dependency), extended by F51 | Toolchains table |
 | Exact mechanics lesson list | Eight lessons | `docs/roadmap.md` |
 | Agent-based-modelling lesson in the MVP or after (unresolved question 4) | Delivered as F11 and included in the first release | `docs/roadmap.md`, `docs/release-readiness.md` |

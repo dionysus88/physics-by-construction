@@ -1,0 +1,14 @@
+Projectile range with drag, launch speed uncertain
+launch speed: 30.0 +/- 0.5 m/s
+drag constant: 0.00103 kg/m
+range at 15 deg: 37.91 +/- 1.05 m
+range at 25 deg: 53.08 +/- 1.36 m
+range at 35 deg: 61.08 +/- 1.48 m
+range at 45 deg: 62.41 +/- 1.46 m
+range at 55 deg: 57.48 +/- 1.32 m
+range at 65 deg: 46.72 +/- 1.07 m
+range at 75 deg: 30.78 +/- 0.71 m
+best angle on the fine grid: 42.5 deg
+best angle without drag: 45.0 deg
+Monte Carlo range at 42.5 deg (200 launches): 62.78 +/- 0.10 m
+Monte Carlo spread of the range: 1.42 m

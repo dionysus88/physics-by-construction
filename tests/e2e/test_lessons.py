@@ -174,12 +174,12 @@ def test_the_first_lesson_shows_mathml_results_and_figures(
     )
     assert len(widths) >= 10 and all(width > 0 for width in widths)
     assert page.locator(".MathJax, .katex, mjx-container").count() == 0
-    # Numbers are what executed cells printed or tabulated, and both figures
-    # were drawn.
+    # Numbers are what executed cells printed or tabulated, and the three
+    # figures were drawn: the update-rule sketch and the two plots.
     assert page.locator("main .cell-output-stdout").count() >= 2
     assert page.locator("main table.result-table").count() == 4
     figures = page.locator("main img.figure-img")
-    assert figures.count() == 2
+    assert figures.count() == 3
     assert all(
         figures.evaluate_all(
             "images => images.map(i => i.complete && i.naturalWidth > 0 && !!i.alt)"
@@ -451,6 +451,7 @@ def test_the_first_lesson_shows_the_constructs_of_format_2_as_text(
     status = page_without_scripts.locator("figcaption .figure-status")
     # The stylesheet shows the word in capitals.
     assert [status.nth(i).inner_text().lower() for i in range(status.count())] == [
+        "conceptual",
         "simulated",
         "simulated",
     ]
