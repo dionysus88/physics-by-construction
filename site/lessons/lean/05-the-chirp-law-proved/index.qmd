@@ -1,0 +1,376 @@
+---
+title: "The chirp law, proved"
+description: >-
+  The shrinking orbit, the rate of the frequency, the chirp mass, and the time
+  to coalescence of the gravitational-wave strain lab, stated and proved in
+  Lean 4 as exact consequences of Kepler's third law and an assumed energy
+  loss, and what that says about the model and nothing about the measurement.
+lesson:
+  id: chirp-law-proved
+  strand: lean
+  order: 5
+  difficulty: 3
+  course: mechanics
+  methods: [lean]
+  outcomes:
+    - State the shrink rate of a circular orbit and the chirp rate as theorems in Lean 4, with the quadrupole power as a hypothesis
+    - Read the proof that a frequency and its rate fix the chirp mass, and the proof that the time to coalescence counts down at the rate one
+    - Say that the theorems are about the model of the lab, and that they prove nothing about the measured strain or the masses of the black holes
+  related: []
+  format: 2
+  prerequisites:
+    lessons: [gravitational-wave-strain, proving-what-the-simulation-showed]
+    outside:
+      - "Calculus: the chain rule and the derivative of a power and of a quotient"
+  lean-modules:
+    - PhysicsByConstruction.Mechanics.Chirp
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+The gravitational-wave strain lab derives the chirp of two bodies that spiral
+together, from Kepler's third law and one input from outside Newtonian
+mechanics, the power that the pair radiates. It then checks the result against
+a numerical inspiral for one pair of masses. A check for one pair of masses
+does not show that the algebra holds for every pair, and a slip in a long chain
+of fractional powers is easy to make. This lesson states the steps in Lean and
+proves them for all masses at once.
+
+It proves properties of the **model**: the equations of the lab and what
+follows from them. It does not prove anything about the strain that the
+detectors recorded, about the fit, or about the black holes. That limit comes
+back at the end, and it is the main one.
+
+## Assumptions
+
+Every assumption is a hypothesis of a theorem or a definition; the build fails
+on `sorry` and on any axiom the project declares.
+
+1. **Two point masses on a circular orbit.** The separation $a$ is the only
+   coordinate. Kepler's third law holds at every instant,
+   $\omega^2 a^3 = G(m_1 + m_2)$ with $\omega = \pi f$ the orbital angular
+   frequency (`hK`). The orbit is assumed to stay circular while it shrinks.
+2. **The quadrupole power is an assumption, not derived.** The energy of the
+   orbit is $-G m_1 m_2/(2a)$ (`orbitEnergy`), and it falls at the power
+   $\tfrac{32}{5} G^4 m_1^2 m_2^2 (m_1+m_2)/(c^5 a^5)$ (`quadrupolePower`),
+   the formula of general relativity. The hypothesis `hloss` says that the
+   derivative of the energy is minus that power. Nothing in the proofs
+   justifies the power; a different power gives a different shrink rate.
+3. **Positive constants and masses.** `hG`, `hc`, `hm₁`, `hm₂`, and a positive
+   separation `ha0`. They let the proofs divide.
+4. **The chirp mass by its fifth power.** `hMc5` defines $\mathcal{M}$ through
+   $\mathcal{M}^5 = (m_1 m_2)^3/(m_1+m_2)$. Powers in the theorems are whole
+   numbers: the lab's $\omega^{11/3}$ appears as the cube of the rate,
+   $(\omega')^3 \propto \omega^{11}$, which says the same thing without a
+   fractional power of a real number.
+5. **Differentiable in time.** The separation and the frequency have
+   derivatives at the instant considered (`HasDerivAt`). The theorems are
+   about those derivatives and not about a numerical integration.
+6. **Real numbers, not floating-point numbers.** Lean's `ℝ` has no round-off,
+   and the constants $G$ and $c$ are arbitrary positive reals, not the
+   measured values.
+
+## What the theorems say {#explanation}
+
+Write $\mathcal{M}$ for the chirp mass and $\omega = \pi f$. The lab's chain of
+steps is proved in pieces.
+
+**The orbit shrinks.** If the separation has the derivative $a'$ and the energy
+$-G m_1 m_2/(2a)$ has the derivative $-P(a)$, the chain rule gives
+$\tfrac{G m_1 m_2}{2 a^2}\,a' = -P(a)$, and so
+
+$$
+a' = -\frac{64}{5}\,\frac{G^3 m_1 m_2 (m_1 + m_2)}{c^5 a^3}.
+$$
+
+**The frequency rises.** Differentiating Kepler's law,
+$\omega^2 a^3 = G(m_1+m_2)$, along the orbit gives
+$2\omega\omega' a^3 + 3\omega^2 a^2 a' = 0$, so
+$\omega' = -\tfrac{3\omega}{2a}\,a'$. With the shrink rate, and Kepler's law
+again to remove $a$, the masses enter only through $\mathcal{M}$:
+
+$$
+(\omega')^3 = \left(\frac{96}{5}\right)^3 \left(\frac{G\mathcal{M}}{c^3}\right)^5 \omega^{11}.
+$$
+
+**The chirp mass can be read back.** The same relation gives
+$(G\mathcal{M}/c^3)^5 = (5/96)^3(\omega')^3/\omega^{11}$, and a positive
+$\mathcal{M}$ is fixed by its fifth power: a frequency and its rate cannot
+belong to two different chirp masses.
+
+**The time to coalescence.** If $(\omega')^3 = K\omega^{11}$ holds on a
+neighbourhood of an instant $t$, then $\tau = 3\omega/(8\omega')$ has the
+derivative $-1$ at $t$: it is a clock that counts down at the rate one. This is
+a local identity. If the inspiral runs on until the frequency diverges, $\tau$
+reaches zero there, which is the coalescence time of the lab,
+$(5/256)(\pi f)^{-8/3}(G\mathcal{M}/c^3)^{-5/3}$; that the inspiral reaches
+the divergence is not proved here.
+
+[If a circular orbit loses energy at the quadrupole power, its separation
+shrinks at the rate $-\tfrac{64}{5}G^3 m_1 m_2 (m_1+m_2)/(c^5 a^3)$.]{.claim
+type="formal-theorem" scope="two positive masses on a circular orbit, the
+quadrupole power taken as a hypothesis, real arithmetic"
+evidence="shrink_rate_of_energy_loss"}
+
+[With Kepler's third law, the rate of change of the orbital angular frequency
+satisfies $(\omega')^3 = (96/5)^3 (G\mathcal{M}/c^3)^5\omega^{11}$ with the
+chirp mass defined by $\mathcal{M}^5 = (m_1 m_2)^3/(m_1 + m_2)$.]{.claim
+type="formal-theorem" scope="the same model, real arithmetic"
+evidence="chirp_rate_cubed"}
+
+[A frequency and its rate of change determine the chirp mass: two positive
+chirp masses that satisfy the law with the same $\omega$ and $\omega'$ are
+equal.]{.claim type="formal-theorem" scope="positive constants, a non-zero
+frequency, real arithmetic" evidence="chirp_mass_unique"}
+
+[Where $(\omega')^3 = K\omega^{11}$ holds on a neighbourhood of an instant,
+the quantity $3\omega/(8\omega')$ decreases at the rate one at that
+instant.]{.claim type="formal-theorem"
+scope="a local identity at one instant, for a rising frequency with a differentiable rate, real arithmetic"
+evidence="coalescence_countdown"}
+
+## The proofs {#code}
+
+The listings are read from the Lean files of the repository when the site is
+built, and they are the text that `lake build` compiled.
+
+```{python}
+#| echo: false
+from pbc.authoring import lean_evidence, lean_excerpt, reproduce_this
+
+CHIRP = "PhysicsByConstruction.Mechanics.Chirp"
+
+lean_evidence(CHIRP)
+```
+
+The definitions. The power is a definition, and its use is a hypothesis of the
+next theorem.
+
+```{python}
+#| echo: false
+lean_excerpt(CHIRP, "orbitEnergy")
+```
+
+The shrink rate. `hloss` is the assumption: the energy of the orbit falls at
+the quadrupole power. The proof compares two derivatives of the same
+function, the one the chain rule gives and the one `hloss` states, and clears
+the denominators.
+
+```{python}
+#| echo: false
+lean_excerpt(CHIRP, "shrink_rate_of_energy_loss")
+```
+
+The rate of the frequency. The proof differentiates Kepler's law along the
+orbit, solves for $\omega'$, and then cubes it so that the only powers left are
+whole numbers; `hMc5` turns the masses into the chirp mass.
+
+```{python}
+#| echo: false
+lean_excerpt(CHIRP, "chirp_rate_cubed")
+```
+
+The inverse, and the uniqueness of the chirp mass.
+
+```{python}
+#| echo: false
+lean_excerpt(CHIRP, "chirp_mass_from_rate")
+```
+
+The countdown. The proof differentiates the law $(\omega')^3 = K\omega^{11}$ to
+get $\omega''$, and the quotient rule does the rest.
+
+```{python}
+#| echo: false
+lean_excerpt(CHIRP, "coalescence_countdown")
+```
+
+## Worked examples
+
+### The identities on the program's numbers
+
+The theorems are about real numbers and the program uses doubles. The cell
+evaluates the identities with the functions of the lab, for the masses of the
+lab's example, to show that the program computes the quantities the theorems
+describe.
+
+```{python}
+import numpy as np
+
+from pbc.authoring import table
+from pbc.mechanics import chirp
+
+m1, m2, f0 = 36.0, 29.0, 35.0  # solar masses, Hz: the example of the lab
+mc = chirp.chirp_mass(m1, m2)
+omega = np.pi * f0
+omega_dot = np.pi * float(chirp.chirp_rate(f0, mc))
+gmc = mc * chirp.GM_SUN_OVER_C3  # G Mc / c^3, in seconds
+
+cube_lhs = omega_dot**3
+cube_rhs = (96 / 5) ** 3 * gmc**5 * omega**11
+mc_back = float(chirp.chirp_mass_from_rate(f0, omega_dot / np.pi))
+tau_countdown = 3 * omega / (8 * omega_dot)
+tau_lab = chirp.time_to_coalescence(f0, mc)
+
+table(
+    [
+        ("(omega')^3 against (96/5)^3 (G Mc/c^3)^5 omega^11", cube_lhs / cube_rhs - 1),
+        ("chirp mass from the rate against the chirp mass", mc_back / mc - 1),
+        ("3 omega / (8 omega') against the time to coalescence", tau_countdown / tau_lab - 1),
+    ],
+    [("identity of the theorems", "", ""), ("relative difference", "", ".1e")],
+    "The identities of the theorems, evaluated with the functions of the lab.",
+)
+```
+
+All three differences are at round-off. That is a check that the program and
+the theorems describe the same relations for one pair of masses, and it is not
+part of the proof.
+
+### The shrink rate and the energy balance
+
+The first theorem takes the quadrupole power as given and derives the rate.
+The cell does the same with numbers: it differences the energy of the orbit
+along the shrink rate of the program and compares with the power.
+
+```{python}
+a = float(chirp.separation_from_frequency(f0, m1 + m2))
+m1_kg, m2_kg = m1 * chirp.M_SUN, m2 * chirp.M_SUN
+
+
+def orbit_energy(separation):
+    return -chirp.G * m1_kg * m2_kg / (2 * separation)
+
+
+power = (
+    32 / 5 * chirp.G**4 * m1_kg**2 * m2_kg**2 * (m1_kg + m2_kg) / (chirp.C**5 * a**5)
+)
+da_dt = float(chirp.shrink_rate(a, m1, m2))
+h = 1e-3 * a
+d_energy = (orbit_energy(a + h) - orbit_energy(a - h)) / (2 * h) * da_dt
+ratio = -d_energy / power
+print(f"d(energy)/dt over minus the power, from the shrink rate of the program: {ratio:.6f}")
+```
+
+The ratio is one to the accuracy of the difference quotient: the program's
+shrink rate is the one that the energy balance with the quadrupole power
+fixes.
+
+### The countdown along an inspiral
+
+The cell integrates the shrinking orbit, with no use of the closed form, and
+computes $3\omega/(8\omega')$ at each time from the frequency and the rate. The
+theorem says the result falls with the slope $-1$.
+
+```{python}
+#| label: fig-countdown
+#| fig-cap: "The quantity 3 omega / (8 omega') along an integrated inspiral, with the time left to coalescence. It follows the line of slope minus one."
+#| fig-alt: "Plot of seconds against time in seconds. A straight line of slope minus one, the time left, and a dashed curve from the integrated inspiral lie on top of each other."
+#| fig-status: simulated
+import matplotlib.pyplot as plt
+
+tau0 = chirp.time_to_coalescence(f0, mc)
+times = np.linspace(0.0, 0.9 * tau0, 300)
+_, f_num = chirp.inspiral_frequency(times, m1, m2, f0)
+countdown = 3 * f_num / (8 * chirp.chirp_rate(f_num, mc))
+slope = np.polyfit(times, countdown, 1)[0]
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(times, tau0 - times, color="#93003a", label="time left")
+ax.plot(times, countdown, color="#00429d", linestyle="--", label="3 omega / (8 omega')")
+ax.set_xlabel("time (s)")
+ax.set_ylabel("seconds")
+ax.legend()
+plt.show()
+```
+
+The fitted slope is `{python} f"{slope:.4f}"`, as the theorem says. The
+theorem holds wherever the law holds. Near the end of a real inspiral the law
+stops describing the system, and the lab says where.
+
+## Limits {#limits}
+
+- **Nothing about the measurement.** The theorems are about equations. They do
+  not say that the detectors saw a chirp, that the fit of the lab found the
+  right chirp mass, or that any value of the chirp mass is correct. A proved
+  relation between a frequency and its rate says nothing about whether the
+  frequency and the rate were measured well.
+- **The quadrupole power is assumed.** If the true power differs, every
+  theorem still holds as stated, but about a different system. The lesson
+  does not derive the power from general relativity.
+- **The Newtonian orbit.** The model is the leading order. The proofs do not
+  say how good it is near the merger, where the separation approaches the
+  size of the black holes.
+- **The Python code.** Nothing here is a statement about `pbc.mechanics.chirp`.
+  The cells above compare its output with the identities for one pair of
+  masses.
+- **Real numbers, differentiable motion.** `ℝ` is exact and the motion is
+  assumed differentiable. A numerical inspiral has a step error that the
+  theorems do not speak about.
+- **Only these properties.** The closed form of the frequency as a function
+  of time, and the phase of the waveform, are not proved here; the countdown
+  theorem is the local, differential form of the closed form.
+
+::: {.exercise .self-check}
+The uniqueness theorem says a frequency and its rate fix the chirp mass. Does
+it say that the two masses are fixed?
+
+::: {.solution}
+No. The chirp mass is one combination of the two masses, and many pairs
+$(m_1, m_2)$ give the same value of $(m_1 m_2)^3/(m_1+m_2)$. The lab says
+the same: the frequency and its rate fix $\mathcal{M}$ and not the masses
+separately.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**A different power.** Suppose the orbit lost energy at a power proportional
+to $a^{-4}$ and not $a^{-5}$. Which theorem of this lesson would no longer
+apply, and what would change in the shrink rate?
+
+::: {.solution}
+The shrink-rate theorem would not apply, since its hypothesis `hloss` states
+the quadrupole power. From $\tfrac{G m_1 m_2}{2a^2}\,a' = -P$ with
+$P \propto a^{-4}$ the rate would be proportional to $a^{-2}$ and not $a^{-3}$,
+and the powers of $\omega$ in the chirp law would change with it.
+
+```{python}
+print("the exponent of a in the rate is that of the power, plus two")
+```
+:::
+:::
+
+::: {.exercise}
+**The factor 8/3.** Derive by hand that $\tau = 3\omega/(8\omega')$ falls at
+the rate one if $\omega' = k\,\omega^{11/3}$.
+
+::: {.solution}
+$\mathrm{d}\tau/\mathrm{d}t = \tfrac38\,(\omega'^2 - \omega\omega'')/\omega'^2$, and
+$\omega'' = \tfrac{11}{3}\,k\,\omega^{8/3}\omega' = \tfrac{11}{3}\,\omega'^2/\omega$, so
+$\mathrm{d}\tau/\mathrm{d}t = \tfrac38\,(1 - \tfrac{11}{3}) = -1$.
+
+```{python}
+print(f"3/8 * (1 - 11/3) = {3 / 8 * (1 - 11 / 3):.1f}")
+```
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "lean/PhysicsByConstruction/Mechanics/Chirp.lean",
+        "src/pbc/mechanics/chirp.py",
+    ],
+    tests=["tests/unit/test_chirp.py"],
+)
+```
