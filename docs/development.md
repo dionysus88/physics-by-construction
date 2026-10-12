@@ -92,13 +92,13 @@ in `scripts/verify-workflow.conf`. They run in this order:
 | `check-tests` | pytest on `tests/integration`: every check fails on an input that violates it, a lesson made from the template passes, and the CI workflow keeps its permission boundaries. |
 | `lesson-checks` | pytest on `tests/lessons`: the lesson sources follow the format of `docs/authoring.md`. Front matter follows the schema, the required sections and the generated header are present, the lessons form one learning path (unique ids, orders without gaps or duplicates, prerequisites that exist, come earlier, and form no cycle), displayed code is an executed cell or marked "not verified", figure cells have alternative text, and no generated artifact is committed under `site/` or `src/`. |
 | `site-build` | `scripts/build-site.sh`: Quarto executes every page in the locked environment and renders `site/_site/`. A failing cell or an equation that cannot become MathML fails the build. |
-| `site-checks` | pytest on `tests/e2e`, on the built site served under its sub-path: nothing is loaded from another origin, no cookie is set, images have alt text and dimensions, internal links resolve, pages are readable without JavaScript and a script adds no content to them (except inside an element with `data-enhancement`, an `id`, and static content of its own), do not scroll sideways at phone, tablet, or desktop width and keep every image on the screen, and the axe-core scan finds no WCAG 2.1 A or AA violation. For lessons: every lesson has a built page with the required sections, the home page leads to every lesson without JavaScript, the learning path page and every lesson header show what the front matter says (order, difficulty, prerequisites, previous and next), excerpts are identical to their source in `src/pbc` or in `lean/` (for a Lean excerpt, the region between its anchors), the formal proofs lesson states the commit, Lean, and Mathlib versions and links to the proofs at the built commit, "not verified" material shows its label, and the commands of each "Reproduce this" section regenerate the published page and its figures within 30 seconds. |
+| `site-checks-*` | Five checks that together are pytest on `tests/e2e` ("The checks of the built site" below), on the built site served under its sub-path: nothing is loaded from another origin, no cookie is set, images have alt text and dimensions, internal links resolve, pages are readable without JavaScript and a script adds no content to them (except inside an element with `data-enhancement`, an `id`, and static content of its own), do not scroll sideways at phone, tablet, or desktop width and keep every image on the screen, and the axe-core scan finds no WCAG 2.1 A or AA violation. For lessons: every lesson has a built page with the required sections, the home page leads to every lesson without JavaScript, the learning path page and every lesson header show what the front matter says (order, difficulty, prerequisites, previous and next), excerpts are identical to their source in `src/pbc` or in `lean/` (for a Lean excerpt, the region between its anchors), the formal proofs lesson states the commit, Lean, and Mathlib versions and links to the proofs at the built commit, "not verified" material shows its label, and the commands of each "Reproduce this" section regenerate the published page and its figures within 30 seconds. |
 | `determinism` | `scripts/check-determinism.sh`: builds a fresh copy of the site sources a second time and requires byte-identical output. |
 | Workflow self-tests | The shell tests of the agentic development workflow in `tests/*-test.sh`. Run in CI always, and locally only when a workflow file changed; see "Workflow self-tests" below. |
 
 Run one check on its own with the command from `scripts/verify.conf`, for
-example `uv run --locked pytest tests/unit`. `site-checks` and `determinism`
-need the output of `site-build`.
+example `uv run --locked pytest tests/unit`. The `site-checks-*` checks and
+`determinism` need the output of `site-build`.
 
 While writing, preview the site with live reload:
 
@@ -108,6 +108,37 @@ uv run --locked quarto preview site
 
 How to write a lesson is described in `docs/authoring.md`; the template is
 `docs/lesson-template.qmd`.
+
+### The checks of the built site
+
+`pytest tests/e2e` runs every check of the built site and is what you run
+while working on one. Verification runs the same tests as five checks, each
+in a group of its own (see "Groups of checks"), so that CI can run them side
+by side:
+
+| Check | Runs |
+|---|---|
+| `site-checks-lessons-1`, `site-checks-lessons-2` | `tests/e2e/test_lessons.py`, the lessons divided over two parts. The tests that are not about one lesson run in part 1. |
+| `site-checks-pages-1`, `site-checks-pages-2` | `tests/e2e/test_built_site.py`; part 2 is the three slowest tests. |
+| `site-checks-other` | Every other file of `tests/e2e`. It names the two files it leaves out, so a new test file runs without a change. |
+
+`--shard <part>/<parts>` selects a part. What a part holds is written in
+`tests/e2e/shards.json` and does not follow from the order in which pytest
+finds the tests:
+
+- A new lesson runs without a change: a lesson that neither list of
+  `tests/e2e/test_lessons.py` names runs in the part that a checksum of its
+  path selects, the same one on every machine. Add it to the list of the
+  part that takes less time when the two parts drift apart; the durations
+  are in the output of `pytest --durations=0`.
+- A new test of `tests/e2e/test_built_site.py` runs in part 1 without a change.
+- An entry that names a lesson or a test that no longer exists is an error.
+
+`tests/integration/test_site_check_division.py` collects what the five checks
+run and requires that it is every test of `tests/e2e`, each exactly once.
+
+The lessons were divided by the duration of each in CI on 2026-10-12, the
+heaviest first, to two parts of about four minutes.
 
 ### Other browser engines
 

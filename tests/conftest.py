@@ -20,6 +20,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Built site to check in tests/e2e (default: site/_site).",
     )
     parser.addoption(
+        "--shard",
+        default=None,
+        metavar="PART/PARTS",
+        help="Run one part of a test file of tests/e2e, as divided in"
+        " tests/e2e/shards.json.",
+    )
+    parser.addoption(
         "--repository",
         default=None,
         help="Repository whose lessons tests/lessons checks (default: this one).",

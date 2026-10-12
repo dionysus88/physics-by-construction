@@ -4,7 +4,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from support.paths import BUILT_SITE, SITE_SOURCE
+from support import lesson_checks, shards
+from support.paths import BUILT_SITE, REPO_ROOT, SITE_SOURCE
 from support.site_server import SiteServer, configured_base_path
 
 
@@ -24,3 +25,49 @@ def site_dir(request: pytest.FixtureRequest) -> Path:
 def server(site_dir: Path) -> Iterator[SiteServer]:
     with SiteServer(site_dir, configured_base_path(SITE_SOURCE)) as server:
         yield server
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """Keep the part of each test file that --shard asks for."""
+    option = config.getoption("--shard")
+    if option is None:
+        return
+    here = Path(__file__).parent
+    by_file: dict[str, list[pytest.Item]] = {}
+    for item in items:
+        if here in item.path.parents:
+            by_file.setdefault(item.path.relative_to(REPO_ROOT).as_posix(), []).append(
+                item
+            )
+    try:
+        part, parts = shards.parse(option)
+        table = shards.table()
+        left_out: list[pytest.Item] = []
+        for file, tests in by_file.items():
+            described = [
+                (
+                    getattr(test, "originalname", None) or test.name,
+                    getattr(test, "callspec", None)
+                    and test.callspec.params.get("lesson"),
+                )
+                for test in tests
+            ]
+            known = {
+                "lesson": [
+                    page.relative_to(SITE_SOURCE).with_suffix(".html").as_posix()
+                    for page in lesson_checks.lesson_pages(REPO_ROOT)
+                ],
+                "test": [
+                    name for name in vars(tests[0].module) if name.startswith("test")
+                ],
+            }
+            numbers = shards.part_of(file, described, table, parts, known)
+            left_out += [t for t, n in zip(tests, numbers, strict=True) if n != part]
+    except shards.ShardError as error:
+        raise pytest.UsageError(str(error)) from None
+    if left_out:
+        gone = set(left_out)
+        config.hook.pytest_deselected(items=left_out)
+        items[:] = [item for item in items if item not in gone]

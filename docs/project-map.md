@@ -43,7 +43,7 @@ in `docs/workflow.md`.
 | `tests/integration/` | pytest: every check fails on a violating input, among them the dataset check and `fetch-data.sh`; a lesson made from the template passes; boundaries of the CI workflow |
 | `tests/lessons/` | pytest: the required checks on the lesson sources |
 | `tests/e2e/` | pytest with a headless browser: the required checks on the built site and its lesson pages |
-| `tests/support/` | Helpers of the tests: the lesson source checks, the built-site checks, the analysis of which cells are made from a dataset, the sub-path test server, the `verify.conf` reader |
+| `tests/support/` | Helpers of the tests: the lesson source checks, the built-site checks, the analysis of which cells are made from a dataset, the sub-path test server, the `verify.conf` reader, the division of the built-site checks over parts (`shards.py`, with `tests/e2e/shards.json`) |
 | `tests/*.sh` | Shell tests of the workflow scripts, of `doctor.sh`, and of `preflight.sh` |
 | `.github/workflows/ci.yml` | CI: prepares the runner, runs `./scripts/verify.sh --all`, and on `main` deploys the verified site |
 | `.github/dependabot.yml` | Update proposals for Python packages and GitHub Actions |
