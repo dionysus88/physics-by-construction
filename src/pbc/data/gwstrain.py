@@ -339,3 +339,86 @@ def _interval(grid: Array, profile: Array, best: int) -> tuple[float, float]:
             high = _crossing(grid[k], profile[k], grid[k + 1], profile[k + 1], level)
             break
     return float(low), float(high)
+
+
+@dataclass(frozen=True)
+class ModelAtMass:
+    """The best chirp of one trial chirp mass, with the error metrics of its
+    comparison with the whitened data inside the fit window."""
+
+    mc: float  # solar masses, detector frame
+    t_c: float  # s, the coalescence time that minimises the chi-square at this mass
+    chi2: float  # whitened residuals over ``sigma``, both detectors
+    reduced_chi2: float  # per sample of the window, both detectors
+    rms_residual: float  # whitened units, both detectors
+    correlation: float  # of data and model inside the window, both detectors
+    model: Mapping[str, Array]  # whitened best-fit model per detector, whole segment
+
+
+def models_at_masses(
+    time: Array,
+    data: Mapping[str, Array],
+    whiteners: Mapping[str, Whitener],
+    delays: Mapping[str, float],
+    masses: Array,
+    *,
+    window: tuple[float, float],
+    sigma: float,
+    mc_start: float,
+    t_c_start: float,
+    t_c_reach: float = 0.003,
+) -> list[ModelAtMass]:
+    """The best-fit chirp at each of ``masses``, for comparison with the data.
+
+    This is the model of ``fit_chirp`` with the chirp mass fixed: at each mass
+    the amplitude pair of each detector is solved linearly and the coalescence
+    time is the one that minimises the chi-square. The chi-square has a sharp
+    minimum in the coalescence time and several of them, a period of the wave
+    apart, so the search starts from the fitted pair (``mc_start``,
+    ``t_c_start``) and walks outward in mass, each mass searching within
+    ``t_c_reach`` of the time found at the nearest mass already done, on a
+    fine grid and then by a bounded search. At the fitted mass it gives the
+    chi-square of that fit.
+    """
+    keep = (time >= window[0]) & (time <= window[1])
+    names = list(whiteners)
+
+    def evaluate(mc: float, t_c: float):
+        design = _design(time, whiteners, delays, mc, t_c)
+        amplitudes = _solve(design, data, keep)
+        model = {n: design[n] @ amplitudes[n] for n in names}
+        chi2 = float(sum(np.sum((data[n][keep] - model[n][keep]) ** 2) for n in names))
+        return chi2, model
+
+    measured = np.concatenate([data[n][keep] for n in names])
+    solved: dict[float, ModelAtMass] = {}
+    anchors = {float(mc_start): t_c_start}
+    for mc in sorted(np.asarray(masses, dtype=float), key=lambda m: abs(m - mc_start)):
+        mc = float(mc)
+        near = min(anchors, key=lambda a: abs(a - mc))
+        trial = np.arange(
+            anchors[near] - t_c_reach, anchors[near] + t_c_reach + 1e-9, 0.0001
+        )
+        coarse = [evaluate(mc, t)[0] for t in trial]
+        k = int(np.argmin(coarse))
+        found = optimize.minimize_scalar(
+            lambda t_c, mc=mc: evaluate(mc, t_c)[0],
+            bounds=(trial[max(k - 1, 0)], trial[min(k + 1, len(trial) - 1)]),
+            method="bounded",
+            options={"xatol": 1e-7},
+        )
+        # A bounded search is not guaranteed to beat the grid point it starts at.
+        t_best = float(found.x) if found.fun <= coarse[k] else float(trial[k])
+        chi2, model = evaluate(mc, t_best)
+        modelled = np.concatenate([model[n][keep] for n in names])
+        anchors[mc] = t_best
+        solved[mc] = ModelAtMass(
+            mc=mc,
+            t_c=t_best,
+            chi2=chi2 / sigma**2,
+            reduced_chi2=chi2 / sigma**2 / measured.size,
+            rms_residual=float(np.sqrt(chi2 / measured.size)),
+            correlation=correlation(measured, modelled),
+            model=model,
+        )
+    return [solved[float(m)] for m in np.asarray(masses, dtype=float)]

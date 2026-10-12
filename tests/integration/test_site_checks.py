@@ -747,8 +747,8 @@ def test_a_widget_script_without_requests_or_storage_is_clean(make_site: Site):
 @pytest.mark.parametrize(
     "source, kind",
     [
-        ("fetch('data.json');", "request"),
         ("new XMLHttpRequest();", "request"),
+        ("navigator.sendBeacon('/x');", "request"),
         ("import('./other.js');", "request"),
         ("const url = 'https://example.org/lib.js';", "other origin"),
         ("const url = '//cdn.example.org/lib.js';", "other origin"),
@@ -851,6 +851,126 @@ def test_a_page_without_an_enhancement_is_not_driven(make_site: Site, browser: B
         violations = site_checks.check_widgets_store_nothing(browser, server, site)
 
     assert violations == []
+
+
+def test_a_widget_may_fetch_its_on_demand_data(make_site: Site):
+    site = make_site(
+        files={"widgets/w.js": "fetch(new URL('d.json', document.baseURI));"}
+    )
+
+    assert site_checks.check_widget_sources(site) == []
+
+
+def test_a_learner_script_may_still_not_fetch(make_site: Site):
+    site = make_site(files={"learner/l.js": "fetch('d.json');"})
+
+    assert [v.rule for v in site_checks.check_learner_script_sources(site)] == [
+        "learner-source"
+    ]
+
+
+# --- On-demand data -------------------------------------------------------------
+
+_ONDEMAND_SCRIPT = (
+    "const root = document.getElementById('w');"
+    "const button = root.querySelector('button[data-loads-ondemand]');"
+    "button.addEventListener('click', async () => {"
+    "  const r = await fetch(new URL(root.dataset.ondemand, document.baseURI));"
+    "  root.dataset.loaded = String((await r.text()).length);"
+    "});"
+)
+
+
+def ondemand_site(make_site: Site, size: int = 1_000, script: str = _ONDEMAND_SCRIPT):
+    return make_site(
+        body='<div id="w" data-enhancement data-ondemand="d.json"><p>Static.</p>'
+        '<button type="button" data-loads-ondemand>Load</button></div>'
+        '<script src="widgets/w.js"></script>',
+        files={"d.json": "[" + "0," * (size // 2) + "0]", "widgets/w.js": script},
+    )
+
+
+def test_on_demand_data_within_the_budget_is_clean(make_site: Site, browser: Browser):
+    site = ondemand_site(make_site)
+
+    assert site_checks.check_ondemand_budget(site, {"index.html": 100_000}) == []
+    with served(site) as server:
+        assert (
+            site_checks.check_ondemand_loads_after_action(browser, server, site) == []
+        )
+
+
+def test_on_demand_data_over_its_budget_is_reported(make_site: Site):
+    site = ondemand_site(make_site, size=5_000)
+
+    assert rules(site_checks.check_ondemand_budget(site, budget=4_000)) == {
+        "ondemand-budget"
+    }
+
+
+def test_everything_a_page_can_load_has_a_budget_too(make_site: Site):
+    site = ondemand_site(make_site)
+
+    violations = site_checks.check_ondemand_budget(
+        site, {"index.html": 4_999_500}, everything=5_000_000
+    )
+
+    assert rules(violations) == {"ondemand-total"}
+
+
+def test_on_demand_data_that_is_not_in_the_site_is_reported(make_site: Site):
+    site = ondemand_site(make_site)
+    (site / "d.json").unlink()
+
+    assert rules(site_checks.check_ondemand_budget(site)) == {"ondemand-missing"}
+
+
+@pytest.mark.parametrize("url", ["https://example.org/d.json", "//example.org/d.json"])
+def test_on_demand_data_from_another_origin_is_reported(make_site: Site, url: str):
+    site = make_site(body=f'<div data-ondemand="{url}"></div>')
+
+    assert rules(site_checks.check_ondemand_budget(site)) == {"ondemand-origin"}
+
+
+def test_data_that_loads_before_any_action_is_reported(
+    make_site: Site, browser: Browser
+):
+    eager = (
+        "fetch(new URL(document.getElementById('w').dataset.ondemand,"
+        " document.baseURI));"
+    )
+    site = ondemand_site(make_site, script=eager)
+
+    with served(site) as server:
+        violations = site_checks.check_ondemand_loads_after_action(
+            browser, server, site
+        )
+
+    assert "ondemand-early" in rules(violations)
+
+
+def test_a_button_that_loads_nothing_is_reported(make_site: Site, browser: Browser):
+    site = ondemand_site(make_site, script="")
+
+    with served(site) as server:
+        violations = site_checks.check_ondemand_loads_after_action(
+            browser, server, site
+        )
+
+    assert rules(violations) == {"ondemand-not-loaded"}
+
+
+def test_data_without_a_button_to_ask_for_it_is_reported(
+    make_site: Site, browser: Browser
+):
+    site = make_site(body='<div data-ondemand="d.json"></div>', files={"d.json": "[]"})
+
+    with served(site) as server:
+        violations = site_checks.check_ondemand_loads_after_action(
+            browser, server, site
+        )
+
+    assert rules(violations) == {"ondemand-no-action"}
 
 
 # --- Learner state --------------------------------------------------------------
