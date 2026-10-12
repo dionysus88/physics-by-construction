@@ -1,0 +1,42 @@
+{
+  "tests/e2e/test_lessons.py": {
+    "by": "lesson",
+    "shards": [
+      [
+        "lessons/lean/01-proving-what-the-simulation-showed/index.html",
+        "lessons/lean/02-momentum-in-a-collision-proved/index.html",
+        "lessons/mechanics/01-kinematics-as-a-program/index.html",
+        "lessons/mechanics/02-newtons-laws/index.html",
+        "lessons/mechanics/04-harmonic-oscillator/index.html",
+        "lessons/mechanics/05-numerical-integrators/index.html",
+        "lessons/mechanics/06-energy-conservation/index.html",
+        "lessons/mechanics/07-momentum-and-collisions/index.html",
+        "lessons/mechanics/08-kepler-orbit/index.html",
+        "lessons/mechanics/11-gravitational-wave-strain/index.html"
+      ],
+      [
+        "lessons/agents-abm/01-particles-in-a-box/index.html",
+        "lessons/agents-llm/01-an-agent-runs-an-experiment/index.html",
+        "lessons/agents-llm/02-a-counterexample-hunter/index.html",
+        "lessons/agents-llm/03-three-reviewers/index.html",
+        "lessons/lean/03-what-symplectic-euler-conserves/index.html",
+        "lessons/lean/04-lean-exercises-on-your-machine/index.html",
+        "lessons/mechanics/03-projectile-motion-with-drag/index.html",
+        "lessons/mechanics/09-verifying-scientific-code/index.html",
+        "lessons/mechanics/10-automated-analysis-pipelines/index.html",
+        "lessons/mechanics/12-inverse-physics-parameter-discovery/index.html"
+      ]
+    ]
+  },
+  "tests/e2e/test_built_site.py": {
+    "by": "test",
+    "shards": [
+      [],
+      [
+        "test_wcag_scan_finds_no_violation",
+        "test_pages_and_figures_fit_phone_tablet_and_desktop_width",
+        "test_skip_link_and_navigation_focus_pass_the_keyboard_pass"
+      ]
+    ]
+  }
+}
