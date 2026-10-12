@@ -118,6 +118,10 @@ def recover(
     )
 
 
+class ProfileError(RuntimeError):
+    """A refit of a profile did not converge, so no profile is returned."""
+
+
 @dataclass(frozen=True)
 class Profile:
     name: str
@@ -163,6 +167,10 @@ def profile(
     The interval is where the profile is within ``DELTA_CHI2`` of its
     minimum. When it is not, on one side or on both, the data do not bound
     the parameter there and the result is marked open.
+
+    Every refit has to converge. One that does not raises ``ProfileError``:
+    its chi-square is not a minimum over the other parameters, and a profile
+    with such a point could show a bound that the data do not give.
     """
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
@@ -188,6 +196,13 @@ def profile(
             fit = optimize.least_squares(
                 residual, start, bounds=(lower[others], upper[others]), x_scale="jac"
             )
+            # A refit that did not converge gives a chi-square that is not a
+            # minimum, and one such point can open or close the interval.
+            if not fit.success:
+                raise ProfileError(
+                    f"the refit at {name} = {grid[k]:g} did not converge"
+                    f" ({fit.message}); the profile would not be a profile"
+                )
             values[k] = float(np.sum(fit.fun**2))
             start = fit.x
     best = int(np.argmin(values))

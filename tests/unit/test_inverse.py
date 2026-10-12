@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from pbc.data import inverse
 from pbc.data.fit import fit_curve
 from pbc.data.inverse import profile, recover, residual_autocorrelation, verdict
 
@@ -55,6 +56,27 @@ def test_profile_is_a_bowl_for_a_determined_parameter():
     assert out.bounded
     assert out.low < 5.0 < out.high
     assert out.high - out.low < 0.05
+
+
+def test_profile_refuses_a_refit_that_did_not_converge(monkeypatch):
+    y = damped(T, *TRUTH) + np.random.default_rng(1).normal(0, 0.05, T.size)
+    grid = np.linspace(4.9, 5.1, 21)
+    solve = inverse.optimize.least_squares
+    calls = []
+
+    def gives_up_once(*args, **kwargs):
+        result = solve(*args, **kwargs)
+        calls.append(result)
+        if len(calls) == 5:
+            result.success = False
+            result.message = "the limit of evaluations was reached"
+        return result
+
+    monkeypatch.setattr(inverse.optimize, "least_squares", gives_up_once)
+
+    with pytest.raises(inverse.ProfileError, match="did not converge"):
+        profile(damped, T, y, TRUTH, "omega", grid, sigma=0.05, names=NAMES)
+    assert len(calls) == 5, "the profile went on after a refit that did not converge"
 
 
 def test_profile_of_a_non_identifiable_parameter_is_open():

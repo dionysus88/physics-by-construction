@@ -393,8 +393,9 @@ intervals, `{python} f"{inj_half:.1f}"` solar masses wide on average on each sid
 only `{python} f"{inj_covered}"` of `{python} f"{len(injections)}"` stretches, while the
 root-mean-square error of the estimates is `{python} f"{inj_rms:.1f}"` solar masses. The interval
 of the profile assumes independent noise, which the real noise is not, and here it
-is too small. The scatter of the injections is the better statement of the uncertainty
-due to the noise.
+is too small. The scatter of the injections points more directly at the uncertainty
+due to the noise, but four stretches are a demonstration and not an estimate: they
+show that the interval is too small, not how large it should be.
 
 ```{python}
 #| label: band-spread
