@@ -445,7 +445,7 @@ seg = {name: cut_segment(s, 0.75) for name, s in strains.items()}
 time_fit = seg["H1"].time
 
 
-def analyse(band, window, step=0.5, span=(22.0, 50.0)):
+def analyse(band, window, step=1.0, span=(22.0, 50.0)):
     whiteners = {name: make_whitener(strains[name], seg[name], band) for name in strains}
     data = {name: whiteners[name](seg[name].strain) for name in strains}
     sigma = noise_sigma(data["H1"], time_fit, (0.3, 0.65))
@@ -573,7 +573,11 @@ windows = [(-0.2, 0.0), (-0.15, 0.0), (-0.2, -0.01)]
 rows, usable = [], []
 choices = [(band, windows[0]) for band in bands] + [(bands[0], window) for window in windows[1:]]
 for band, window in choices:
-    result, _, _ = analyse(band, window, step=2.0, span=(26.0, 48.0))
+    # The first choice is the fit above; it is not computed a second time.
+    if (band, window) == (BAND, PRIMARY_WINDOW):
+        result = primary
+    else:
+        result, _, _ = analyse(band, window, step=2.0, span=(26.0, 48.0))
     rows.append((
         f"{band[0]:g} to {band[1]:g}", f"{window[0]:g} to {window[1]:g}",
         result.mc, result.t_c * 1e3,
@@ -589,7 +593,7 @@ table(
         ("chirp mass", "solar masses", ".1f"),
         ("coalescence time", "ms", ".0f"), ("note", "", "s"),
     ],
-    caption="Best chirp mass for each choice of band and window of the fit; the grid of masses has a step of two solar masses.",
+    caption="Best chirp mass for each choice of band and window of the fit. The first row is the fit above; the other rows search a grid of masses with a step of two solar masses.",
 )
 ```
 
