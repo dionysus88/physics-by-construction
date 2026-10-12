@@ -278,7 +278,11 @@ def fit_chirp(
             method="bounded",
             options={"xatol": 1e-5},
         )
-        return float(found.fun), float(found.x)
+        # A search that did not converge, or that ended above the grid point
+        # it started from, is not used: the grid point stands.
+        if found.success and np.isfinite(found.fun) and found.fun <= coarse[k]:
+            return float(found.fun), float(found.x)
+        return float(coarse[k]), float(trial[k])
 
     grid = np.arange(20.0, 56.0, 1.0) if mc_grid is None else np.asarray(mc_grid)
     # The best coalescence time has several local minima, so a first pass
@@ -419,8 +423,10 @@ def models_at_masses(
             method="bounded",
             options={"xatol": 1e-7},
         )
-        # A bounded search is not guaranteed to beat the grid point it starts at.
-        t_best = float(found.x) if found.fun <= coarse[k] else float(trial[k])
+        # The grid point stands unless the bounded search succeeded, gave a
+        # finite chi-square, and did not end above the point it started from.
+        refined = found.success and np.isfinite(found.fun) and found.fun <= coarse[k]
+        t_best = float(found.x) if refined else float(trial[k])
         chi2, model = evaluate(mc, t_best)
         modelled = np.concatenate([model[n][keep] for n in names])
         anchors[mc] = t_best
