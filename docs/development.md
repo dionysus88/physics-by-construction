@@ -157,6 +157,39 @@ from `scripts/verify.conf` rather than letting it be skipped. CI declares no
 check of its own; a check that is in neither `scripts/verify.conf` nor
 `scripts/verify-workflow.conf` does not exist.
 
+### Groups of checks
+
+A check may name a group in square brackets after its name:
+
+```text
+lint [code]: ruff check .
+unit-tests [code]: pytest tests/unit
+site-build [build]: ./scripts/build-site.sh
+tests-in-a-browser [e2e]: pytest tests/e2e
+```
+
+- `./scripts/verify.sh` runs every check, whatever its group. Nothing changes
+  for the developer and for the workflow scripts.
+- `./scripts/verify.sh --only code` runs the checks of one group, and
+  `--only code,build` those of several, in the order of the file.
+- `./scripts/verify.sh --groups` prints the groups that have a check.
+- A check without a group is in the group `default`.
+- An unknown group is an error, so a renamed group cannot pass unnoticed.
+
+Groups exist for a CI that has outgrown one job: each job runs
+`./scripts/verify.sh --all --only <group>`, and one job that needs all of them
+is the required check. Every check stays declared in `scripts/verify.conf`
+or `scripts/verify-workflow.conf`; none is declared in the workflow file.
+Such a CI has to run **every** group, `default` included, or a check that is
+added without a group runs on a laptop and never in CI. Compare the output of
+`--groups` with the groups of the workflow file in a test of the project.
+
+A partial run is never a verification. With `--only` nothing is recorded as
+passed and `--reuse` is refused, so `review-feature.sh` and
+`finish-feature.sh` still run every check. A failing partial run removes an
+existing record, like any failing run. The workflow self-tests keep their own
+rule with `--only`: they run when a workflow file changed, or with `--all`.
+
 ### Recorded verification
 
 A run in which every check passed is recorded in `.agents/verification/passed`,
@@ -187,6 +220,26 @@ Two limits:
 
 A record made without the workflow self-tests does not stand in for a run that
 needs them, such as `--reuse --all`.
+
+### References in the documentation
+
+`./scripts/check-docs.sh` checks that the tracked Markdown files name files
+that exist: every relative link (inline, with or without a title, and the
+definition of a reference link; also one that leaves the repository), and
+every path in backticks that starts with
+a tracked top-level directory and names a `.md`, `.sh`, `.conf`, `.json`,
+`.yml`, or `.yaml` file. It does not check anchors or external links, it
+skips a path with a placeholder and a path that Git ignores, and it does not
+read links that are shown as an example in a fenced code block or in inline
+code. Name the files
+that come later, or a directory that will hold them, after `--later`:
+
+```text
+docs-references: ./scripts/check-docs.sh --later docs/PLANNING_APPROVAL.md docs/changes
+```
+
+The template has such a line in its own `scripts/verify.conf`. It catches a
+document that one change still names after another change removed it.
 
 ### Workflow self-tests
 
