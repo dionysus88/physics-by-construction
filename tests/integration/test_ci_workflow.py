@@ -190,8 +190,8 @@ def test_no_job_continues_after_a_failure_or_runs_on_a_condition():
 
 
 def test_the_jobs_have_the_agreed_timeouts():
-    # 45 minutes per job since 2026-10-11, by the owner; ADR 012 decides from
-    # the measured cold-cache run whether it returns to the 30 of ADR 003.
+    # 45 minutes per job since 2026-10-11, by the owner, and kept by ADR 012,
+    # decision 9, in place of the 30 of ADR 003.
     jobs = load(CI)["jobs"]
     for name, job in check_jobs().items():
         assert job["timeout-minutes"] == 45, name

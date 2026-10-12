@@ -17,7 +17,7 @@ ADR 003 put every check in one CI job named `verify`, with a budget of 12
 minutes for a typical pull request, and named the response when the budget is
 exceeded: first make the offending checks cheaper, then run the same checks in
 parallel jobs behind one required check. The first response was applied in F10
-and was not enough. On 2026-10-12, with twenty lessons, the job took 32 to 43
+and was not enough. On 2026-10-12, with twenty lessons, the job took 31 to 43
 minutes; the owner had raised its timeout from 30 to 45 minutes the day
 before. Measured in that job: the checks of the built site 894 s, the
 integration tests 366 s, the site build 205 s, the second build for
@@ -102,8 +102,8 @@ Three properties of the single job have to survive the split:
    nothing. Mathlib is still never compiled from source (ADR 003,
    decision 4).
 
-8. **The budgets of ADR 003, decision 5, stand**, now for the wall clock of
-   a run: 12 minutes for a typical pull request with warm caches, 25 with
+8. **The budgets of ADR 003, decision 5, stand, except the job timeout
+   (decision 9)**, now for the wall clock of a run: 12 minutes for a typical pull request with warm caches, 25 with
    cold caches. With decision 4 the longest path is the whole `build` job
    and then the slowest `e2e` job, and that path is expected above 12
    minutes. The project owner decided on 2026-10-12 to accept that for F58:
@@ -114,7 +114,8 @@ Three properties of the single job have to survive the split:
    feature is delivered the budget is exceeded and the response of ADR 003,
    decision 6, stays due.
 
-9. **The timeout of a job stays 45 minutes.** The longest job measured is
+9. **The timeout of a job stays 45 minutes**, in place of the 30 minutes
+   of ADR 003, decision 5. The longest job measured is
    `build` with 20 minutes 27 seconds, in the run with cold caches. The 30
    minutes of ADR 003 would hold it today with less than ten minutes to
    spare, and the job grows with every lesson until verification is

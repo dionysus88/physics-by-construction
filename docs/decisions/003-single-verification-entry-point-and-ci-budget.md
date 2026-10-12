@@ -11,7 +11,8 @@ file changed; CI still runs every check.
 Decision 2 is superseded by
 [ADR 012](012-parallel-verification-jobs-behind-one-required-check.md): the
 checks run in parallel jobs behind one aggregate required check that keeps
-the name `verify`.
+the name `verify`. The job timeout of decision 5 is 45 minutes per job, by
+decision 9 of the same ADR.
 
 Date: 2026-10-06
 
