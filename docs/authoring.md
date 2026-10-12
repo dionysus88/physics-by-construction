@@ -1117,8 +1117,12 @@ page explains it. Only that provider's key is needed then.
 
 Real measurements are inputs that no build can regenerate (ADR 007). A lesson
 may use one only after the dataset has passed the feasibility gate and holds a
-`go` on its card. No lesson page uses data yet; this section is the rule for
-the first one, and `site/rendering-check.qmd` shows the pattern working.
+`go` on its card. Two lessons use measured data: the analysis pipelines lesson
+(`site/lessons/mechanics/10-automated-analysis-pipelines`), with the wave
+gauges of the flume, and the gravitational-wave lab
+(`site/lessons/mechanics/11-gravitational-wave-strain`), the first lab built
+around one dataset. `site/rendering-check.qmd` shows the pattern in the
+smallest form.
 Evidence and decisions are in `docs/datasets/`.
 
 **The gate.** Before any lesson commitment a dataset gets a dossier,

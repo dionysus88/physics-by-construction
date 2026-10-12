@@ -16,7 +16,7 @@ lesson:
     - Reduce two bodies under gravity to one
     - Derive the ellipse, its size, and its period from the energy and the angular momentum
     - Compare each integrator with the exact orbit over a thousand orbits
-  related: []
+  related: [gravitational-wave-strain]
   format: 2
   prerequisites:
     lessons: [energy-conservation, momentum-and-collisions]

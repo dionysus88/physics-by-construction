@@ -29,10 +29,23 @@ rights:
     source: GWOSC event page https://gwosc.org/events/GW150914/ ('Data released under a CC BY 4.0 License.
       Please follow acknowledgement guidelines'), read 2026-10-09; CC BY 4.0 permits copying, redistribution,
       adaptation, and publication of derivatives with attribution and an indication of changes
-  attribution: 'Cite one of the GWOSC data-release papers and include: ''This research has made use of
-    data or software obtained from the Gravitational Wave Open Science Center (gwosc.org), a service of
-    the LIGO Scientific Collaboration, the Virgo Collaboration, and KAGRA.'' with the funding text of
-    https://gwosc.org/acknowledgement/ (read 2026-10-09).'
+  attribution: >-
+    Data: GWOSC, GW150914 v3, CC BY 4.0; whitened, band-passed and fitted here (changes indicated on each figure).
+    Data-release paper: R. Abbott et al. (LIGO Scientific Collaboration and Virgo Collaboration), "Open data from
+    the first and second observing runs of Advanced LIGO and Advanced Virgo", SoftwareX 13 (2021) 100658.
+    Acknowledgement (https://gwosc.org/acknowledgement/, read 2026-10-11): "This research has made use of data or
+    software obtained from the Gravitational Wave Open Science Center (gwosc.org), a service of the LIGO Scientific
+    Collaboration, the Virgo Collaboration, and KAGRA. This material is based upon work supported by NSF's LIGO
+    Laboratory which is a major facility fully funded by the National Science Foundation, as well as the Science and
+    Technology Facilities Council (STFC) of the United Kingdom, the Max-Planck-Society (MPS), and the State of
+    Niedersachsen/Germany for support of the construction of Advanced LIGO and construction and operation of the
+    GEO600 detector. Additional support for Advanced LIGO was provided by the Australian Research Council. Virgo is
+    funded, through the European Gravitational Observatory (EGO), by the French Centre National de Recherche
+    Scientifique (CNRS), the Italian Istituto Nazionale di Fisica Nucleare (INFN) and the Dutch Nikhef, with
+    contributions by institutions from Belgium, Germany, Greece, Hungary, Ireland, Japan, Monaco, Poland, Portugal,
+    Spain. KAGRA is supported by Ministry of Education, Culture, Sports, Science and Technology (MEXT), Japan Society
+    for the Promotion of Science (JSPS) in Japan; National Research Foundation (NRF) and Ministry of Science and ICT
+    (MSIT) in Korea; Academia Sinica (AS) and National Science and Technology Council (NSTC) in Taiwan."
 artifacts:
 - name: H-H1_GWOSC_4KHZ_R1-1126259447-32.txt.gz
   type: calibrated-observation
