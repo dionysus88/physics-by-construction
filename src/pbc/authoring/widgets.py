@@ -2,9 +2,12 @@
 
 A widget is a self-hosted ES module in ``site/widgets/`` that enhances a
 static figure already in the page (``docs/authoring.md``, "Widgets"). Its
-data is computed by an executed cell when the page is built and embedded in
-the page as JSON, so that the widget needs no request and does no physics of
-its own. The two helpers here write the data and the script tag.
+data is computed by an executed cell when the page is built, so the widget
+does no physics of its own. Small data is embedded in the page as JSON and
+needs no request. Data that is too large for the page is written as a file
+beside it (``widget_asset``), which the widget fetches from the site's own
+origin, and only after the reader asks for it. The helpers here write the
+data, the file, and the script tag.
 """
 
 import json

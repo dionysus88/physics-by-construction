@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from scipy import signal
 
-from pbc.data import SAMPLES_DIR
+from pbc.data import SAMPLES_DIR, gwstrain
 from pbc.data.gwosc import FILES, read_strain
 from pbc.data.gwstrain import (
     correlation_with_control,
@@ -108,6 +108,48 @@ def test_the_fit_recovers_the_parameters_of_an_injected_chirp(strains):
     assert fit.mc == pytest.approx(truth_mc, abs=1.5)
     assert fit.t_c == pytest.approx(truth_tc, abs=3e-3)
     assert not fit.at_edge
+
+
+@pytest.mark.parametrize("fault", ["not converged", "not finite"])
+def test_the_fit_does_not_use_a_search_that_failed(strains, monkeypatch, fault):
+    # Every bounded search fails and reports a time outside its bounds with a
+    # chi-square that looks better than any grid point. The fit then rests on
+    # the grid points alone and still finds the injected chirp.
+    seg = {n: cut_segment(s, 0.75) for n, s in strains.items()}
+    white = {n: make_whitener(strains[n], seg[n], BAND) for n in strains}
+    time = seg["H1"].time
+    truth_mc, truth_tc = 30.0, 0.03
+    rng = np.random.default_rng(7)
+    data = {}
+    for n in strains:
+        template = white[n](chirp_waveform(time, truth_mc, truth_tc, 1.0, 0.4))
+        data[n] = 6.0 * template / np.max(np.abs(template)) + rng.normal(size=time.size)
+
+    search = gwstrain.optimize.minimize_scalar
+
+    def fails(function, **options):
+        result = search(function, **options)
+        result.x = options["bounds"][0] - 0.05
+        if fault == "not converged":
+            result.success = False
+            result.fun = -1.0
+        else:
+            result.fun = float("-inf")
+        return result
+
+    monkeypatch.setattr(gwstrain.optimize, "minimize_scalar", fails)
+    fit = fit_chirp(
+        time,
+        data,
+        white,
+        {"H1": 0.0, "L1": 0.0},
+        window=(-0.2, 0.0),
+        sigma=1.0,
+        mc_grid=np.arange(24.0, 40.0, 1.0),
+    )
+    assert np.isfinite(fit.reduced_chi2) and fit.reduced_chi2 > 0
+    assert fit.mc == pytest.approx(truth_mc, abs=1.5)
+    assert fit.t_c == pytest.approx(truth_tc, abs=3e-3)
 
 
 def test_the_fit_follows_the_delay_convention_of_the_lag(strains):

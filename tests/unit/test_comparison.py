@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from pbc.authoring.widgets import widget_asset
-from pbc.data import SAMPLES_DIR
+from pbc.data import SAMPLES_DIR, gwstrain
 from pbc.data.comparison import DECIMALS, SCHEMA, waveform_comparison
 from pbc.data.gwosc import FILES, read_strain
 from pbc.data.gwstrain import (
@@ -51,6 +51,43 @@ def test_the_model_at_the_fitted_mass_reproduces_the_fit(lab):
     assert at_best.reduced_chi2 == pytest.approx(fit.reduced_chi2, rel=5e-2)
     for name in white:
         assert at_best.model[name] == pytest.approx(fit.models[name], abs=5e-2)
+
+
+@pytest.mark.parametrize("fault", ["not converged", "not finite"])
+def test_a_failed_search_leaves_the_grid_point_standing(lab, monkeypatch, fault):
+    time, data, white, delays, sigma, fit = lab
+
+    def at(mass):
+        [model] = models_at_masses(
+            time, data, white, delays, np.array([mass]), window=WINDOW, sigma=sigma,
+            mc_start=fit.mc, t_c_start=fit.t_c,
+        )  # fmt: skip
+        return model
+
+    search = gwstrain.optimize.minimize_scalar
+
+    def fails(function, **options):
+        result = search(function, **options)
+        # A result that looks better than the grid point, far from it, and
+        # that may not be used.
+        result.x = options["bounds"][0] - 0.05
+        if fault == "not converged":
+            result.success = False
+            result.fun = -1.0
+        else:
+            result.fun = float("-inf")
+        return result
+
+    monkeypatch.setattr(gwstrain.optimize, "minimize_scalar", fails)
+    failed = at(fit.mc)
+    monkeypatch.undo()
+    searched = at(fit.mc)
+
+    # The time is a point of the fine grid, which is a tenth of a millisecond
+    # apart, and the chi-square is the one of that point, not of the search.
+    assert failed.t_c == pytest.approx(searched.t_c, abs=1.5e-4)
+    assert np.isfinite(failed.chi2) and failed.chi2 > 0
+    assert failed.chi2 >= searched.chi2 - 1e-9
 
 
 def test_the_metrics_rank_the_masses_as_the_profile_does(lab):
