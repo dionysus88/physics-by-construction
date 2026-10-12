@@ -699,7 +699,7 @@ Budget (required by the requirements; rationale in ADR 003):
 |---|---|
 | Typical pull request, warm caches, wall clock | 12 minutes or less |
 | Cold caches (for example after a Mathlib bump) | 25 minutes or less |
-| Job timeout | 45 minutes per job (30 in ADR 003; raised by the owner on 2026-10-11). ADR 012 decides from a measured cold-cache run whether it returns to 30 |
+| Job timeout | 45 minutes per job (30 in ADR 003; raised by the owner on 2026-10-11, and kept by ADR 012, decision 9: the longest job measured takes 20 minutes and grows with every lesson) |
 | Unit tests | 2 minutes or less |
 | Lean build after the Mathlib cache is in place | 3 minutes or less |
 | One lesson page, executed | 30 seconds or less |
@@ -902,8 +902,10 @@ work of the roadmap features named:
   hand-typed approximate numbers in prose in several lessons (F28, F29, F30,
   F31, F35, F36).
 - Cards exist for the 25 surveyed datasets and three samples are committed (F50); the shared analysis and plotting core is in `pbc.data` (F51); no lesson uses data yet, the sample page `rendering-check` shows the data card and a measured figure.
-- The `verify` job exceeds its wall-clock budget by about three and a half
-  minutes with eleven lessons (F58).
+- A CI run takes 18 to 25 minutes with twenty-two lessons, in parallel jobs
+  (F58, ADR 012), against a budget of 12 minutes. The remainder is for the
+  feature that makes verification proportional to what a pull request
+  changes.
 - The first release has no tag yet; `docs/release-readiness.md` lists the
   human steps that remain (tag, release note, follow-up Issues for the
   accessibility observations and the style differences). They are not

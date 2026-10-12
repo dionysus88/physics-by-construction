@@ -324,6 +324,49 @@ applied on this branch and the second is the Issue's. The merge of this
 branch adds two pages, shortens two tests, and adds no check; the human
 re-measures the `verify` job after it.
 
+### Parallel jobs (F58), measured 2026-10-12
+
+F58 applied the second response: the checks run in parallel jobs behind the
+one required check `verify` (ADR 012). Measured from the Actions runs of
+2026-10-12, with twenty-two lessons. Wall clock is from the start of the run
+to the end of its last job; runner time is the sum of the jobs.
+
+| Run | Caches | Wall clock | Runner time | `build` | `integration` | slowest `e2e` |
+|---|---|---|---|---|---|---|
+| Single job before F58, seven runs of that day | warm | 30 min 34 s to 43 min 19 s | the same | | | |
+| Pull request #141, run 38281376211 | warm, except the uv cache of the jobs that started first | 25 min 00 s | 47 min 13 s | 18 min 56 s | 9 min 46 s | 5 min 46 s |
+| Pull request #142 (measurement only), run 38284365563 | warm | 22 min 56 s | 44 min 36 s | 16 min 55 s | 9 min 25 s | 5 min 47 s |
+| Push of `aeeaa0e` to `main`, run 38284263388, with `deploy` | warm | 17 min 52 s | 38 min 55 s | 12 min 33 s | 9 min 00 s | 4 min 50 s |
+| Pull request #143 (measurement only), run 38284385577 | cold: every cache key changed | 25 min 17 s | 45 min 12 s | 20 min 27 s | 9 min 00 s | 4 min 32 s |
+
+Budgets of ADR 003: 12 minutes with warm caches, 25 minutes with cold caches.
+
+- **A run takes 18 to 25 minutes, against 31 to 43 before.** It is still
+  over the budget of 12 minutes, by 6 to 13 minutes. The cold run is 17
+  seconds over its budget of 25 minutes.
+- **The longest path is the `build` job and then the slowest `e2e` job.**
+  `build` holds the Lean build, the site build, the second build for
+  determinism, and the reproduction of every lesson; the last two compare
+  bytes with the first build and have to run on its machine (ADR 012,
+  decision 4). The same job took 12 min 33 s to 20 min 27 s on the same
+  content: the runners differ.
+- **Warm and cold differ little**, because the caches are a small part of a
+  run: the time is in executing the lessons, three times each.
+- **A run uses 39 to 47 runner minutes**, more than the single job in a
+  good run and about as much as in a slow one: every job prepares its own
+  runner.
+- Two warm pull request runs were measured, not the three of the first
+  acceptance criterion of Issue #130; the project owner chose that on
+  2026-10-12 to close the feature. The run on `main` is a third warm run,
+  but a push and with the deploy.
+
+**Decision of the project owner (2026-10-12).** F58 is closed with this
+measured state. The 12 minutes are an acceptance criterion of the feature
+that makes verification proportional to what a pull request changes, which
+the planning change `final-curriculum` adds; until that feature is delivered
+the budget is exceeded, every new lesson adds to the `build` job, and the
+response of ADR 003, decision 6, stays due.
+
 ## Release (human)
 
 After the items above: tag the merge commit (`git tag -a mvp-v1.0.0`) and
