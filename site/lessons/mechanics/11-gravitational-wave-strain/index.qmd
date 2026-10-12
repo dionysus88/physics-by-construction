@@ -8,7 +8,7 @@ description: >-
 lesson:
   id: gravitational-wave-strain
   strand: mechanics
-  order: 10
+  order: 11
   difficulty: 3
   course: mechanics
   methods: [measured-data, simulation]
@@ -641,11 +641,15 @@ chirp mass of `{python} f"{mc_fit:.0f}"` solar masses, with a statistical interv
 `{python} f"{100 * (ratio - 1):.0f}"` percent above the published value.]{.claim type="experimentally-supported"
 scope="Newtonian-order model, window ending before the merger, white-noise assumption"
 evidence="primary-fit sensitivity gw150914-strain"}
-The published value comes from waveforms with the higher-order terms that this
-model lacks, so a fit of the leading term alone is expected to differ from it;
-this lesson does not show which term causes the difference. The estimate is a check that the picture of a
-shrinking orbit is quantitatively right, to the tens of percent, and not a
-measurement that competes with the published one.
+The simplified Newtonian fit gives a chirp mass substantially higher than the
+published value. This discrepancy shows the limits of the model and of the
+analysis method. The published value comes from waveforms with higher-order
+terms that this model lacks, and the processing, the method of the fit, and the
+assumptions of the model can each contribute as well; the results of this
+lesson do not show how much each of them does. The statistical interval and the
+spread over the analysis choices do not capture the full systematic
+uncertainty. The lab demonstrates the underlying physics, and should not be
+read as a precision measurement.
 
 ## Limits {#limits}
 
@@ -653,8 +657,9 @@ What the Newtonian model does not capture: it is the leading order of the full t
 
 - **Higher-order corrections.** The speed of the bodies is a sizeable fraction
   of the speed of light in the last cycles, and the corrections in powers of
-  that speed change the phase, which is what the bias above shows. The
-  published masses come from waveforms that include them.
+  that speed change the phase. They can contribute to the difference above;
+  this lesson does not separate their effect from that of the processing and
+  of the fit. The published masses come from waveforms that include them.
 - **The merger and the ringdown.** After the event time the signal is the
   collision and the settling of the final black hole, which no Newtonian orbit
   describes: the separation of the example falls below the size of the horizon.
