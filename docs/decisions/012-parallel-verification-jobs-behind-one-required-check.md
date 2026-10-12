@@ -2,8 +2,9 @@
 
 ## Status
 
-Proposed with the implementation of F58 (Issue #130); accepted when the pull
-request that adds this ADR is merged. Supersedes decision 2 of
+Accepted by the project owner with the merge of pull request #141 on
+2026-10-12 (F58, Issue #130). Decision 9 and the section "Measured" were
+added by the pull request that closes the feature. Supersedes decision 2 of
 [ADR 003](003-single-verification-entry-point-and-ci-budget.md) and decision 2
 of [ADR 005](005-workflow-self-tests-run-locally-on-workflow-changes.md); the
 other decisions of both stand.
@@ -111,9 +112,26 @@ Three properties of the single job have to survive the split:
    the feature that makes verification proportional to what a pull request
    changes, which the planning change `final-curriculum` adds. Until that
    feature is delivered the budget is exceeded and the response of ADR 003,
-   decision 6, stays due. The timeout of a job stays 45 minutes until a run
-   with cold caches is measured; step 4 of F58 records the measured times
-   here and decides from them whether the timeout returns to 30 minutes.
+   decision 6, stays due.
+
+9. **The timeout of a job stays 45 minutes.** The longest job measured is
+   `build` with 20 minutes 27 seconds, in the run with cold caches. The 30
+   minutes of ADR 003 would hold it today with less than ten minutes to
+   spare, and the job grows with every lesson until verification is
+   proportional to a change. The feature that brings that decides whether
+   the timeout returns to 30 minutes.
+
+## Measured
+
+On 2026-10-12, with twenty-two lessons; the runs and the times of the jobs
+are in `docs/release-readiness.md`, "Parallel jobs (F58)".
+
+| Run | Wall clock | Runner time |
+|---|---|---|
+| Single job before this ADR | 31 to 43 minutes | the same |
+| Pull request, warm caches (two runs) | 22 min 56 s and 25 min 00 s | 44 min 36 s and 47 min 13 s |
+| Push to `main` with deploy, warm caches | 17 min 52 s | 38 min 55 s |
+| Pull request, cold caches | 25 min 17 s | 45 min 12 s |
 
 ## Alternatives considered
 

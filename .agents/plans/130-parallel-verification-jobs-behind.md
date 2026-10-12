@@ -338,3 +338,16 @@ F58 measures and records the run time on three consecutive pull requests; the
 12 minutes become a criterion of the feature that makes verification
 proportional to what a pull request changes (planning change
 `final-curriculum`). The Issue and ADR 012, decision 8, say so.
+
+## Step 4 as done, 2026-10-12
+
+Measured: two pull request runs with warm caches (22 min 56 s and 25 min
+00 s), the push to `main` with deploy (17 min 52 s), and one pull request
+run with every cache key changed (25 min 17 s). The numbers are in
+`docs/release-readiness.md` and ADR 012. The timeout of a job stays 45
+minutes (ADR 012, decision 9).
+
+On the owner's instruction of 2026-10-12, to close the feature: two warm
+pull request runs in place of three, and the pull request of this step was
+not verified locally before its review. It changes documentation only, and
+CI runs every check on it.
