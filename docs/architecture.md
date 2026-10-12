@@ -120,7 +120,9 @@ src/pbc/                 Importable Python package with all reusable lesson code
                          contract, and a gallery of deliberately faulty steppers (F46)
   abm/                   Agent-based models
   agents/                Agent harness: provider interface, tool allowlist, replay; the lesson
-                         modules (`projectile_lab`, `review_lab`: three reviewers, F18)
+                         modules (`projectile_lab`, `review_lab`: three reviewers, F18; `design` and
+                         `design_lab`: the design of measurements that tell two models apart, scored
+                         and judged by the build, F20)
   authoring/             Helpers lessons use to display code, proofs, tables, diagrams,
                          references, and claim labels by reference
   data/                  The dataset card schema and check; the readers (GWOSC text,

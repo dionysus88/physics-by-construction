@@ -13,6 +13,7 @@ that nothing in it can become markup of the page.
 import json
 import re
 
+from pbc.agents.design import DISCRIMINATED, Assessment
 from pbc.agents.hunter import Experiment, Verdict
 from pbc.agents.loop import Transcript
 from pbc.agents.messages import ToolCall, ToolResult
@@ -197,5 +198,84 @@ class VerdictDisplay:
             f" {verdict.tested} experiment(s) of the domain and none broke the"
             f" predicate. {nearest} Finitely many experiments cannot show that the"
             " claim holds everywhere, so this does not show that it is true.\n"
+            ":::\n"
+        )
+
+
+class AssessmentDisplay:
+    """The assessment of an experimental design, as the build computed it.
+
+    Every number is a recomputation: the design score from the arguments of the
+    measurements, the chi-square of each model from their recomputed values. A
+    discrimination is printed as a claim of type ``numerically-verified``
+    scoped to the measurements; an inconclusive outcome is labelled as such,
+    has no claim type, and says what it does not show.
+    """
+
+    def __init__(self, assessment: Assessment):
+        self.assessment = assessment
+
+    def _fits(self) -> str:
+        fits = self.assessment.fits
+        if fits is None:
+            return ""
+        lines = []
+        for item in fits:
+            parameters = ", ".join(
+                f"{name} = {_number(value)} \u00b1 {_number(error)}"
+                for name, value, error in zip(
+                    item.model.parameters,
+                    item.fit.params,
+                    item.fit.stderr,
+                    strict=True,
+                )
+            )
+            lines.append(
+                f"- {item.model.name}: chi-square {_number(item.chi2)} for"
+                f" {item.fit.dof} degrees of freedom; {parameters} (one standard"
+                " error)"
+            )
+        return "\n".join(lines) + "\n\n"
+
+    def _repr_markdown_(self) -> str:
+        a = self.assessment
+        design = a.design
+        head = (
+            f"The build recomputed {len(a.measurements)} measurement(s) from their"
+            f" arguments and scored the design at {_inline(_number(a.score))}"
+            " (chi-square by which the worse model stays behind the true one"
+            " on noise-free values at these points; the smaller of the two"
+            f" directions). A difference of {_inline(_number(design.threshold))}"
+            " counts as telling the models apart.\n\n"
+        )
+        if a.outcome == DISCRIMINATED:
+            best = a.preferred
+            assert best is not None and a.difference is not None
+            scope = (
+                f"the {len(a.measurements)} measurements of this run with an"
+                f" instrument noise of {design.sigma:g}"
+            )
+            return (
+                "::: {.verdict}\n"
+                "**Verdict: the measurements discriminate, recomputed by this"
+                " build.**\n\n"
+                + head
+                + self._fits()
+                + f"[The measurements favour {best.model.name}: it fits within the"
+                f" noise, and the other model is worse by a chi-square of"
+                f" {a.difference:.4g}.]"
+                f'{{.claim type="numerically-verified" scope="{scope}"}}\n\n'
+                "What the agent wrote did not decide the verdict.\n"
+                ":::\n"
+            )
+        return (
+            "::: {.verdict .inconclusive}\n"
+            "**Verdict: inconclusive.** This is not a result about the models and"
+            " has no claim type.\n\n"
+            + head
+            + self._fits()
+            + f"Why: {a.reason}. Measurements that do not separate the models do"
+            " not show that they are equal, and a model that fits is not thereby"
+            " true.\n"
             ":::\n"
         )
