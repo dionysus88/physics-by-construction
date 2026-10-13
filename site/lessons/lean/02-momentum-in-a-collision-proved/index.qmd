@@ -17,6 +17,7 @@ lesson:
     - Say which part of the momentum conservation seen in the simulation the theorem covers, and which it leaves out
   related: []
   format: 2
+  preview: fig-momentum-residual
   prerequisites:
     lessons: [momentum-and-collisions, proving-what-the-simulation-showed]
     outside:

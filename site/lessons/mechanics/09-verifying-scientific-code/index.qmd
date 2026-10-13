@@ -12,6 +12,7 @@ lesson:
   difficulty: 3
   course: mechanics
   slot: AI2
+  preview: fig-verification-convergence
   methods: [simulation]
   outcomes:
     - Test a simulation against limits, conservation, and convergence with references independent of the code
@@ -243,6 +244,7 @@ order than they have:
 
 ```{python}
 #| label: fig-verification-convergence
+#| fig-status: simulated
 #| fig-cap: "Largest error over two periods against the time step for velocity Verlet, Runge-Kutta 4, and two faulty steppers. A fault shows as a slope below the claimed order."
 #| fig-alt: "Log-log plot of the error in metres against the time step in seconds. Velocity Verlet and Runge-Kutta 4 lie on straight lines of slope 2 and 4, the second far lower. Verlet without the half has slope 1 and lies above velocity Verlet. Runge-Kutta 4 with equal weights has slope 2 and lies on a line parallel to velocity Verlet, far above Runge-Kutta 4."
 import matplotlib.pyplot as plt

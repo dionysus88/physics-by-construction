@@ -19,6 +19,7 @@ lesson:
     - Say what a replay does and does not show about an agent's conclusion
   related: []
   format: 2
+  preview: fig-agent-evidence
   prerequisites:
     lessons: [projectile-with-drag]
     outside:

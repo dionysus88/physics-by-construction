@@ -25,7 +25,7 @@ from typing import Any
 
 import yaml
 
-from pbc.authoring import evidence, glossary, is_numeric_console_block
+from pbc.authoring import evidence, glossary, is_numeric_console_block, previews
 from pbc.authoring import path as learning_path
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
@@ -79,7 +79,7 @@ _LESSON_KEYS = {
     "outcomes",
     "related",
 }
-_OPTIONAL_LESSON_KEYS = {"lean-modules", "format", "slot"}
+_OPTIONAL_LESSON_KEYS = {"lean-modules", "format", "slot", "preview"}
 # The lesson formats; a lesson without a declaration is in format 1.
 FORMATS = (1, 2)
 _PREREQUISITE_KEYS = {"lessons", "outside"}
@@ -371,6 +371,14 @@ def _metadata_problems(front_matter: Any, strand: str, directory: str) -> list[s
         and re.fullmatch(r"[A-Z]+[0-9]+", lesson["slot"])
     ):
         problems.append("'lesson.slot' must be a slot label such as M1 or AI0")
+    if "preview" in lesson and not (
+        isinstance(lesson["preview"], str)
+        and re.fullmatch(r"fig-[a-z0-9]+(-[a-z0-9]+)*", lesson["preview"])
+    ):
+        problems.append(
+            "'lesson.preview' must be the label of a figure cell, such as"
+            " fig-orbit-four-methods"
+        )
     if "format" in lesson and not (
         _is_integer(lesson["format"]) and lesson["format"] in FORMATS
     ):
@@ -622,6 +630,7 @@ def check_path(repository: Path) -> list[Violation]:
                 outcomes=tuple(meta["outcomes"]),
                 related=tuple(meta["related"]),
                 slot=meta.get("slot", ""),
+                preview=meta.get("preview", ""),
             )
         )
     try:
@@ -837,6 +846,17 @@ def check_figures(repository: Path) -> list[Violation]:
                         "image file in the page; a figure is drawn by an executed cell",
                     )
                 )
+        front_matter = lesson.front_matter
+        if isinstance(front_matter, dict) and isinstance(
+            front_matter.get("lesson"), dict
+        ):
+            preview = str(front_matter["lesson"].get("preview") or "")
+            violations += [
+                Violation("figure-preview", name, message)
+                for message in previews.problems(
+                    preview, page.read_text(encoding="utf-8")
+                )
+            ]
     return violations
 
 

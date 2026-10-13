@@ -19,6 +19,7 @@ lesson:
     - Compare each integrator with the exact orbit over a thousand orbits
   related: [gravitational-wave-strain]
   format: 2
+  preview: fig-orbit-four-methods
   prerequisites:
     lessons: [energy-conservation, momentum-and-collisions]
     outside:

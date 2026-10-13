@@ -13,6 +13,7 @@ lesson:
   difficulty: 3
   course: mechanics
   slot: AI4
+  preview: fig-review-evidence
   methods: [simulation, llm-agents]
   outcomes:
     - Give each of several review agents its own bounded list of checks over the same code
@@ -300,6 +301,7 @@ scan of the same two pieces.
 
 ```{python}
 #| label: fig-review-evidence
+#| fig-status: simulated
 #| fig-cap: "Error against the exact oscillator over two periods, against the number of time steps per period, for pieces 1 and 2. Lines are a fresh scan; dots are the values the evidence reviewer asked for, recomputed by this build."
 #| fig-alt: "A log-log chart of error against steps per period, from 20 to 800. Two lines fall with a slope close to minus one; the line of piece 2 lies above that of piece 1. Dots mark 50, 100 and 200 steps for each piece, on the lines."
 import matplotlib.pyplot as plt

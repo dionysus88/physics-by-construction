@@ -17,6 +17,7 @@ lesson:
     - Say why the site shows a stub as not verified and a solution as checked
   related: []
   format: 2
+  preview: fig-two-sides
   prerequisites:
     lessons: [proving-what-the-simulation-showed]
     outside:

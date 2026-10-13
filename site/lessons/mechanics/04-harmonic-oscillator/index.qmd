@@ -18,6 +18,7 @@ lesson:
     - Use the oscillator as the test system for a stepping method
   related: [proving-what-the-simulation-showed]
   format: 2
+  preview: fig-oscillator-phase-space
   prerequisites:
     lessons: [newtons-laws]
     outside:

@@ -12,6 +12,7 @@ lesson:
   difficulty: 3
   course: mechanics
   slot: AI3
+  preview: fig-hunt
   methods: [simulation, llm-agents]
   outcomes:
     - State a falsifiable claim with a predicate and a budget of experiments
