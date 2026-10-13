@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed with the planning of the change cycle `physics-next-phase`;
-accepted when that planning is approved. Adds the explicit, sandboxed
+Accepted with the approval of the planning of the change cycle
+`physics-next-phase` (2026-10-09). Adds the explicit, sandboxed
 opt-in that ADR 004 said would need a new ADR; ADR 004's harness is
 unchanged.
 

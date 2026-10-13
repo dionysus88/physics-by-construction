@@ -7,7 +7,18 @@ Accepted by the project owner with the merge of pull request #141 on
 added by the pull request that closes the feature. Supersedes decision 2 of
 [ADR 003](003-single-verification-entry-point-and-ci-budget.md) and decision 2
 of [ADR 005](005-workflow-self-tests-run-locally-on-workflow-changes.md); the
-other decisions of both stand.
+other decisions of both stand. The feature that decision 8 names is F61,
+and its decision record is
+[ADR 014](014-verification-proportional-to-the-change.md); the timeout of
+decision 9 stays 45 minutes by that ADR's decision 7. ADR 014 decision 11
+amends decisions 2, 3, and 6 of this ADR for a full run (F113): the group
+`build` runs in same-machine lesson shards that each execute a bounded
+share of the lessons and make the comparisons of decision 4 on their own
+machine, and one `assemble` job renders the one built site of decision 6
+from their results; a lesson-shard matrix counts as the one job of its
+group in decision 2. The lesson shards are not the division of
+`tests/e2e/shards.json`, which splits the built-site tests between the
+`e2e-pages` jobs of this ADR and stands.
 
 Date: 2026-10-12
 

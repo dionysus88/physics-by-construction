@@ -2,8 +2,10 @@
 
 Project direction for Physics by Construction, derived from the approved
 `docs/PROJECT_REQUIREMENTS.md` (approved 2026-10-06, re-approved on
-2026-10-09 with the change request `docs/changes/physics-next-phase.md`) and
-consistent with `docs/architecture.md` and ADRs 001 to 010.
+2026-10-09 with the change request `docs/changes/physics-next-phase.md`
+and on 2026-10-12 with the change request
+`docs/changes/final-curriculum.md`) and consistent with
+`docs/architecture.md` and ADRs 001 to 014.
 
 Keep this high-level. GitHub Issues are the actionable backlog and the source
 of truth for a feature once its Issue exists. Each feature below has a stable
@@ -16,7 +18,7 @@ the human picks the next feature among those whose dependencies are done.
 Review the later-phase features against the current architecture before
 starting them.
 
-## State at the change cycle
+## State at the change cycle `physics-next-phase`
 
 Checked on 2026-10-09 at the base commit `2f011ea` of the planning branch
 `planning/physics-next-phase`:
@@ -51,12 +53,153 @@ are retired and are never assigned to anything else. Features the change
 cycle adds without a candidate number take the next unused IDs from F57
 onward. The section "Candidate mapping" records every candidate's outcome.
 
+## State at the change cycle `final-curriculum`
+
+Checked on 2026-10-12 at the base commit `0580b3a` of the planning branch
+`planning/final-curriculum`, against the repository, `gh issue list
+--state all`, and `gh pr list --state all`. This is the reconciliation
+report that section 9 of `docs/changes/final-curriculum.md` asks for; the
+files are the truth, this section is their summary at that commit.
+
+### Published lessons and their slots
+
+Twenty-two lessons are published, all with `course: mechanics`, in the
+four strands. The slot labels are the curriculum labels of the change
+request (ADR 013); eighteen lessons fill a slot (seventeen take their
+`slot` in F62, the gas lesson T0 in F70 together with its course) and four
+are Lean lessons beyond the one Lean slot of the baseline.
+
+| Lesson directory under `site/lessons/` | `id` | Strand, order | Methods | Feature | Slot |
+|---|---|---|---|---|---|
+| `mechanics/01-kinematics-as-a-program` | `kinematics` | mechanics 1 | simulation | F02 | M1 |
+| `mechanics/02-newtons-laws` | `newtons-laws` | mechanics 2 | simulation | F04 | M2 |
+| `mechanics/03-projectile-motion-with-drag` | `projectile-with-drag` | mechanics 3 | simulation | F04 | M3 |
+| `mechanics/04-harmonic-oscillator` | `harmonic-oscillator` | mechanics 4 | simulation | F05 | M4 |
+| `mechanics/05-numerical-integrators` | `numerical-integrators` | mechanics 5 | simulation | F05 (editorial F30) | M5 |
+| `mechanics/06-energy-conservation` | `energy-conservation` | mechanics 6 | simulation | F06 | M6 |
+| `mechanics/07-momentum-and-collisions` | `momentum-and-collisions` | mechanics 7 | simulation | F06 | M7 |
+| `mechanics/08-kepler-orbit` | `kepler-orbit` | mechanics 8 | simulation | F06 | M8 |
+| `mechanics/09-verifying-scientific-code` | `verifying-scientific-code` | mechanics 9 | simulation | F46 | AI2 (physics reasoning path; a mechanics lesson, no agent) |
+| `mechanics/10-automated-analysis-pipelines` | `automated-analysis-pipelines` | mechanics 10 | simulation, measured-data | F47 | R1 (autonomous research path) |
+| `mechanics/11-gravitational-wave-strain` | `gravitational-wave-strain` | mechanics 11 | measured-data, simulation | F60 | M16 (designated lab; primary home mechanics) |
+| `mechanics/12-inverse-physics-parameter-discovery` | `inverse-physics` | mechanics 12 | simulation, measured-data | F23 | D6 (law discovery path) |
+| `agents-llm/01-an-agent-runs-an-experiment` | `agent-experiment` | agents-llm 1 | simulation, llm-agents | F09 | AI0 |
+| `agents-llm/02-a-counterexample-hunter` | `counterexample-hunter` | agents-llm 2 | simulation, llm-agents | F16 | AI3 |
+| `agents-llm/03-three-reviewers` | `scientific-review` | agents-llm 3 | simulation, llm-agents | F18 | AI4 |
+| `agents-llm/04-an-experimental-design-agent` | `experimental-design-agent` | agents-llm 4 | simulation, llm-agents | F20 | D9 (law discovery path) |
+| `agents-abm/01-particles-in-a-box` | `particles-in-a-box` | agents-abm 1 | simulation, abm | F11 | T0; no `slot` until F70 sets `slot: T0` and `course: thermodynamics` together (ADR 013 decision 6); address unchanged |
+| `lean/01-proving-what-the-simulation-showed` | `proving-what-the-simulation-showed` | lean 1 | lean | F08 | L1 |
+| `lean/02-momentum-in-a-collision-proved` | `collision-momentum-proved` | lean 2 | lean | F17 | none: beyond the baseline |
+| `lean/03-what-symplectic-euler-conserves` | `symplectic-euler-conserved-energy` | lean 3 | lean | F17 | none: beyond the baseline |
+| `lean/04-lean-exercises-on-your-machine` | `lean-exercises-on-your-machine` | lean 4 | lean | F21 | none: beyond the baseline |
+| `lean/05-the-chirp-law-proved` | `chirp-law-proved` | lean 5 | lean | F56 | none: beyond the baseline |
+
+Three lessons (`counterexample-hunter`, `scientific-review`,
+`experimental-design-agent`) declare no `format`; the format-2 default
+flip of F28 is still pending for them and is not a concern of this change.
+
+### Count reconciliation
+
+| Count | Value |
+|---|---|
+| Reference curriculum (requirements decision 23) | 115 slots: 81 Part A, 33 Part B, 1 Lean |
+| Published lessons at `0580b3a` | 22 |
+| Published lessons that fill a slot | 18: M1 to M8, M16, T0, AI0, AI2, AI3, AI4, D6, D9, R1, L1; 17 carry `slot` from F62, T0 from F70 with its course |
+| Published lessons beyond the baseline | 4 Lean lessons (F17, F21, F56); kept, mapped, never deleted or hidden |
+| Slots to fill | 97, of which 6 belong to features that exist without an Issue (AI1 F45, AI5 F55, R4 F49, W7 F52, FL7 F53, EM7 F54) and 91 to the new features of Phase 4 |
+| Lessons when the reference curriculum is complete | 119: 115 slots plus the 4 Lean lessons beyond the baseline, plus any further Lean lesson of F22 |
+| Designated measured-data labs | 16 (M15, M16, T7, T8, W7, W8, EM7, EM8, FL7, FL8, Q7, Q8, AST8, AST9, MAT5, MAT6); 1 published (M16), 3 with existing features (W7, FL7, EM7), 12 new features |
+| Datasets with a go decision | 3 (GW150914 strain, used; Aalborg wave flume, for W8; NPL S-parameters, for EM7) |
+
+115 stays the reference structure (requirements decision 23). The
+historical baseline of the change request (11 published, 104 future)
+counted one Lean lesson and no agent, pipeline, lab, or inverse-physics
+lesson; the actual inventory is reported above and no published lesson is
+rebuilt to match a count.
+
+### Features of the previous phases: state and role in the final curriculum
+
+Every feature F01 to F60 keeps its block as approved; the blocks are
+history. "Delivered" means the Issue is closed and the pull request
+merged. The slot column is the mapping that section 9, point 3, of the
+change request asks for; no feature's scope is duplicated.
+
+| Feature, Issue | State at `0580b3a` | Role in the final curriculum |
+|---|---|---|
+| F01 to F09, #3 to #25 | Delivered | The site, the lesson format, M1 to M8, L1, AI0. |
+| F10, #29 | Delivered; release tag still a human step | None. |
+| F11, #30 | Delivered | T0 of the thermodynamics course, re-homed by front matter in F70, which sets `course` and `slot` together (ADR 013 decision 6); no slot before F70. |
+| F12, #31 | Delivered | The content workflow every lesson feature uses. |
+| F13, #89; F14, #94 | Delivered | Progress marks and recommendations that F64 keeps on the redesigned path. |
+| F15, no Issue | Not started; **dropped by `final-curriculum`** (ADR 013 decision 7) | Its goal is delivered by F62 and the first lesson feature of each course (F70, F71, F72, F73, F89, F91, F94); its ID is never reused. |
+| F16, #87 | Delivered | AI3. |
+| F17, #61 | Delivered | Two Lean lessons beyond the baseline (L2, L3). |
+| F18, #88 | Delivered | AI4; its reviewers are reused by F110 and F111. |
+| F19, #111 | Delivered | The evidence map page; the R2 lesson that teaches it is F109. |
+| F20, #128 | Delivered | D9, with the revision-2 enhancement (hypothesis-discriminating information gain) already in its design and judging; no new feature. |
+| F21, #90 | Delivered | A Lean lesson beyond the baseline (L4). |
+| F22, no Issue | Not started; unchanged | A Lean strand lesson outside the 115 slots; kept as approved. |
+| F23, #120 | Delivered | D6, with the revision-2 enhancement (identifiability, parameter correlations, held-out uncertainty) delivered by its fitting helpers and page; no new feature. |
+| F25 to F44, Issues #41 to #60, #83 to #86, #99 to #112, and #121 | Delivered | The visual system, metadata, graph, cards, format 2, search, diagrams, and components that F62 to F64 build on without reopening. |
+| F45, no Issue | Not started; unchanged | AI1; coordinates with M12 of F68 on the resonance reference solution. |
+| F46, #62 | Delivered | AI2 (a mechanics lesson without an agent, in the physics reasoning path). |
+| F47, #123 | Delivered | R1. |
+| F49, no Issue | Not started; unchanged | R4. |
+| F50, #51 | Delivered | The gate every new lab and F88's comparison pass; its process is reused, the Issue is not reopened. |
+| F51, #102 (follow-up #115) | Delivered | The shared analysis core of every lab. |
+| F52, no Issue | Not started; unchanged | W7; its course is `waves`, created by F71 (reconciled note in its block). |
+| F53, no Issue | Not started; unchanged | FL7; its course is `fluids`, created by F73. |
+| F54, no Issue | Not started; unchanged | EM7; its course is `electromagnetism`, created by F72; its dataset has a go decision. |
+| F55, no Issue | Not started; unchanged | AI5. |
+| F56, #129 | Delivered | A Lean lesson beyond the baseline (L5). |
+| F57, #49; F59, #101 | Delivered | Identity and the instructor pack; unchanged. |
+| F58, #130 (follow-up #138 open) | Delivered | The parallel jobs F61 builds on. |
+| F60, #122 | Delivered | M16. |
+
+Retired IDs F24 and F48 stay retired. The seven enhancements of existing
+slots named in revision 2 are recorded under "Slot mapping" below: two
+are delivered (D6 by F23, D9 by F20), and five belong to the features that
+create their slots (AI6 in F96, EV1 in F100, EV2 in F81, R5 in F110, and
+the linked Q5/Q8 pair in F90 and F103); none adds a slot.
+
+### Architecture decisions of this change cycle
+
+- **ADR 013** allows all eight courses with fixed identifiers, makes every
+  course a strand with the same identifier created by its first lesson
+  feature, declares the reference curriculum as data that lessons fill by
+  `slot`, derives the four method paths from the slot, validates the
+  prerequisite graph as a graph while previous and next stay the reading
+  route (a prerequisite may live in a later strand), and reconciles F15
+  as dropped. It supersedes decision 4 of ADR 008 and amends its decisions
+  1, 3, and 5; every published address, identifier, and link stays.
+- **ADR 014** makes a pull request verify what it changed against the
+  verified result of `main`, which is restored and never committed, with
+  `main` verifying everything; the navigation and the commit a page shows
+  are regenerated on every build, and a check is reused only from a base
+  the same check implementation produced; a lesson whose inputs cannot be
+  followed, a changed shared input, or changed checks make the run a full
+  run, and a full run executes the lessons in same-machine lesson shards
+  that one assembly turns into the one built site, so that every job fits
+  the timeout at 110 lessons. It amends ADR 002 and ADR 012 and is the
+  record that ADR 003 decision 6 and ADR 012 decision 8 require. F61
+  delivers the selection, with F62, before the first lesson feature of
+  this phase; F113 delivers the lesson shards before the lesson count
+  passes the lesson-shard size.
+
+No accepted ADR conflicts with the re-approved requirements; ADR 008's
+single-additional-course rule is the one decision the requirements asked
+to supersede, and ADR 013 does it.
+
 ## Overview
 
 Phases: Phase 1 is the MVP; Phase 2 is the work the requirements placed
 after the MVP; Phase 3 is the change cycle `physics-next-phase`, ordered in
-waves R0 to R5 by dependency (see "Execution order"). A wave is a suggested
-grouping, not a gate: a feature may start when its dependencies are done.
+waves R0 to R5 by dependency; Phase 4 is the change cycle
+`final-curriculum`, ordered in waves C0 to C4 (see "Execution order"). A
+wave is a suggested grouping, not a gate: a feature may start when its
+dependencies are done. The gates of Phase 4 (F61 and F62 before every
+lesson feature of the phase, F64 before the lesson features of waves C2 to
+C4) are dependencies, listed in the table and in each block.
 
 | ID | Feature | Phase | Depends on | Risk |
 |---|---|---|---|---|
@@ -74,7 +217,7 @@ grouping, not a gate: a feature may start when its dependencies are done.
 | F12 | Content proposal workflow through GitHub Issues | 2, delivered | F10 | High |
 | F13 | Self-check quizzes and browser-local progress | 2 | F03, F07, F10 | Medium |
 | F14 | Adaptive recommendations | 2 | F13 | Medium |
-| F15 | Second course on the three-pillar path | 2 | F10 | Medium |
+| F15 | Second course on the three-pillar path | 2, dropped by `final-curriculum` (ADR 013) | F10 | Medium |
 | F58 | Parallel verification jobs behind one required check | 3, R0 | F10 | High |
 | F44 | Visual design and accessibility system | 3, R1 | F10 | Medium |
 | F57 | Open-source identity, attribution, and citation | 3, R1 | F10, F12 | Medium |
@@ -105,9 +248,9 @@ grouping, not a gate: a feature may start when its dependencies are done.
 | F51 | Experimental methods and visualization foundations | 3, R3 | F50 (a go decision), F28 | Medium |
 | F60 | Gravitational-wave strain lab: from Kepler's orbit to a chirp | 3, R3 | F51, F06 | Medium |
 | F43 | Science-first visualization components | 3, R3 | F07, F51 | Medium |
-| F54 | Microwave S-parameter lab | 3, R4 | F51, a course for the lab (F15; see the block) | Medium |
-| F53 | Flow measurement lab with PIV fields | 3, R4 | F51, F43, a course for the lab (F15; see the block) | Medium |
-| F52 | Optical diffraction lab | 3, R4 | F51, F43, a course for the lab (F15; see the block) | Medium |
+| F54 | Microwave S-parameter lab | 3, R4 | F51, a course for the lab (F72 since `final-curriculum`; see the block) | Medium |
+| F53 | Flow measurement lab with PIV fields | 3, R4 | F51, F43, a course for the lab (F73 since `final-curriculum`; see the block) | Medium |
+| F52 | Optical diffraction lab | 3, R4 | F51, F43, a course for the lab (F71 since `final-curriculum`; see the block) | Medium |
 | F55 | Agent-assisted experimental physics | 3, R4 | F45, one of F60 or F54 | Medium |
 | F23 | Inverse physics: parameter discovery with uncertainty | 3, R4 | F51, one of F60 or F54 | Medium |
 | F47 | Automated analysis pipelines | 3, R4 | F51 | Medium |
@@ -122,6 +265,75 @@ grouping, not a gate: a feature may start when its dependencies are done.
 Retired candidate numbers: F24 (optional local tutor, deferred) and F48
 (paper reproduction, absorbed into F49). See "Candidate mapping".
 
+Phase 4, the change cycle `final-curriculum` (2026-10-12). The slots are
+the curriculum labels of `docs/changes/final-curriculum.md`; the full
+mapping is under "Slot mapping".
+
+| ID | Feature | Wave | Slots | Depends on | Risk |
+|---|---|---|---|---|---|
+| F61 | Verification proportional to the change | C0 | none | F58 | High |
+| F113 | Bounded full verification: same-machine lesson shards of the build | C0 | none | F61, F58 | High |
+| F62 | Eight courses and the reference curriculum | C0 | none (migrates 17 published lessons; T0 by F70) | F03, F37, F26, F27, F25 | Medium |
+| F63 | Verified lesson previews | C0 | none | F62, F28, F44 | Medium |
+| F64 | Learning Path redesign: course-first, compact, accessible | C0 | none | F62, F63, F26, F27, F37, F41, F44, F13, F14 | Medium |
+| F65 | Physics environments and the discovery evaluation protocol | C1 | none | F09, F16, F20, F23, F46 | Medium |
+| F66 | Law discovery lessons: black-box force laws | C1 | D1, D2, D3 | F61, F62, F113 by the lesson-shard rule, F65 | Medium |
+| F67 | Symbolic regression and equation discovery | C1 | D7, D8 | F61, F62, F113 by the lesson-shard rule, F65, F23 | Medium |
+| F68 | Advanced mechanics: chaos, Lagrangian and Hamiltonian mechanics, resonance | C1 | M9, M10, M11, M12 | F61, F62, F113 by the lesson-shard rule, F05, F06 | Medium |
+| F69 | Mechanics: many-body gravitation, nonlinear dynamics, rotational motion | C1 | M13, M14, M17 | F61, F62, F113 by the lesson-shard rule, F68, F06 | Medium |
+| F70 | Thermodynamics: random walks, kinetic theory, entropy | C1 | T1, T2, T3 (and T0 re-homed) | F61, F62, F113 by the lesson-shard rule, F11, F06 | Medium |
+| F71 | Waves and optics: the wave equation, interference, sound | C1 | W1, W2, W9 | F61, F62, F113 by the lesson-shard rule, F05 | Medium |
+| F72 | Electromagnetism: fields, charged particles, induction | C1 | EM1, EM2, EM3 | F61, F62, F113 by the lesson-shard rule, F06 | Medium |
+| F73 | Fluid dynamics: advection, Burgers, finite volumes, shallow water | C1 | FL1, FL4, FL9, FL5 | F61, F62, F113 by the lesson-shard rule, F05, F06 | Medium |
+| F74 | Wave flume lab | C1 | W8 | F61, F62, F113 by the lesson-shard rule, F71, F51, F43 | Medium |
+| F75 | Thermodynamics: Ising model, molecular dynamics, heat engines | C2 | T4, T5, T9 | F61, F62, F64, F113, F70 | Medium |
+| F76 | Heat conduction and the finite-element bridge | C2 | T6, T10 | F61, F62, F64, F113, F70 | Medium |
+| F77 | Optics: refraction, polarisation, diffraction, inverse optics | C2 | W3, W4, W5, W6 | F61, F62, F64, F113, F71 | Medium |
+| F78 | Electromagnetism: Maxwell's equations and FDTD, RLC circuits, waveguides | C2 | EM4, EM5, EM6 | F61, F62, F64, F113, F72, F71 | Medium |
+| F79 | Fluid dynamics: Navier-Stokes, vortex shedding, particle-based fluids | C2 | FL2, FL3, FL6 | F61, F62, F64, F113, F73 | Medium |
+| F80 | Applied capstone: adaptive phased-array beam steering | C2 | EM9 | F61, F62, F64, F113, F78, F71 | Medium |
+| F81 | Interactive discovery benchmarks and non-agent baselines | C2 | EV2, EV3 | F61, F62, F64, F113, F65, F66, F67 | Medium |
+| F82 | Discovering conservation laws and invariants | C2 | D13 | F61, F62, F64, F113, F65, F67, F69 | Medium |
+| F83 | Pendulum and accelerometer data lab | C2 | M15 | F61, F62, F64, F113, F51, F68 | Medium |
+| F84 | Heat transfer measurements lab | C2 | T7 | F61, F62, F64, F113, F76, F51 | Medium |
+| F85 | Brownian motion tracking lab | C2 | T8 | F61, F62, F64, F113, F70, F51 | Medium |
+| F86 | RLC circuit measurements lab | C2 | EM8 | F61, F62, F64, F113, F78, F51 | Medium |
+| F87 | Applied capstone: thermal engineering of a hypothetical AI accelerator | C3 | T11 | F61, F62, F64, F113, F76 | Medium |
+| F88 | Applied capstone: reconstructing the 2025 Kamchatka tsunami | C3 | FL10 | F61, F62, F64, F113, F73, F51 | High |
+| F89 | Quantum physics: the Schrödinger equation, tunnelling, the harmonic oscillator | C3 | Q1, Q2, Q3 | F61, F62, F64, F113, F05, F71 | Medium |
+| F90 | Quantum physics: spin, entanglement and Bell inequalities, open systems | C3 | Q4, Q5, Q6 | F61, F62, F64, F113, F89 | Medium |
+| F91 | Astrophysics: the three-body problem, modified gravity, lensing | C3 | AST1, AST2, AST3 | F61, F62, F64, F113, F69 | Medium |
+| F92 | Relativity and cosmology: special relativity, relativistic orbits, cosmic expansion | C3 | AST10, AST4, AST5 | F61, F62, F64, F113, F91 | Medium |
+| F93 | Gravitational-wave chirp and exoplanet transit simulations | C3 | AST6, AST7 | F61, F62, F64, F113, F91, F60 | Medium |
+| F94 | Materials physics: crystal lattices and phonons, electronic band structure | C3 | MAT1, MAT2 | F61, F62, F64, F113, F71, F89 | Medium |
+| F95 | Materials physics: elasticity and deformation, defects | C3 | MAT3, MAT4 | F61, F62, F64, F113, F94, F76 | Medium |
+| F96 | Multimodal physics reasoning and interpretable explanations | C3 | AI6, AI7 | F61, F62, F64, F113, F09, F46, F65 | Medium |
+| F97 | Physical reasoning from video | C3 | AI8 | F61, F62, F64, F113, F96, F06 | Medium |
+| F98 | Discovery under noise, hidden variables, and generalisation | C3 | D10, D11, D12 | F61, F62, F64, F113, F66, F81 | Medium |
+| F99 | Discovering gravity and unknown physical worlds | C3 | D4, D5 | F61, F62, F64, F113, F66, F69, F91 | Medium |
+| F100 | Physics reasoning benchmarks | C3 | EV1 | F61, F62, F64, F113, F96, F65 | Medium |
+| F101 | Robustness, cost, and scientific failure analysis | C3 | EV4, EV5 | F61, F62, F64, F113, F81, F98 | Medium |
+| F102 | Atomic spectroscopy lab | C3 | Q7 | F61, F62, F64, F113, F89, F51 | Medium |
+| F103 | Quantum measurement statistics lab | C3 | Q8 | F61, F62, F64, F113, F90, F51 | Medium |
+| F104 | Exoplanet light curves lab | C3 | AST8 | F61, F62, F64, F113, F93, F51 | Medium |
+| F105 | Galaxy rotation curves lab | C3 | AST9 | F61, F62, F64, F113, F91, F51 | Medium |
+| F106 | X-ray diffraction data lab | C3 | MAT5 | F61, F62, F64, F113, F94, F51 | Medium |
+| F107 | Stress-strain measurements lab | C3 | MAT6 | F61, F62, F64, F113, F95, F51 | Medium |
+| F108 | Turbulence and flow measurements lab | C3 | FL8 | F61, F62, F64, F113, F79, F53, F51 | Medium |
+| F109 | Evidence maps and reproducible literature evidence | C4 | R2, R3 | F61, F62, F64, F113, F19, F39, F28 | Medium |
+| F110 | Agent-driven materials discovery | C4 | R5 | F61, F62, F64, F113, F95, F18, F20 | Medium |
+| F111 | Autonomous physics research challenge | C4 | R6 | F61, F62, F64, F113, F49, F101, F98, F65 | High |
+| F112 | Curriculum completion audit | C4 | none | every scheduled lesson feature, F64 | Low |
+
+The features of the previous phase without an Issue keep their IDs and
+blocks and fill these slots when their dependencies are met: F45 (AI1),
+F55 (AI5), F49 (R4), F52 (W7, after F71), F53 (FL7, after F73), F54 (EM7,
+after F72); F22 stays a Lean strand feature outside the slots. Each of
+them publishes a lesson in this phase and therefore starts after F61 and
+F62, and after F113 under the full-run gate, like every lesson feature of
+the phase (the gates under "Phase 4"); their blocks are not rewritten, the
+gate is this rule. F15 is dropped.
+
 Risk levels follow `.agents/policies/autonomy.md`. Every feature that adds a
 lesson is at least Medium, because physics and proof content needs independent
 review, not only passing checks. Features that change CI, repository
@@ -134,9 +346,10 @@ all derived from lesson front matter; there is no second list.
 
 | Facet | Content | Today | Next phase |
 |---|---|---|---|
-| **Physics courses** (by subject) | Mechanics. Later candidates: waves and optics (bridged by the wave-flume and optics datasets), Lagrangian and Hamiltonian mechanics, statistical physics, electromagnetism, fluid dynamics. | One course, implicit | `course` in every lesson (F37); a second course only through F15 with the human's explicit choice. F15 yields one course. A measured-data lab whose subject F15 does not choose waits for a later course feature, which takes the next unused ID when the human asks for it; the only other route is a `mechanics` framing its Issue justifies under ADR 008 decision 3. |
+| **Physics courses** (by subject) | Mechanics. Later candidates: waves and optics (bridged by the wave-flume and optics datasets), Lagrangian and Hamiltonian mechanics, statistical physics, electromagnetism, fluid dynamics. | One course, implicit | `course` in every lesson (F37); a second course only through F15 with the human's explicit choice. F15 yields one course. A measured-data lab whose subject F15 does not choose waits for a later course feature, which takes the next unused ID when the human asks for it; the only other route is a `mechanics` framing its Issue justifies under ADR 008 decision 3. **Since `final-curriculum` (ADR 013):** the eight courses `mechanics`, `thermodynamics`, `waves`, `electromagnetism`, `fluids`, `quantum`, `astrophysics`, `materials` with fixed identifiers, each a strand with the same identifier created by its first lesson feature (F70, F71, F72, F73, F89, F91, F94); the reference curriculum in the curriculum file, filled by `slot` (F62); F15 dropped; a lab's home is its subject's course, and the `mechanics` framing of a lab of another subject is no longer a route. |
 | **Methods** (cross-cutting, not subjects) | Simulation, LLM agents in the harness, agent-based modelling, formal verification in Lean, measured data, coding agents on the learner's machine. | Four strands in one linear path | `methods` tags, one method path per method on the learning-path page, related-lesson links (F37); no method becomes a course. |
-| **Strands** (URL groups and ordering) | `mechanics`, `agents-llm`, `agents-abm`, `lean`. | Unchanged | Unchanged identifiers and addresses; display titles may be refined (for example "AI-assisted research" for `agents-llm`). A measured-data lab of the mechanics course takes the next order in the `mechanics` strand; a lesson about a method lives in that method's strand. No lesson is placed by a method tag alone (ADR 008 decision 4). |
+| **Strands** (URL groups and ordering) | `mechanics`, `agents-llm`, `agents-abm`, `lean`. | Unchanged | Unchanged identifiers and addresses; display titles may be refined (for example "AI-assisted research" for `agents-llm`). A measured-data lab of the mechanics course takes the next order in the `mechanics` strand; a lesson about a method lives in that method's strand. No lesson is placed by a method tag alone (ADR 008 decision 4). **Since `final-curriculum` (ADR 013):** one strand per course in curriculum order, then the three method strands; the lessons of the four method paths live in `agents-llm`. |
+| **Method paths** (since `final-curriculum`, ADR 013) | Physics reasoning and scientific agents (AI0 to AI8), scientific law discovery (D1 to D13), physics agent benchmarking (EV1 to EV5), autonomous scientific research (R1 to R6). | Not shown; six published lessons belong to them | A facet of the slot: a secondary view of the path page over the same canonical pages (F62, F64); never a course, a strand, or a page of its own. |
 
 Rules that follow: a lab belongs to one primary course and links to its
 agent, measured-data, and Lean extensions instead of being duplicated; no
@@ -927,6 +1140,16 @@ which tests cannot establish; plan a review with real use.
 **Detailed implementation plan expected.** Yes.
 
 ### F15 — Second course on the three-pillar path
+
+**Dropped by the change cycle `final-curriculum` (2026-10-12; ADR 013
+decision 7).** F15 was never started and has no Issue. Its goal, a course
+beyond mechanics, is delivered by F62 (the eight courses and the reference
+curriculum) and by the first lesson feature of each course (F70, F71, F72,
+F73, F89, F91, F94), each with the human's approval of the lesson list in
+its Issue, as this block asked. Its rule that a course contains an agent
+lesson and a Lean lesson is not carried: the method paths are a view over
+the courses, and proofs are added where they add physics insight. The ID
+F15 is never reused. The block below is kept as approved, as history.
 
 **Goal.** Grow beyond mechanics with a second course that again spans
 simulation, agents, and proof.
@@ -2306,6 +2529,13 @@ each with its precise scope stated.
 
 ### F45 — Agent-assisted simulation development
 
+**Reconciled by the change cycle `final-curriculum` (2026-10-12).** F45
+fills slot AI1 of the physics reasoning path and is unchanged; it has no
+Issue. Its default exercise, a damped driven oscillator with resonance, is
+also the subject of lesson M12 (F68): whichever lands first owns the
+verified reference solution in `src/pbc`, and the other reuses it (see
+F68).
+
 **Source.** Candidate F45 (merged with the shared workflow of F55); Section
 12 (F45 + F55); requirements use case 9; ADR 010, accepted with this
 planning.
@@ -2607,6 +2837,12 @@ component.
 
 ### F54 — Microwave S-parameter lab
 
+**Reconciled by the change cycle `final-curriculum` (2026-10-12).** The
+lab's course is `electromagnetism`, created by F72 (ADR 013); the references to
+F15 below are history, F15 is dropped, and the `mechanics` framing is no
+longer a route. The feature is otherwise unchanged and has no Issue; it
+starts when F72 and its other dependencies are delivered.
+
 **Source.** Candidate F54; Section 8.1 (NPL row, "strong low-friction
 candidate").
 
@@ -2635,6 +2871,12 @@ mechanics course. The F50 dossier is evidence for the F15 choice.
 
 ### F53 — Flow measurement lab with PIV fields
 
+**Reconciled by the change cycle `final-curriculum` (2026-10-12).** The
+lab's course is `fluids`, created by F73 (ADR 013); the references to
+F15 below are history, F15 is dropped, and the `mechanics` framing is no
+longer a route. The feature is otherwise unchanged and has no Issue; it
+starts when F73 and its other dependencies are delivered.
+
 **Source.** Candidate F53; Section 8.1 (cylinder-wake and Rostock rows).
 
 **Goal.** From processed PIV velocity fields to vorticity, streamlines, and
@@ -2659,6 +2901,12 @@ under the caps; the animation with a keyframe within the on-demand budget.
 **Risk.** Medium. **Detailed implementation plan expected.** Yes.
 
 ### F52 — Optical diffraction lab
+
+**Reconciled by the change cycle `final-curriculum` (2026-10-12).** The
+lab's course is `waves`, created by F71 (ADR 013); the references to
+F15 below are history, F15 is dropped, and the `mechanics` framing is no
+longer a route. The feature is otherwise unchanged and has no Issue; it
+starts when F71 and its other dependencies are delivered.
 
 **Source.** Candidate F52; Section 8.1 (Fraunhofer row).
 
@@ -2876,6 +3124,1936 @@ checks are shown; the paper's licence and the data rights are recorded.
 **Risk.** High (scope). **Detailed implementation plan expected.** Yes,
 likely several Issues.
 
+## Phase 4 — Final curriculum (change cycle `final-curriculum`)
+
+Every feature in this phase comes from `docs/changes/final-curriculum.md`
+(revision 3, 2026-10-10) and the requirements re-approved with it on
+2026-10-12 (decisions 23 to 31); each block names the slots of the
+reference curriculum it fills and the section of the change request it
+comes from. The wave C0 and the discovery foundation F65 are specified in
+detail, because they are the first wave and everything else depends on
+them. Waves C1 to C4 are deliberately coarser: revalidate each feature
+against the architecture, the requirements, the curriculum file, and the
+delivered features before creating its Issue, and expect a feature plan to
+refine it. The human approves each course's concrete lesson list in the
+Issues before drafting (requirements, unresolved question 6).
+
+What every feature of this phase inherits, without repeating it in each
+block:
+
+- **The gates** (requirements decisions 29 and 30). Every feature that
+  publishes a lesson in this phase depends on F61 (verification
+  proportional to the change) and F62 (the courses, the curriculum file,
+  and the `slot` field its lessons must carry), whether or not its block
+  names them: no lesson of this phase is drafted, and no Issue for one is
+  created, before both are delivered. Every lesson feature of waves C2,
+  C3, and C4, which is the bulk of the new lessons, additionally depends
+  on F64 (the Learning Path redesign). The dependency tables and the
+  blocks repeat these gates so that `create-feature-issue.sh` sees them;
+  this rule is the source when a block is terser. There is no exception
+  for cost: departing from a gate is a change to the requirements, not a
+  scheduling choice.
+- **The full-run gate** (ADR 014 decisions 7 and 11). Every job of a full
+  run must fit the job timeout, and until F113 is delivered a full run is
+  the one `build` job of ADR 012, which fits the budget up to the
+  lesson-shard size of 32 lessons. A lesson feature of wave C1 depends on F113 unless
+  the lesson count it brings the site to is at most 32 (twenty-two today,
+  so room for about ten lessons, in the order the human creates the
+  Issues); every lesson feature of waves C2 to C4 depends on F113 as it
+  depends on F64. The dependency table marks the wave C1 features "F113
+  by the lesson-shard rule" and names F113 outright from wave C2 on; F61
+  records the measured count at which the one job leaves the budget, and
+  if that count is below 32 no lesson feature starts before F113.
+- **The invariants and the lesson model** of `docs/architecture.md`,
+  including the reference curriculum and the slot (ADR 013), the
+  verification selection (ADR 014), and the format-2 lesson checks of
+  `docs/authoring.md`.
+- **The definition of done of a lesson** (change request, section 11;
+  requirements decision 31): substantive physics at its stated level with
+  the physical question, assumptions, essential derivation, units, and
+  domain of validity; runnable pinned code and figures the build
+  regenerates; interpreted figures with provenance labels; honest numerical,
+  epistemic, and empirical limitations; typed claims with evidence; unique
+  identifier, course, slot, methods, difficulty, validated prerequisites,
+  outcomes, and related links; exercises, a self-check, accessible labels,
+  and a tested "Reproduce this" path; references from the register; focused
+  tests for the code it adds; applicable checks passing within the budgets;
+  and an independent scientific review before merge. No live LLM or API
+  call is a required check.
+- **A feature may deliver exactly one slot.** There is no rule that a slot
+  is a feature, and none that it is not (requirements, later phases and
+  decision 31; change request, section 2, point 10). Until 2026-10-13 the
+  sentence of the later phases read "no feature equals one slot", against
+  decision 31; the project owner corrected it on that day to the wording of
+  decision 31. The features of this roadmap that deliver one slot stand.
+- **The placement rule**: a lesson of a course's physics lives in the
+  course's strand at the next free order, with `course` and `slot` set; a
+  lesson whose subject is a method lives in `agents-llm` (the method paths),
+  `agents-abm`, or `lean`, with the primary course of the physics it uses.
+  The first lesson feature of a course creates its strand directory and its
+  package under `src/pbc` (ADR 013). Related links are one-directional from
+  the prerequisite side (F37).
+- **The lab rule** (requirements decisions 18 and 27; ADR 007): a
+  measured-data lab feature starts with the feasibility spike of its
+  candidate dataset under the F50 process (card, inspected file, artifact
+  labels, reference figure from source-controlled code, rights, sizes,
+  dossier) and waits for the human's go decision; on defer or reject the
+  feature records the decision on its card and dossier and stops, or
+  proposes another candidate in a new spike. A lab then meets the gates of
+  section 8.4 of `docs/changes/physics-next-phase.md` as F60 did: sample
+  under the caps with a parsing test, regenerated reference figure, rights
+  and attribution shown, every figure labelled, measurements distinct from
+  processed signals and models, versioned and tested download, a no-LLM
+  path, the page within the time and payload budgets, the physical
+  assumptions, error metric, and interpretation stated, and an independent
+  physics review of the claim types. No dataset is accepted because the
+  curriculum names it; only GW150914 strain, the Aalborg wave flume, and
+  the NPL S-parameters have a go decision today.
+- **The capstone rule** (change request, section 4.1; requirements
+  decision 26, non-goals, and "Content integrity"; architecture, "Applied
+  capstone and numerical-engineering lesson"): a verified progression from
+  the precursor lessons; a bounded workflow from physical requirements to a
+  qualified decision; comparison with an analytical, manufactured,
+  independent, or trusted numerical reference; refinement and genuine
+  failure modes; the credibility boundary stated and typed; the required
+  path on the pinned stack within the page budget; heavy tools optional,
+  with their outputs as declared `modelled-reference` inputs.
+- **The agent rule** (requirements decision 25; ADR 004; architecture,
+  "Law-discovery environment and agent benchmark"): bounded allowlisted
+  tools, a budget, versioned model and prompt, a frozen replay the build
+  recomputes, the hidden truth never reachable, non-agent baselines,
+  hold-outs, seeds where needed, visible failures, and heavy runs outside
+  `verify.conf`.
+- **No hardware** (requirements decision 28): no lesson builds a sensor
+  experiment, records audio, collects classroom or smartphone data, or
+  controls an instrument; the acoustics lesson is numerical, and the
+  video-reasoning lesson uses generated or rights-cleared existing clips.
+
+Risk levels follow `.agents/policies/autonomy.md`: every lesson feature is
+at least Medium (independent scientific review); a feature that changes CI,
+workflow permissions, or the required check is High.
+
+### Wave C0 — Governance, verification, and the learning path
+
+Order within the wave, by dependency: F61 and F62 are independent of each
+other and may run in parallel worktrees; F113 after F61; F63 after F62;
+F64 after F63. F61 and F62 precede the first lesson feature of this phase
+(requirements decision 30; the gates under "Phase 4"): until F61 lands,
+every new lesson would add about 45 seconds of runner time to every pull
+request, and until F62 lands a lesson cannot carry a validated `slot`.
+F113 precedes every lesson feature that would take the lesson count past
+32 (the full-run gate), and F64 precedes the lesson features of waves C2
+to C4 (requirements decision 29).
+
+### F61 — Verification proportional to the change
+
+**Source.** Change request section 15; requirements decision 30 and
+"Runtime and deployment constraints"; ADR 012 decisions 8 and 9; ADR 014,
+proposed with this planning and accepted when it is approved.
+
+**Problem.** Every pull request executes every lesson three times and
+checks every page. With twenty-two lessons a run takes 18 to 25 minutes
+against a budget of 12; at 110 lessons the site build alone would take
+about 19 minutes. The verification cost must depend on what a pull
+request changes, not on the size of the curriculum, without dropping a
+check, without a check that exists only in CI, and with the published site
+still the site that was verified in full.
+
+**Goal.** Implement ADR 014: a pull request executes and checks the
+lessons whose input digest changed against the verified result of the
+latest successful run on `main`, and every page whose bytes differ from
+it; what a page shows of its context (navigation, slot, the commit it
+names) is produced by every build and never taken from the base; a check
+is reused only from a base the same check implementation produced;
+`main` verifies everything and publishes the base; the selection lives in
+`./scripts/verify.sh`.
+
+**User-visible outcome.** A contributor who changes one lesson sees the
+`verify` check finish within 12 minutes; a contributor who changes shared
+code, the checks themselves, or a lesson whose inputs cannot be followed
+sees a full run, as before. Locally, `./scripts/verify.sh` without
+options is unchanged; with the base option it runs the same selection CI
+runs. Nothing on the published site changes.
+
+**In scope.**
+
+- The input digest of a lesson (ADR 014 decision 1) as one function in the
+  authoring package, with a test that each kind of input (lesson source,
+  fixture, an imported `src/pbc` module and a module it imports, a sample
+  and its card, a displayed Lean module, the toolchain and manifest, the
+  Python pins, each shared site file, `src/pbc/authoring`) changes the
+  digest, and that a lesson with a dynamic import, a composed path, a
+  non-Python cell, or a read outside the known locations has no digest.
+  The digests of every lesson are written beside the built site.
+- The base option of `./scripts/verify.sh`: it names a directory that
+  holds the base (site checksums, executed results, digests); the script
+  computes the selection once and writes it where the checks read it; a
+  run without the option runs everything; `--only` and the base combine as
+  CI needs; the record of a run with a base names the base.
+- The site build with a base: the executed results of the base are
+  restored, the entries of every changed lesson are removed, Quarto
+  executes the changed lessons and renders every page; the time of each
+  executed lesson is measured and compared with the 30-second budget. The
+  default build writes the store, which `.gitignore` lists and the
+  committed-artifact check rejects. The determinism check starts its second
+  build from the same restored state. The reproduction check and the
+  per-page checks read the selection: the reproduction runs for changed
+  lessons; the per-page checks run for the pages whose bytes differ from
+  the base, found by comparing the built site with the base's checksums
+  after the build commit is normalised in both.
+- The context of a page regenerated on every build (ADR 014 decision 9):
+  the header (`lesson_header`: previous and next, prerequisites, related
+  lessons, course, slot, path position) and the provenance helpers
+  (`reproduce_this`, the excerpt and Lean helpers, which embed
+  `build_commit()`) stop being replayed from the store. The feature picks
+  the mechanism (the helpers move out of the executed cells into a build
+  step such as a filter or a post-render over marked regions, or the
+  store is written without the outputs of those cells and they run on
+  every build) and changes the lesson template and the authoring helpers
+  once; lesson bodies stay as they are. The store entries of the pages
+  that are not lessons (home, path, evidence map, glossary, about) are
+  never restored.
+- The identity of the checks (ADR 014 decision 10): one digest over
+  `scripts/verify.sh`, `scripts/verify.conf`, `scripts/build-site.sh`,
+  `scripts/check-determinism.sh`, `tests/e2e`, `tests/support`,
+  `tests/integration`, `tests/e2e/shards.json`, `pyproject.toml`,
+  `uv.lock`, and the browser tooling the runner preparation installs,
+  written into the base beside the lesson digests. When the current
+  tree's identity differs from the base's, nothing of the base is
+  restored: the run executes every lesson, checks every page, and
+  reproduces every lesson against its own results, and its record says
+  why; no reproduction ever compares bytes with a result of the base
+  (ADR 012 decision 4). A split per check group is allowed only with a
+  test that shows each group's inputs are complete.
+- The workflow: a `main` run uploads the base (executed results and
+  digests beside the site artifact of ADR 012) after `verify` passed; a
+  `pull_request` run retrieves the latest base read-only (a read permission
+  on the artifacts of earlier runs, or the cache of the default branch,
+  whichever needs the smaller permission and is tested) and accepts it
+  only by its provenance (ADR 014 decision 2): the run that produced it
+  is a `push` run on `refs/heads/main` whose aggregate `verify` check
+  concluded with success, established from that run's recorded event,
+  branch, and conclusion, never from the artifact's name, its recency,
+  or its contents; a pull request run, including one from a fork,
+  uploads the built site for review and must not be able to supply a
+  base. The contents of a base are data: the workflow and the script
+  execute nothing from it and read nothing in it as configuration. The
+  run then verifies that the accepted base is complete and of the
+  current format and passes it to the script, or runs without it. If
+  the feature chooses the cache of the default branch, its plan records
+  why the cache's scoping gives the same guarantee (an entry is written
+  only by a `main` run after `verify` passed, a pull request run reads
+  the default branch's entries and can never write one that a later
+  pull request reads, and a fork pull request writes nothing) and a test
+  shows it. A run on `main` never receives a base; a test of the
+  workflow file shows it.
+- Tests in `tests/integration`: the selection names exactly the lessons
+  whose digest differs; a lesson without a digest selects every lesson; a
+  changed shared input of ADR 014 decision 4 selects every lesson, one
+  test per input; a changed module of `src/pbc` selects every lesson that
+  imports it directly or through another module, and every lesson when
+  its importers cannot be followed; a missing, truncated, or older-format
+  base selects every lesson; an artifact of a pull request run and an
+  artifact of a `main` run whose `verify` did not succeed are each
+  rejected as a base and the run executes every lesson, one test per
+  rejected case, with the provenance read from the producing run's
+  event, branch, and conclusion and not from the artifact's name or
+  upload time; a failing changed lesson fails the run; a page that
+  differs from the base is checked and a byte-identical page is not; the
+  workflow passes a base only on pull requests and keeps `contents: read`
+  with the one added read scope.
+- Tests of the regenerated context, on a run with a base built from a
+  fixture site: inserting a lesson between two unchanged ones updates
+  their previous and next links and the path page; retitling an unchanged
+  lesson updates every unchanged page that links to it (previous, next,
+  prerequisites, related); adding a prerequisite or a related link to a
+  changed lesson updates the unchanged page it points at where that page
+  shows it; the "Reproduce this" section and every code and Lean excerpt
+  of an unchanged page name the commit of the run, never the commit of
+  the base, and the page the reader gets is the page that was checked.
+- Tests of the check identity: a change to each input of the identity (a
+  test file of `tests/e2e`, a module of `tests/support`, the verification
+  script, its configuration, `tests/e2e/shards.json`, the build or
+  determinism script, `uv.lock`) makes the run a full run in which every
+  lesson is executed, every page checked, and every lesson reproduced
+  against this run's results, with nothing restored from the base; an
+  unchanged identity reuses the checks as decision 3 says; a base without
+  an identity runs everything.
+- The measurement: three consecutive pull requests that change one
+  lesson, their wall clock and the render time per page without execution,
+  recorded in the pull request and in `docs/release-readiness.md`; the
+  projection to 110 lessons from the measured per-page render cost. The
+  render is measured on a build that executes no scientific cell and
+  runs the context cells of ADR 014 decision 9 if the feature keeps them
+  as executed cells, which is the build the assembly of F113 makes, so
+  the figure carries over to it. The full run on `main` as well: the
+  time of the `build` job with warm and with cold caches and its cost
+  per lesson on the slowest runner of those runs, projected to 110
+  lessons, and the lesson count at which that one job leaves the
+  full-run budget of ADR 014 decision 7 (35 minutes with cold caches),
+  which is the count the full-run gate of this phase uses until F113
+  lands.
+- `docs/architecture.md` ("Inside one verification run", "CI pipeline and
+  time budget"), `docs/deployment.md`, and `docs/development.md` updated;
+  the acceptance of ADR 014 recorded in its status with the merge.
+
+**Out of scope.** Selecting the Lean build (requirements, unresolved
+question 8), the integration tests, or the workflow self-tests; a
+schedule; a path filter in the workflow file; changing what any check
+checks; self-hosted runners; the job timeout, which stays 45 minutes, and
+the lesson shards and assembly of a full run (ADR 014 decisions 7 and 11;
+F113).
+
+**Dependencies.** F58 (the parallel jobs, the single built site, and the
+checksums the comparison with the base reuses).
+
+**Acceptance criteria.**
+
+1. Three consecutive warm-cache pull requests that each change one lesson
+   finish within 12 minutes wall clock; the times, the number of lessons,
+   the per-page render cost without execution, and the projection to 110
+   lessons are recorded in `docs/release-readiness.md`.
+2. A pull request that changes one lesson executes that lesson in the
+   build and in the second build, reproduces it, and checks its page and
+   every page whose bytes differ from the base, and nothing else of the
+   lesson checks; shown by the run's record and by a test.
+   The pages of that run show the navigation of the pull request's tree
+   and name its commit: the tests of the regenerated context (lesson
+   insertion, retitling, prerequisite and related links, commit
+   provenance) pass, and the attached site artifact of the pull request
+   is inspected for the previous, next, and "Reproduce this" of one
+   unchanged page.
+3. A pull request that changes a shared input of ADR 014 decision 4
+   (`uv.lock`, `pyproject.toml`, `.python-version`, a file of
+   `src/pbc/authoring`, `site/_quarto.yml`, a template, filter, asset, or
+   shared site file, the glossary, the reference register, the curriculum
+   file, the Lean toolchain or manifest) executes every lesson; one that
+   changes a module of `src/pbc` executes every lesson that imports it
+   directly or through another module, and every lesson when the
+   module's importers cannot be followed; shown by a test per input kind.
+4. A run on `main` executes and checks every lesson and publishes the base
+   only after `verify` passed; a test of the workflow file shows no base
+   reaches a `main` run, that a pull request run accepts a base only from
+   a `push` run on `refs/heads/main` whose `verify` succeeded, and no job
+   gained write permissions.
+5. A run in which any lesson's inputs cannot be followed, a run whose
+   base is missing or of another format, and a run offered an artifact
+   of a pull request run or of a `main` run whose `verify` did not
+   succeed (rejected by its provenance) execute every lesson; a test per
+   case. A pull request that changes a test of the built site,
+   a support module, the verification script or its configuration,
+   `tests/e2e/shards.json`, the build or determinism script, or `uv.lock`
+   is a full run: it executes every lesson, checks every page, and
+   reproduces every lesson against its own results with the current
+   checks, restoring nothing from the base; a test per input of the
+   identity shows it and shows that no reproduction compared bytes with a
+   result of the base, and the record of such a run says why it ran in
+   full.
+6. `./scripts/verify.sh` without options runs every check as before; with
+   the base option it selects as CI does; a test covers both, and a local
+   run of the selection on a laptop matches the selection CI made for the
+   same base.
+7. No check left `scripts/verify.conf`, every group still runs in exactly
+   one job, and the published site of `main` is the fully verified one
+   (the tests of F58 still pass).
+8. ADR 014 is accepted with the merge; ADR 002, ADR 003, and ADR 012 name
+   it in their status.
+9. The full run on `main` is measured (the `build` job with warm and with
+   cold caches, its cost per lesson taken on the slowest runner of those
+   runs) and projected to 110 lessons; the projection and the lesson
+   count at which the one job leaves the
+   35-minute budget of ADR 014 decision 7 are recorded in
+   `docs/release-readiness.md`. That count is at least the lesson-shard
+   size of 32 lessons (ADR 014 decision 11), which the measured cost
+   confirms or lowers and never raises; if it is lower, F113 reduces the
+   lesson-shard size accordingly and no lesson feature starts before F113.
+
+**Risk.** High. The feature changes the CI workflow, a workflow
+permission, and the merge gate's meaning on pull requests, which need
+explicit human approval and security-focused review; the digest is a new
+guarantee whose completeness the tests must demonstrate; the render cost
+of unchanged pages may dominate at 110 lessons, which criterion 1 measures
+and reports rather than hides.
+
+**Detailed implementation plan expected.** Yes.
+
+### F113 — Bounded full verification: same-machine lesson shards of the build
+
+**Source.** ADR 014 decisions 7 and 11; ADR 012 decisions 2, 3, 4, 6, and
+9; requirements, "Runtime and deployment constraints" (every push to
+`main` executes and checks every lesson; the site is served from a
+verified build of `main`; the planner sets a concrete budget); change
+request section 15 (the cost per lesson).
+
+**Problem.** The `build` job of ADR 012 holds the three executions of
+every lesson (the build, the second build for determinism, the
+reproduction in a fresh clone), which compare bytes and have to run on one
+machine. It took 20 min 27 s with cold caches at twenty-two lessons; at
+about 41 seconds per lesson it leaves the full-run budget of 35 minutes
+at about 40 lessons and needs about 80 at 110, against a timeout of 45.
+F61 makes a pull request pay for what it changed, but a run on `main`
+and a full-run pull request still execute every lesson, and a run on
+`main` that times out publishes nothing.
+
+**Goal.** Implement ADR 014 decision 11: a full run executes the lessons
+in same-machine lesson shards of at most 32 lessons, each making its
+comparisons of bytes on its own machine, and one assembly renders the one
+built site from their results, so that every job of a full run fits the
+timeout at 110 lessons without a tolerance, a dropped check, or a raised
+timeout. A lesson shard is a share of the lessons that the script derives
+from their count; it is not the division of the built-site tests in
+`tests/e2e/shards.json` (F58, ADR 012), which this feature leaves as it
+is. "Shard" alone in this block means a lesson shard.
+
+**User-visible outcome.** A push to `main`, and a pull request that is a
+full run, finish within the job timeout at any size of the curriculum up
+to 110 lessons; a contributor still sees one required check, `verify`;
+the published site is still one site verified in full. Locally,
+`./scripts/verify.sh` without options is unchanged.
+
+**In scope.**
+
+- The lesson-shard and assembly modes of `./scripts/verify.sh`:
+  `--shard k/N` runs the group `build` on the k-th lesson shard, which the
+  script assigns from the lesson list in a stable order with at most `S`
+  lessons per shard, `S = 32` declared in `scripts/verify.conf` and `N`
+  the ceiling of the lesson count over `S`, never read from a file; the
+  assembly mode names the parts to assemble. Both are partial runs like
+  `--only` and verify nothing by themselves; a run without options
+  executes everything in one build on one machine, as today.
+- The shard run: the Lean build in full; the execution of the share and
+  its second execution for determinism; the render of the share's pages;
+  the reproduction of each lesson of the share in a fresh clone against
+  the pages and figure files this shard rendered; the publication of the
+  part (the share's entries of the store, its rendered pages and figure
+  files) with the checksum of every file, as a job artifact.
+- The assembly: retrieve the parts; require that every file is the
+  recorded one and that the parts cover every lesson exactly once; render
+  every page from the union of the parts (and, on a pull request, the
+  base for the unchanged lessons) without executing a scientific cell of
+  any lesson, with the context of ADR 014 decision 9 from the current
+  tree (if F61 kept the header and provenance helpers as executed cells,
+  the assembly runs those context cells and nothing else of a lesson);
+  the assembly's runner prepares what those context cells read, in
+  particular the Lean build record the Lean excerpt helper checks
+  (architecture, "Formal proof lesson"), restored from a shard's part
+  and required equal across every part, or recreated by the Lean build,
+  which is cheap with Mathlib's cache, the plan stating which; the
+  assembly's cost is then the render cost F61 measured on a build of
+  the same shape; render a second
+  time and compare the bytes on the same machine; require that each
+  lesson page equals the page its shard rendered and reproduced; upload
+  the one site with its checksums (ADR 012 decision 6); on `main`,
+  publish the base of F61 from the assembled results.
+- The workflow: `build` becomes a matrix of lesson shards and `assemble`
+  a job after them; the `e2e` jobs download the assembled site and keep
+  their division of `tests/e2e/shards.json`; `deploy` is unchanged. The
+  number of lesson shards is derived from the lesson count by the
+  script, and the workflow's lesson-shard count equals that derivation (`N` the
+  ceiling of the lesson count over `S`, ADR 014 decision 11), never more
+  and never fewer: either a job computes the matrix from the script's
+  output, or the matrix is static and is bumped exactly when the lesson
+  count crosses a multiple of `S`, and the test asserts equality between
+  the workflow's shards and the script's, so that an over-covering matrix
+  fails as an under-covering one does (an idle shard still prepares a
+  runner, and the requirement is a bounded full run, not a padded one);
+  the feature chooses the simpler one that needs no permission and tests
+  it.
+- Tests in `tests/integration`: the lesson shards cover every lesson
+  exactly once and none exceeds `S`; the workflow's lesson shards equal
+  the script's; a
+  failing shard fails `verify`; a missing, extra, or altered part fails
+  the assembly; a lesson page that differs from its shard's fails the
+  assembly; no shard uploads a Pages artifact; the tests marked
+  `same_machine` run on the machine that computed the bytes they compare
+  with (ADR 012 decision 4, extended); a local run without options is
+  unchanged in meaning; workflow permissions stay `contents: read` with
+  write scopes only in `deploy`.
+- The measurement: one full run on `main` with warm caches and one with
+  cold caches (as F58 measured), the time of every shard and of the
+  assembly, the cost per lesson on the slowest runner of those runs,
+  recorded in the pull request and in `docs/release-readiness.md`, with
+  the projection to 110 lessons (four shards) against the 35-minute
+  budget of ADR 014 decision 7, and the shard size `S = 32` confirmed or
+  lowered from that cost. And, by the protocol of F61 criterion 1, three
+  consecutive warm-cache pull requests that each change one lesson on
+  the sharded workflow: their wall clock, the assembly's time, and the
+  projection to 110 lessons, recorded in `docs/release-readiness.md`,
+  because the assembly is a second step on the longest path of every
+  pull request and the 12-minute budget of requirements decision 30 must
+  be established on the workflow shape that persists.
+- `docs/architecture.md` ("CI pipeline and time budget", "Inside one
+  verification run"), `docs/deployment.md`, and `docs/development.md`
+  updated; the status of ADR 012 and ADR 014 records the delivery.
+
+**Out of scope.** Changing what any check checks; selecting the Lean
+build (requirements, unresolved question 8); a tolerance in any
+comparison of bytes; raising the job timeout, which is the fallback of ADR
+014 decision 11 and needs a revision of that record; self-hosted runners;
+changing the pull request budget (F61 sets it; criterion 5 re-measures
+it on the sharded workflow).
+
+**Dependencies.** F61 (the store, the selection, the regenerated context,
+and the base, which the shards and the assembly reuse), F58.
+
+**Acceptance criteria.**
+
+1. A full run on `main` at the lesson count of its day, with warm caches
+   and with cold caches, finishes with every job within 35 minutes; the
+   times per shard and for the assembly, the cost per lesson on the
+   slowest runner of those runs, and the projection to 110 lessons with
+   every job within 35 minutes are
+   recorded in `docs/release-readiness.md`; that cost confirms the shard
+   size of 32 lessons or the feature lowers it (ADR 014 decision 7).
+2. The published site is one site rendered by the assembly; every lesson
+   page of it is byte-identical to the page its shard reproduced; the
+   `e2e` jobs check that site and `deploy` publishes it; a test shows
+   that no shard uploads a Pages artifact.
+3. The lesson shards cover every lesson exactly once, none exceeds 32
+   lessons, their number is derived from the lesson count and read from
+   no file, and the workflow's lesson shards equal the script's; a test
+   per property.
+4. A failing shard, a missing or altered part, and a lesson page that
+   differs from its shard's each fail `verify`; a test per case.
+5. A pull request with a base runs the same jobs; a shard with nothing
+   to execute finishes in its fixed cost; three consecutive warm-cache
+   pull requests that each change one lesson, measured as F61 criterion
+   1 measures them, finish within 12 minutes wall clock on the sharded
+   workflow, with their times, the assembly's time, and the projection
+   to 110 lessons recorded in `docs/release-readiness.md`.
+6. `./scripts/verify.sh` without options runs every check in one process
+   on one machine as before; `--shard` and the assembly verify nothing by
+   themselves; a test covers both.
+7. Every group runs in exactly one job or one shard matrix; the tests
+   marked `same_machine` run on the machine of the bytes they compare
+   with; permissions are unchanged (the tests of F58 and F61 still pass).
+8. The status of ADR 012 and ADR 014 records the delivery.
+
+**Risk.** High. The feature changes the CI workflow and the deploy chain,
+which need explicit human approval and security-focused review.
+Technical risk: the assembly's render of a page from a shard's results
+must equal the shard's render of it on another machine; the store holds
+the executed outputs and the figure files as bytes, so the render should
+not depend on the machine, and criterion 2 proves it on the hosted
+runners. If it does not hold, the feature records the evidence and stops,
+and the fallback of ADR 014 decision 11 is decided by the human as a
+revision of that record.
+
+**Detailed implementation plan expected.** Yes.
+
+### F62 — Eight courses and the reference curriculum
+
+**Source.** Change request sections 2, 3, 9, and 12 (decisions 5 to 7);
+requirements decisions 23 to 25 and unresolved question 6; ADR 013,
+proposed with this planning and accepted when it is approved.
+
+**Problem.** The site has one course and no record of the reference
+curriculum: no stable identifiers for the other seven courses, no place
+for a planned lesson that is not a placeholder page, no way to show the
+four method paths, and a hand-kept planned list on the home page that
+names a delivered feature and a dropped one.
+
+**Goal.** Implement ADR 013: the eight course identifiers and the strand
+order; the curriculum file with the 115 slots, the four method paths, and
+every slot's home and kind; the `slot` front-matter field with its checks;
+the migration of the twenty-two published lessons; the path page and the
+home page reading the planned structure from the file and every published
+fact from front matter.
+
+**User-visible outcome.** The learning path page lists the mechanics
+course with its published lessons and, visibly distinguished, its planned
+slots; names the seven courses that have no lesson yet in one sentence;
+shows the four method paths as a secondary view with their published
+lessons in path order and their planned slots; keeps every method view and
+every link. The home page's planned list names the courses and paths of
+the reference curriculum with their real published counts. A lesson header
+shows the lesson's slot and, for a method-path lesson, its position in its
+path. Every existing URL still works.
+
+**In scope.**
+
+- `COURSES` with the eight identifiers and titles of ADR 013 decision 1;
+  `STRANDS` in the order of decision 2 (courses first, then the three
+  method strands), with the display title of `agents-llm` refined to name
+  physics and AI; a course still appears as a course only when it has a
+  lesson.
+- The curriculum file (site/curriculum.yaml), read and validated by
+  `pbc.authoring.path`: the eight courses, the four paths, and the 115
+  slots of the requirements' decision 23 with label, working title, home,
+  position in the path where applicable, and kind; a schema check that
+  rejects an unknown course or path, a duplicate label, a slot without a
+  home, a slot with both a course and a path, and any field that belongs
+  to front matter.
+- The `slot` field: optional, unique, naming an existing label; the lesson
+  source check fails on an unknown label, on two lessons with one slot,
+  and on a lesson whose `course` is not the home of a slot homed in a
+  course (a slot of a method path may be filled by a lesson of any
+  course); the seventeen published lessons that fill a slot of their own
+  course or of a path migrate (M1 to M8, M16, AI0, AI2, AI3, AI4, D6, D9,
+  R1, L1 as listed under "State at the change cycle `final-curriculum`");
+  the gas lesson gets no slot in F62 and keeps `course: mechanics`: F70
+  sets `slot: T0` and `course: thermodynamics` together (ADR 013 decision
+  6), and until then T0 is an unfilled planned slot of a course that has
+  no lesson, named in the one sentence and shown nowhere else; the four
+  Lean lessons beyond the baseline get no slot; front matter only, bodies
+  byte-identical.
+- The path page: planned slots per course and per path from the file,
+  visibly distinguished, with label and working title only, no link and
+  no count; the four paths as a view after the courses and before the
+  method views; the planned courses named in one sentence; the test that
+  compares the page with the front matter and the file.
+- The home page: `PLANNED` of `pbc.authoring.home` replaced by the
+  courses and paths of the file with their published counts; the test of
+  the home page updated to read the file instead of the roadmap table.
+- `path.json` (F13) and the lesson header carry the slot and the path
+  position; `docs/authoring.md` and the lesson template state the slot
+  rule and the placement rule of ADR 013; the content-proposal form's
+  course list gains the eight courses.
+- The prerequisite rule of ADR 013 decision 8 in the lesson source check
+  (`pbc.authoring.path.problems`): a prerequisite must exist, the graph
+  must have no cycle, and a prerequisite in the same strand must come
+  earlier in that strand; a prerequisite in another strand may come later
+  in the linear order. The course view and the path view of the path page
+  order lessons by the order in which the curriculum file lists their
+  slots, lessons without a slot after them in linear order; previous and
+  next, the graph layout, and every address stay as they are. The path
+  page's explanation of previous and next (F37) says that a prerequisite
+  may live in a later strand and that the dependency map gives the order
+  of ideas. Tests on fixture lessons: a `thermodynamics` lesson that
+  requires the gas lesson of `agents-abm` (the T0 to T2 progression)
+  passes and the course view lists T0 first; a `mechanics` lesson that
+  requires a `lean` lesson passes; a prerequisite later in the same strand
+  fails; a cycle across strands fails; the twenty-two published lessons
+  still pass unchanged.
+
+**Out of scope.** Any new lesson or strand directory (the first lesson
+feature of each course creates it); the redesign of the path page's
+layout (F64) and the thumbnails (F63); changing any address, identifier,
+or lesson body.
+
+**Dependencies.** F03 (F62 replaces the "prerequisite later in the path"
+check of F03 criterion 2 by the graph rule of ADR 013 decision 8), F37
+(the metadata and the path page it extends), F26 and F27 (consumers that
+must keep working), F25 (the home page's planned list).
+
+**Acceptance criteria.**
+
+1. The curriculum file holds exactly 81 Part A slots in the eight courses
+   (17, 12, 9, 9, 10, 8, 10, 6), 33 Part B slots in the four paths (9, 13,
+   5, 6), and the one Lean slot; 16 slots are labs and 3 are capstones;
+   a test counts them, so that a change of the file is a reviewed change
+   of the curriculum and this roadmap's "Slot mapping" is updated with it.
+2. The seventeen published lessons that fill a slot of their course or of
+   a path carry their slot; the gas lesson (T0, set by F70) and the four
+   Lean lessons beyond the baseline carry none; a test shows the build
+   fails on an unknown label, on a duplicated slot, and on a lesson whose
+   course is not the home of the course slot it names; lesson bodies are
+   byte-identical to before, shown by the diff of the pull request.
+3. The path page shows every published lesson under its course and, for
+   a method-path lesson, under its path at its position; every unfilled
+   slot of a course that has a lesson, and of every path, appears as
+   planned with no link; a course that has no lesson is named in the one
+   sentence and shows no slot (so T0 is listed only from F70); a planned
+   slot is never counted in a published count; shown by a test over the
+   file and the front matter.
+4. Every lesson URL that existed before the feature resolves to the same
+   lesson, and previous and next follow the strand order of ADR 013
+   (unchanged until a second course strand exists), shown by the test over
+   the list of previous addresses.
+   The prerequisite check accepts a prerequisite in a later strand and
+   rejects a later prerequisite in the same strand and a cycle, shown by
+   the fixture tests of ADR 013 decision 8 (the T0 to T2 progression and
+   a cross-strand dependency), and the course view orders by the slot
+   order of the curriculum file.
+5. The home page's planned list is derived from the file, names no
+   delivered feature, and its test reads the file.
+6. From the home page, with JavaScript disabled, a reader reaches every
+   lesson through the course list and through each path; the page passes
+   the accessibility scan and reflows at 320 CSS px.
+7. ADR 013 is accepted with the merge; ADR 008 names it in its status;
+   F15 is recorded as dropped.
+
+**Risk.** Medium. The migration touches the front matter of every lesson
+and the header every page renders; the F03 and F37 tests catch drift. The
+file is a new validated input that the human approves line by line.
+
+**Detailed implementation plan expected.** Yes, short: the file schema,
+the migration table, the page sections.
+
+### F63 — Verified lesson previews
+
+**Source.** Change request section 8.2 (items 3 and 5), 8.3, and section
+10 ("Shared figure/preview infrastructure"); requirements "UX expectations"
+(thumbnails) and non-goals (no decorative, stock, hand-copied, or external
+images); decision 29.
+
+**Goal.** A deterministic small preview for every published lesson,
+derived from the lesson's own verified figure by the same executed cell
+that produces it, with a repository-generated conceptual SVG as the
+documented fallback, so that the learning path can show one verified
+thumbnail per lesson without any committed, copied, or external image.
+
+**User-visible outcome.** Nothing until F64 uses it, except that the
+preview of every lesson is built, checked, and byte-stable, and the
+learning path export names it.
+
+**In scope.** The optional `preview` front-matter field naming a figure
+cell label of the lesson. Introducing the field is justified (change
+request section 8.3 and requirements decision 29 allow a new field only
+when it is needed) because a lesson has several figures and the
+representative one (a measured-versus-model panel, a phase curve) is
+often not the first, which is frequently a conceptual setup diagram;
+deriving the preview from the first figure cell was considered and
+rejected for that reason. Declaring it stays optional per lesson, with
+the conceptual fallback below for a lesson that names none, so that no
+lesson is forced to declare one. The
+figure helper writes, beside the full
+figure, a small raster or SVG rendering at a fixed size with the same
+status label in its alt text; a lesson without `preview` gets the
+conceptual fallback drawn by code from its course and methods (no image
+file); the built-site check that every lesson has exactly one preview,
+that it comes from the named cell or the fallback, that two builds give
+byte-identical previews, and that no image on the path page is loaded
+from outside the build; `path.json` carries the preview path and its alt
+text; the twenty-two published lessons each name a preview cell (a
+trajectory, a phase curve, a measured-versus-model panel, a transcript
+figure, a proof diagram) chosen in the Issue; `docs/authoring.md`.
+
+**Out of scope.** The path page layout (F64); cropping by hand;
+image files of any kind; previews of pages that are not lessons.
+
+**Dependencies.** F62 (the field joins the validated schema), F28 (figure
+status), F44 (the visual system's sizes).
+
+**Acceptance criteria.** Every lesson has one preview that a test traces
+to its named cell or to the fallback; two builds produce byte-identical
+previews; the preview carries alt text with the status; the previews of all
+lessons together stay within the initial payload budget of the path page
+(measured by the F44 check); the authoring guide states the rule; a lesson
+whose `preview` names no figure cell fails the build.
+
+**Risk.** Medium. Matplotlib output at small sizes needs explicit,
+deterministic configuration; the F02 determinism settings and the byte
+test guard it.
+
+**Detailed implementation plan expected.** Yes, short.
+
+### F64 — Learning Path redesign: course-first, compact, accessible
+
+**Source.** Change request section 8 (8.1 to 8.5) and section 12,
+decision 8; requirements "UX expectations" (Learning Path page) and
+decision 29.
+
+**Decision on scope (section 8).** One feature, after F62 (the data) and
+F63 (the previews), that rebuilds the page from the delivered F26, F27,
+F37, F41, F44, F13, and F14 foundations without reopening them. It is
+delivered before the bulk of the new lessons, so that the page does not
+deteriorate as the catalogue grows.
+
+**Problem.** The page exposes every card in full in every view, repeats
+long cards across the course and method views, shows the whole graph
+prominently, and will become unreadable at a hundred lessons. It must
+look like a calm scientific publication: course-first, compact, with
+detail on demand.
+
+**Goal.** The page of the requirements' "UX expectations": course panels
+with real counts and verified miniatures; a course's lessons behind native
+disclosure, closed by default; compact cards with a thumbnail and chips;
+details on expansion; the method paths and the methods as a secondary
+view; the graph under an optional disclosure with course-scoped subsets;
+optional filters that coordinate with the search; every lesson reachable
+without JavaScript; every existing address valid.
+
+**User-visible outcome.** A first-time visitor sees "Choose a physics
+course" with the three activities explained, compact course panels, one
+per course that has a lesson, with the courses that have none named in
+one sentence (the change request asks for eight panels; the
+requirements' use case 1 and ADR 013 decision 5 show a course as each
+gains a lesson, so a course without one gets no panel for that reason; a
+panel with a zero count and a conceptual miniature was considered and
+rejected, because the change request forbids advertising planned content
+as published and a zero-count panel is a placeholder in another form),
+opens a course, scans its lessons as small rows with one preview each,
+opens a
+lesson's details when wanted, switches to the physics-and-AI paths, the
+measured-data labs, agent-based modelling, or Lean as views over the same
+lessons, and finds the dependency map at the bottom.
+
+**In scope.**
+
+- The page generator (`pbc.authoring.path`, the templates, `site/path`)
+  rendering: the intro; one panel per course with description, published
+  count, the F63 preview of its first or representative lesson (chosen by
+  a rule in the file, not by hand), and the entry link; `<details>` and
+  `<summary>` per course, closed by default, with the current course open
+  when the page is reached from a lesson, if that can be done without a
+  script; lesson rows in the slot order of the curriculum file (ADR 013
+  decision 8) with title, one-sentence physical question,
+  difficulty badge, thumbnail, chips for simulation, experimental data,
+  and AI extensions, and planned slots as distinguished rows; a nested
+  disclosure per lesson with outcomes, prerequisites, what the reader
+  builds, related extensions, the capstone classification for T11, EM9,
+  and FL10 when they exist, and the reproduce link; the four method paths
+  and the method views as secondary sections that list the same lessons
+  compactly and link to the canonical pages; the F13 progress marks and
+  the F14 recommendations kept.
+- The graph (F26) unchanged in content, under a "View dependency map"
+  disclosure, with a course-scoped subset per course generated from the
+  same metadata and the text alternative kept.
+- Optional filters (course, method, difficulty, publication state) as a
+  form that works by links without JavaScript and is enhanced with a
+  script that stores nothing; coordinated with the search of F41 (the
+  index keeps the page's prose).
+- Responsive layout at phone, tablet, and desktop widths; focus states;
+  reduced motion; the F44 design system; the payload budgets of the
+  architecture measured for the new page; no framework; no external
+  resource.
+- The tests: the page equals the front matter and the curriculum file;
+  counts equal the published lessons; every lesson reachable with scripts
+  disabled through its course and through each path and method; every
+  previous address and graph node address resolves; the accessibility
+  scan, the keyboard pass over the disclosures and the graph, and the
+  no-two-way-scroll check at 320 CSS px; the payload check; byte-stable
+  rebuilds; the search index unchanged in meaning.
+- A visual review before merge recorded on the Issue: an introductory
+  course, the mechanics course with its planned slots, a measured-data
+  lesson, an agent lesson, long titles, and the phone layout.
+
+**Out of scope.** New lessons; changes to lesson pages beyond the header's
+link to the path; a second catalogue; images that are not F63 previews;
+animation; a frontend framework; changing any address.
+
+**Dependencies.** F62, F63, F26, F27, F37, F41, F44, F13, F14.
+
+**Acceptance criteria.**
+
+1. With JavaScript disabled, a first-time visitor can choose a course,
+   expand it, find every published lesson, read its prerequisites, and
+   follow its canonical link; shown by a built-site test per course and
+   per path.
+2. The method-path view and the method views show no duplicate lesson
+   content and miss no lesson; a lesson appears once as a canonical page
+   and elsewhere as a link; shown by a test.
+3. Every course and path count equals the published catalogue; planned
+   slots are visibly distinguished and never linked or counted.
+4. Every previous address, bookmark, and graph node address resolves;
+   shown by the test over the list of previous addresses.
+5. Every thumbnail is an F63 preview with alt text; no image loads from
+   outside the build.
+6. The accessibility scan passes; the disclosures and the graph work by
+   keyboard and read correctly with a screen reader in the manual pass
+   recorded on the Issue; the page reflows at 320 CSS px without two-way
+   scrolling; reduced motion is respected.
+7. The page's initial payload is within the architecture's budget, and
+   its byte-stable rebuild, link, prerequisite, and search-index tests
+   pass.
+8. The visual review of criterion 8.4 of the change request is recorded
+   on the Issue before merge.
+
+**Risk.** Medium. The page is the site's main navigation; the tests of
+F03, F26, F27, F37, F41, and F13 catch regressions, and the no-script
+tests are the guard for the disclosures.
+
+**Detailed implementation plan expected.** Yes.
+
+### Wave C1 — Discovery foundation and the first new physics
+
+Order within the wave, by dependency: F65 first among the discovery
+features and the only feature of the wave that may start before the
+gates, because it publishes no lesson; every lesson feature of the wave
+after F61 and F62, and after F113 once the lesson count would pass 32
+(the full-run gate: the wave adds twenty-six lessons to twenty-two, so
+F113 lands within this wave, after about the first ten); then F66 and
+F67; the first lesson features of the
+courses (F68, F70, F71, F72, F73) are independent of each other and of
+F65 and may run in parallel worktrees; F69 after F68; F74 after F71 and
+F51; F52, F53, F54, F45, and F55 of the previous phase as their
+dependencies, including the gates, are met (see "State at the change
+cycle `final-curriculum`"). This wave is the first block of new lessons;
+the waves after it are the bulk that F64 gates.
+
+### F65 — Physics environments and the discovery evaluation protocol
+
+**Source.** Change request sections 5, 7.3, and 10 ("Law-discovery
+sandbox & evaluation protocol"); requirements decision 25; ADR 004;
+architecture, "Law-discovery environment and agent benchmark".
+
+**Decision on slicing (section 10).** One shared package, `pbc.discovery`,
+carries the environments, the baselines, and the protocol; the lessons of
+the law-discovery and benchmarking paths are separate features that use
+it. No lesson builds its own framework.
+
+**Goal.** A reusable environment abstraction over the models of `src/pbc`
+with the hidden truth kept apart from the agent; non-agent baselines; the
+evaluation protocol (splits, held-out worlds, budgets, seeds, scoring,
+versioned prompts and models, frozen traces, cost records); and the
+harness allowlist that exposes an environment's controls and observations
+to an agent and nothing else.
+
+**User-visible outcome.** Nothing on the site; in the repository, the
+package with its tests and one worked environment (the force laws of the
+mechanics course with modifiable parameters and a hidden modified law),
+the protocol written in its own document, docs/discovery-protocol.md
+(new in this feature, as F46 added `docs/validation-contract.md`; the
+feature registers it in `docs/project-map.md`), and the authoring section
+"Discovery lessons". The protocol does not go into `docs/evaluation.md`,
+which is the review-criteria document of the development workflow, not a
+product document.
+
+**In scope.** `Environment` (controls with bounds and units, observations
+with noise, a budget, reset, a hidden truth that no public method
+returns); environments for the projectile, the oscillator, the central
+force, and an N-body world once F69 exists; the harness tools over an
+environment (ADR 004) with tests that the allowlist cannot reach the
+truth; baselines (random and grid probing, least squares in `pbc.data`,
+sparse identification or symbolic regression in pure Python or as a
+locked library with its licence recorded); the protocol: held-out
+settings, full, partial, and no prior-knowledge conditions, budgets, seeds,
+scoring, the replay fixture with model, prompt, and version, cost and call
+counts recorded from the run that produced the fixture; the rule that a
+full benchmark run lives outside `verify.conf` with a small deterministic
+replay on the page.
+
+**Out of scope.** Any lesson page; external benchmark assets (inspiration
+only, no embedding before licences and assumptions are checked); code
+execution by the agent; a neural or general machine-learning framework.
+
+**Dependencies.** F09, F16, F20 (the harness, the counterexample loop,
+and the design agent it generalises), F23 (the fitting helpers), F46 (the
+validation contract).
+
+**Acceptance criteria.** A test shows the agent's tools cannot read the
+hidden truth of any environment; each baseline recovers a known law or
+parameter on a synthetic environment within tolerance and reports failure
+on one it cannot; the protocol's scoring is deterministic from a frozen
+trace and recomputed by a test; the replay passes without credentials; a
+locked discovery library, if any, has its licence and weight recorded;
+docs/discovery-protocol.md (which does not exist before this feature)
+states the protocol, `docs/project-map.md` lists the document, and the
+authoring guide states its use; `docs/evaluation.md` is unchanged.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F66 — Law discovery lessons: black-box force laws (D1, D2, D3)
+
+**Source.** Change request section 5 (B2: D1 to D3) and section 10
+("First discovery lessons"). Slots D1, D2, D3 of the scientific law
+discovery path; lessons in `agents-llm` with `course: mechanics`.
+
+**Goal.** Three lessons on the F65 environments: discovering an unknown
+force law with controlled probes (D1); the same discovery with full,
+partial, and no prior knowledge compared under one protocol (D2); and
+unlearning a familiar law to identify a deliberately modified one (D3);
+each with a non-agent baseline, held-out tests, a frozen replay, and a
+typed verdict only where the build recomputes it.
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F65.
+
+**Acceptance criteria.** The lesson rule; the agent rule; the three
+conditions of D2 scored on the same held-out settings; the modified law of
+D3 recovered by the baseline and reported for the agent as it is; the
+replay recomputed by the build.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F67 — Symbolic regression and equation discovery (D7, D8)
+
+**Source.** Change request section 5 (B2: D7, D8). Slots D7 and D8;
+lessons in `agents-llm` with `course: mechanics`, methods `simulation`
+(and `llm-agents` only where an agent is used).
+
+**Goal.** Interpretable functional forms recovered from simulated data
+with non-LLM tools (D7), and dynamical equations inferred from
+trajectories with numerical derivatives and noise (D8), on the course's
+models, with the identifiability and noise limits stated; the baselines
+every later discovery lesson compares with.
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F65, F23.
+
+**Acceptance criteria.** The lesson rule; a known law and a known equation
+recovered within tolerance from clean data and the failure under noise
+shown and explained; any locked library's licence recorded; no claim that
+a recovered form is the physical law beyond what held-out data supports.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F68 — Advanced mechanics: chaos, Lagrangian and Hamiltonian mechanics, resonance (M9 to M12)
+
+**Source.** Change request section 4 (A1: M9, M10, M11, M12). Slots M9 to
+M12 in the `mechanics` strand.
+
+**Goal.** Four lessons: the double pendulum and sensitivity to initial
+conditions with a Lyapunov estimate (M9); constrained and coupled systems
+from a Lagrangian, simulated and checked (M10); phase space, symplectic
+structure, and geometric integration (M11); damping, driving, resonance
+curves, and their validation (M12).
+
+**Note on F45.** F45's default coding-agent exercise is a damped driven
+oscillator with resonance. Whichever lands first owns the verified
+reference solution in `src/pbc`; the other reuses it; M12 is the course
+lesson that teaches the physics and F45 the exercise that builds it.
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F05, F06; coordination with F45 as noted.
+
+**Acceptance criteria.** The lesson rule; M9's Lyapunov estimate checked
+against the sign expected in regular and chaotic regimes; M10's equations
+checked against the Newtonian form for a case with a closed form; M11's
+symplectic integrator checked for the conserved modified energy of M5 and
+L3, with L3 among M11's prerequisites although it lives in the later
+`lean` strand (ADR 013 decision 8); M12's resonance curve checked against
+the analytic amplitude.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F69 — Mechanics: many-body gravitation, nonlinear dynamics, rotational motion (M13, M14, M17)
+
+**Source.** Change request section 4 (A1: M13, M14, M17; M17 new in
+revision 2). Slots M13, M14, M17 in the `mechanics` strand.
+
+**Goal.** N-body orbits and long-term stability with an optional REBOUND
+comparison as a declared reference artifact (M13); attractors,
+bifurcations, and where linearisation fails (M14); rigid-body rotation,
+inertia tensors at an introductory level, torque, angular momentum, and
+gyroscopic precession as the worked example, with unit, energy, and
+angular-momentum checks (M17, linked to M10, M11, and later D13).
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F68, F06.
+
+**Acceptance criteria.** The lesson rule; M13's energy and angular-momentum
+drift reported per integrator and compared with the reference artifact
+where one is declared; M14's bifurcation diagram checked against a known
+threshold; M17's precession rate checked against the analytic limit.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F70 — Thermodynamics and statistical physics: random walks, kinetic theory, entropy (T1, T2, T3)
+
+**Source.** Change request section 4 (A2: T1, T2, T3) and section 3
+(legacy T0). Slots T1 to T3; the first lesson feature of the
+`thermodynamics` course: it creates the strand directory and
+`pbc.thermodynamics`, and re-homes the gas lesson of F11 as `course:
+thermodynamics`, `slot: T0` under its `agents-abm` address, setting the
+two fields in one change (the lesson carries no slot before F70; ADR 013
+decision 6).
+
+**Goal.** From microscopic randomness to diffusion laws (T1); particle
+collisions and the Maxwell-Boltzmann distribution, reusing the F11 gas
+model (T2); entropy from ensembles with its scope and limits (T3).
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F11, F06.
+
+**Acceptance criteria.** The lesson rule; the course appears on the path
+with its four lessons (T0 to T3, T0 first by the slot order of the
+curriculum file) and its eight planned slots; T0's address and identifier
+unchanged and its header naming the new course; T2 lists T0 as a
+prerequisite although T0 comes later in the linear order (ADR 013
+decision 8); T1's
+diffusion coefficient checked against the random-walk prediction; T2's
+distribution checked against the analytic form at the simulated
+temperature; T3's entropy checked in a case with a closed form.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F71 — Waves and optics: the wave equation, interference, sound (W1, W2, W9)
+
+**Source.** Change request section 4 (A3: W1, W2, W9; W9 new in revision
+2, numerical, no recording). Slots W1, W2, W9; the first lesson feature of
+the `waves` course (strand directory, `pbc.waves`).
+
+**Goal.** Finite-difference wave propagation with boundaries and
+convergence (W1); superposition, standing waves, modes, and dispersion
+(W2); numerical sound propagation, resonance, and the Doppler shift with
+analytic limiting cases, with no audio or sensor requirement (W9).
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F05.
+
+**Acceptance criteria.** The lesson rule; W1's convergence order measured
+and the CFL limit shown; W2's mode frequencies checked against the
+analytic values; W9's Doppler shift checked against the formula for a
+moving source and a moving observer.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F72 — Electromagnetism: fields, charged particles, induction (EM1, EM2, EM3)
+
+**Source.** Change request section 4 (A4: EM1, EM2, EM3). Slots EM1 to
+EM3; the first lesson feature of the `electromagnetism` course (strand
+directory, `pbc.electromagnetism`); gives F54 its home.
+
+**Goal.** Vector fields, superposition, and potential (EM1);
+charged-particle motion in given fields (EM2); time-dependent flux and the
+induced electromotive force (EM3).
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F06.
+
+**Acceptance criteria.** The lesson rule; EM1's field checked against the
+closed form for a dipole; EM2's cyclotron frequency checked; EM3's induced
+voltage checked against the flux derivative.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F73 — Fluid dynamics: advection, Burgers, finite volumes, shallow water (FL1, FL4, FL9, FL5)
+
+**Source.** Change request section 4 (A5: FL1, FL4, FL9, FL5; FL9 new in
+revision 2; FL5 enhanced in revision 3), section 7.1 (FL9, FL5), and
+section 10 ("Conservative numerical methods"). Slots FL1, FL4, FL9, FL5 in
+the teaching order FL1, FL4, FL9, FL5; the first lesson feature of the
+`fluids` course (strand directory, `pbc.fluids` with the conservative
+fluxes that FL5 and FL10 reuse); gives F53 its home.
+
+**Goal.** Schemes, boundary conditions, stability, and artificial
+diffusion (FL1); nonlinear steepening, shocks, and numerical dissipation
+(FL4); transparent conservative fluxes with CFL limits, shock capturing,
+mass and momentum budgets, convergence, and a comparison with a
+non-conservative discretisation (FL9); the depth-averaged balance, a small
+conservative scheme with still-water and dam-break checks, depth
+positivity, boundaries, and conservation (FL5).
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F05, F06.
+
+**Acceptance criteria.** The lesson rule; FL1's numerical diffusion
+measured against the modified equation; FL4's shock speed checked against
+the Rankine-Hugoniot condition; FL9's budgets conserved to round-off and
+the non-conservative scheme's error shown; FL5's still water preserved and
+the dam-break front checked against the exact solution; one flux
+implementation shared by FL9 and FL5.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F74 — Wave flume lab (W8)
+
+**Source.** Change request section 4 (A3: W8); the Aalborg submerged-bar
+dataset with a go decision from F50 (`docs/datasets/aalborg-submerged-bar.md`).
+Slot W8, a measured-data lab of the `waves` course.
+
+**Goal.** Measured tank waves over a submerged bar compared with the
+simulated propagation and dispersion of W1 and W2, with the measured and
+the modelled-reference artifacts of the card kept distinct, the waveform
+comparator of F43, residuals, and a qualified claim.
+
+**Dependencies.** F61, F62 (the gates of this phase), F113 by the lesson-shard rule of the full-run gate, F71, F51, F43; the go decision exists, so no new spike
+unless the committed sample needs widening within the caps.
+
+**Acceptance criteria.** The lab rule; the measured series never labelled
+`simulated` and the CFD series of the card labelled by its artifact; the
+model's dispersion compared with the measured gauges with uncertainty.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### Wave C2 — Core subject expansion and numerical engineering
+
+Order within the wave: every lesson feature of this wave after F64 (the
+gates under "Phase 4"); F75 and F76 after F70; F77 after F71; F78 after
+F72 and F71; F79 after F73; F80 after F78; F81 after F66 and F67; F82
+after F67 and F69; the labs F83 to F86 after their course lessons and
+F51, each through its gate.
+
+### F75 — Thermodynamics: Ising model, molecular dynamics, heat engines (T4, T5, T9)
+
+**Source.** Change request section 4 (A2: T4, T5, T9; T9 new in revision
+2). Slots T4, T5, T9 in the `thermodynamics` strand.
+
+**Goal.** Magnetisation, critical behaviour, and finite-size effects (T4);
+interparticle potentials, thermodynamic observables, and drift checks
+(T5); idealised Carnot and comparison cycles with heat, work, and
+efficiency from p-V paths and the first and second laws checked (T9).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F70.
+
+**Acceptance criteria.** The lesson rule; T4's critical temperature
+estimated and compared with the exact two-dimensional value with
+finite-size caveats; T5's energy conservation and equipartition checked;
+T9's efficiency checked against the Carnot bound.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F76 — Heat conduction and the finite-element bridge (T6, T10)
+
+**Source.** Change request section 4 (A2: T6 enhanced in revision 3; T10
+new in revision 3), section 7.1 (T6/T10/T11), and section 10 ("FEM and
+engineering mesh foundation"); requirements decision 26 and non-goals (no
+heavyweight solver as a mandatory dependency). Slots T6 and T10 in the
+`thermodynamics` strand; adds `pbc.fem`, the small triangular
+finite-element solver that T11 and MAT3 reuse.
+
+**Goal.** From lumped cooling to the one- and two-dimensional heat
+equation with finite differences, conductive and convective boundaries,
+stability, grid and time-step convergence, and units (T6); then weak-form
+intuition, piecewise-linear elements on a small triangular mesh generated
+and inspected in the lesson, assembly and solution of a sparse system with
+SciPy, explicit boundary conditions, comparison with the finite-difference
+solution and a manufactured solution, mesh-quality and refinement checks,
+and energy and heat-flux balances (T10). Gmsh and FEniCSx are optional
+reference tools whose output, if used, is a declared `modelled-reference`
+input; they are not dependencies.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F70.
+
+**Acceptance criteria.** The lesson rule; T6's stability limit and
+convergence order measured; T10's error against the manufactured solution
+decreasing at the expected rate under refinement, its flux balance closed
+to a stated tolerance, its page within the 30-second budget on the pinned
+stack, and any optional-tool artifact carrying a card; a test that
+`pbc.fem` has no import outside the locked environment.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F77 — Optics: refraction, polarisation, diffraction, inverse optics (W3, W4, W5, W6)
+
+**Source.** Change request section 4 (A3: W3 to W6). Slots W3 to W6 in
+the `waves` strand; W5 prepares F52's home.
+
+**Goal.** Propagation across an interface with Snell's law verified (W3);
+polarisation states, Malus's law, and practical limits (W4); Fraunhofer
+diffraction and instrument limits (W5); inferring optical parameters from
+intensity data, on simulated data until F52 provides measured images (W6).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F71.
+
+**Acceptance criteria.** The lesson rule; W3's refracted angle, W4's
+transmitted intensity, and W5's fringe spacing checked against the closed
+forms; W6's recovered parameters within tolerance on synthetic data with
+the identifiability limit shown.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F78 — Electromagnetism: Maxwell's equations and FDTD, RLC circuits, waveguides and antenna basics (EM4, EM5, EM6)
+
+**Source.** Change request section 4 (A4: EM4, EM5, EM6 enhanced in
+revision 3). Slots EM4 to EM6 in the `electromagnetism` strand.
+
+**Goal.** A transparent finite-difference time-domain solver for
+electromagnetic waves (EM4); transient and frequency-domain circuit
+behaviour (EM5); modes, boundary conditions, and transmission in
+waveguides, with the bridge from superposition to element radiation
+patterns that EM9 needs and the limits of the idealised models (EM6).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F72, F71 (W1's finite differences and W2's
+superposition).
+
+**Acceptance criteria.** The lesson rule; EM4's wave speed and reflection
+checked and its stability limit shown; EM5's resonance checked against the
+analytic response; EM6's cut-off frequencies checked and the element
+pattern compared with the analytic dipole pattern.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F79 — Fluid dynamics: Navier-Stokes, vortex shedding, particle-based fluids (FL2, FL3, FL6)
+
+**Source.** Change request section 4 (A5: FL2, FL3, FL6). Slots FL2, FL3,
+FL6 in the `fluids` strand; FL3 prepares F53's physics.
+
+**Goal.** A contained two-dimensional incompressible solver (FL2);
+vorticity, shedding, and the Reynolds-regime caveats (FL3); grid versus
+particle modelling and its limits (FL6).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F73.
+
+**Acceptance criteria.** The lesson rule; FL2 checked against a
+lid-driven-cavity reference at low Reynolds number declared as a
+`modelled-reference` input or against a manufactured solution; FL3's
+Strouhal number compared with the published range with the regime stated;
+FL6's conservation checked.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F80 — Applied capstone: adaptive phased-array beam steering (EM9)
+
+**Source.** Change request section 4 (A4: EM9), section 4.1, section 7.1
+(EM9), and section 10 ("A4 selected phased-array capstone"); requirements
+decision 26 and non-goals. Slot EM9, the applied capstone of the
+`electromagnetism` course.
+
+**Goal.** A finite-array complex field and array-factor model checked
+against analytical steering, null, and symmetry limits; electronic
+steering toward a moving receiver and a null toward an interferer where
+feasible; the effect of element spacing, amplitude and phase control,
+quantisation, frequency, noise, and element patterns on the main lobe,
+sidelobes, and grating lobes; the trade-offs and the cases where the ideal
+model fails; the page states that an array-factor model is not a full-wave
+antenna or metasurface design and implies no fabricated device.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F78, F71 (W2); F54 optional for measured RF context.
+
+**Acceptance criteria.** The capstone rule; the steering angle, the null
+depth, and the grating-lobe onset checked against the analytic
+expressions; the quantisation and noise degradation measured; an
+optional full-wave element reference, if used, declared as a
+`modelled-reference` input; deterministic preview figures from the verified
+sequence, and any interactive enhancement degrading to them.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F81 — Interactive discovery benchmarks and non-agent baselines (EV2, EV3)
+
+**Source.** Change request section 5 (B3: EV2 enhanced in revision 2,
+EV3). Slots EV2 and EV3 of the agent benchmarking path; lessons in
+`agents-llm` with `course: mechanics`.
+
+**Goal.** Whether agents discover laws through simulated experiments at
+full, partial, and no prior knowledge under one protocol with budgets and
+held-out evaluation (EV2); whether agentic tool use outperforms a plain
+model, random selection, or symbolic fitting (EV3); with the protocol of
+F65 and the lessons of F66 and F67 as the subjects.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F65, F66, F67.
+
+**Acceptance criteria.** The agent rule; the scores recomputed from frozen
+traces; the baselines on the same environments and budgets; the page
+states when a comparison is not meaningful because budgets or
+environments differ; no live call in CI.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F82 — Discovering conservation laws and invariants (D13)
+
+**Source.** Change request section 5 (B2: D13, new in revision 2) and
+section 7.1 (D13). Slot D13 of the law discovery path; lesson in
+`agents-llm` with `course: mechanics`.
+
+**Goal.** Candidate conserved functions inferred from trajectories of
+unknown systems, validated across held-out initial conditions and
+integration settings, true invariants separated from integration drift and
+coincidental correlations, with a non-LLM numerical baseline and the
+symmetry-conservation connection explained without assuming equation
+recovery; on the mechanics models of M11 and M17 and, where F73 exists,
+the fluxes of FL9.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F65, F67, F69.
+
+**Acceptance criteria.** The lesson and agent rules; the baseline finds
+the known invariants of a test system and rejects a drift artefact; the
+agent's candidates are tested on untouched trajectories by the build; the
+withheld truth is unreachable.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F83 — Pendulum and accelerometer data lab (M15)
+
+**Source.** Change request section 4 (A1: M15). Slot M15, a measured-data
+lab of the `mechanics` course; no candidate card exists.
+
+**Goal.** Fit the dynamics of M4, M6, and M12 to genuine already-collected
+motion data (a published pendulum or accelerometer record with rights for
+redistribution), with calibration, noise, residuals, and uncertainty.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F51, F68; a new candidate card and spike with a go
+decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F84 — Heat transfer measurements lab (T7)
+
+**Source.** Change request section 4 (A2: T7). Slot T7, a measured-data
+lab of the `thermodynamics` course; no candidate card exists.
+
+**Goal.** Thermal conductivity or relaxation inferred from real temperature
+records against the models of T6, with uncertainty; an optional cross-link
+for T11's parameters.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F76, F51; a new candidate card and spike with a go
+decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F85 — Brownian motion tracking lab (T8)
+
+**Source.** Change request section 4 (A2: T8). Slot T8, a measured-data
+lab of the `thermodynamics` course; no candidate card exists.
+
+**Goal.** Diffusion coefficients inferred from genuine tracked-particle
+trajectories against T1, with the tracking disclosed as processing.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F70, F51; a new candidate card and spike with a go
+decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F86 — RLC circuit measurements lab (EM8)
+
+**Source.** Change request section 4 (A4: EM8). Slot EM8, a measured-data
+lab of the `electromagnetism` course; no candidate card exists.
+
+**Goal.** Measured impedance or time responses of a real circuit fitted
+with the EM5 model, with uncertainty.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F78, F51; a new candidate card and spike with a go
+decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### Wave C3 — Applied capstones, advanced physics, and the agent paths
+
+Order within the wave: every lesson feature of this wave after F64 (the
+gates under "Phase 4"); F87 after F76; F88 after F73 and F51; F89 to F95
+by their dependencies, in parallel worktrees where independent; F96 after
+F65; F100 after F96 and F65; F97 after F96; F98 after F66 and F81; F99 after F66, F69,
+and F91; F101 after F81 and F98; the labs F102 to F108 after their course lessons, each through its
+gate.
+
+### F87 — Applied capstone: thermal engineering of a hypothetical AI accelerator (T11)
+
+**Source.** Change request section 4 (A2: T11), section 4.1, section 7.1,
+and section 10 ("A2 applied thermal capstone"); requirements decision 26
+and non-goals. Slot T11, the applied capstone of the `thermodynamics`
+course.
+
+**Goal.** A hypothetical multi-hotspot package or cold-plate proxy: heat
+loads, geometry and material conductivities, contact and convective
+boundary assumptions, and thermal constraints stated; transient and
+steady temperature fields with `pbc.fem`; cooling, material, and layout
+scenarios compared; the maximum temperature optimised under stated mass,
+size, and heat-removal constraints; mesh, time-step, and sensitivity
+studies against the T6 finite-difference baseline; a trade-off table and
+a justified recommendation; labelled a digital-twin-style teaching
+prototype, not a calibrated twin or a model of a proprietary device, with
+no vendor data and no full three-dimensional CFD.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F76; F84 optional for a measured cross-link.
+
+**Acceptance criteria.** The capstone rule; the energy and flux balances
+closed to a stated tolerance; the finite-element and finite-difference
+solutions agreeing under refinement; the sensitivity plot and the
+trade-off table generated by the build; the credibility label as a typed
+claim on the page; the page within the budget with a small mesh.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F88 — Applied capstone: reconstructing the 2025 Kamchatka tsunami (FL10)
+
+**Source.** Change request section 4 (A5: FL10), section 4.1, section 7.1
+(FL10), section 7.2 (the gated comparison), section 10 ("A5 selected
+tsunami capstone"), section 12 (decision 10), and section 14 (candidate
+sources); requirements decision 26, "Data and persistence" (measured-data
+target), and non-goals. Slot FL10, the applied capstone of the `fluids`
+course.
+
+**Decision on slicing (section 12, decision 10).** Two deliverables in
+one feature, separable into two Issues: the simulation and benchmark core,
+which depends on no dataset approval and is published as clearly
+simulated; and the historical comparison, which starts with the F50 spike
+of the DART records and the bathymetry (rights, provenance, processing,
+station and time-window suitability, a tractable sample) and is published
+only on a go decision. The second never blocks the first.
+
+**Goal.** A teaching-scale, non-operational two-dimensional propagation
+model from the shallow-water equations and the conservative fluxes of
+FL9 and FL5: flat-bottom analytical and benchmark cases, then regional,
+source-documented bathymetry on a cropped grid and a transparent assumed
+initial sea-surface displacement; open boundaries, CFL and grid
+convergence, mass budgets, wet-dry limits, dispersion, Coriolis, and
+spherical-geometry approximations, and the source uncertainty explained;
+wave-height and travel-time figures; after the gate, qualified arrival-time
+and waveform comparisons with authentic July 2025 DART records with
+residuals and uncertainties; the page states it is not for warning,
+inundation, or hazard forecasting.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F73, F51; F50's process for the DART and bathymetry
+candidates (new cards).
+
+**Acceptance criteria.** The capstone rule; the benchmark suite (still
+water, linear-wave propagation, conservation, positivity, boundary
+sensitivity) deterministic and within the page budget on the cropped grid;
+the bathymetry's source and licence on its card; until the gate grants it,
+no measured comparison and no claim of agreement with observations; after
+it, the lab rule applies to the comparison, which is a validation
+component and not a seventeenth lab; heavier reruns outside `verify.conf`.
+
+**Risk.** High. Scope, data rights, and the temptation to present a
+striking animation as validation; the two-deliverable slicing, the gate,
+and the review guard it.
+
+**Detailed implementation plan expected.** Yes, likely two Issues.
+
+### F89 — Quantum physics: the Schrödinger equation, tunnelling, the harmonic oscillator (Q1, Q2, Q3)
+
+**Source.** Change request section 4 (A6: Q1, Q2, Q3). Slots Q1 to Q3;
+the first lesson feature of the `quantum` course (strand directory,
+`pbc.quantum`); QuTiP is an optional comparator only.
+
+**Goal.** Numerical evolution of a one-dimensional wavepacket (Q1);
+barrier transmission and reflection against energy (Q2); eigenstates,
+energies, and numerical convergence (Q3).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F05, F71 (W1's finite differences).
+
+**Acceptance criteria.** The lesson rule; norm conservation and the
+free-particle dispersion checked (Q1); the transmission coefficient
+checked against the closed form (Q2); the eigenvalues converging to the
+analytic spectrum (Q3).
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F90 — Quantum physics: spin, entanglement and Bell inequalities, open systems (Q4, Q5, Q6)
+
+**Source.** Change request section 4 (A6: Q4, Q5 enhanced in revision 2,
+Q6). Slots Q4 to Q6 in the `quantum` strand; Q5's Bell and CHSH content
+is the first half of the linked Q5/Q8 enhancement.
+
+**Goal.** Spin states, probabilities, and the modelled Stern-Gerlach
+apparatus (Q4); correlations, measurement, the Bell and CHSH inequalities,
+and the distinction between the quantum prediction and the
+local-hidden-variable bound (Q5); density matrices, decoherence, and
+master equations (Q6).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F89.
+
+**Acceptance criteria.** The lesson rule; Q5's CHSH value computed from
+the simulated correlations and compared with both bounds; Q6's trace and
+positivity preserved by the integrator.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F91 — Astrophysics: the three-body problem, modified gravity, lensing (AST1, AST2, AST3)
+
+**Source.** Change request section 4 (A7: AST1, AST2, AST3). Slots AST1
+to AST3; the first lesson feature of the `astrophysics` course (strand
+directory, `pbc.astrophysics`, reusing the N-body code of F69).
+
+**Goal.** Nonlinear gravitational dynamics, stability, and initial
+conditions (AST1); deliberately modified central-force laws with orbit
+diagnostics (AST2); simplified deflection and lensing models with the
+limits of mass inference (AST3).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F69.
+
+**Acceptance criteria.** The lesson rule; AST1's conserved quantities
+tracked and a known periodic solution reproduced; AST2's precession
+checked against the perturbative prediction; AST3's deflection angle
+checked against the weak-field formula.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F92 — Relativity and cosmology: special relativity, relativistic orbits, cosmic expansion (AST10, AST4, AST5)
+
+**Source.** Change request section 4 (A7: AST10 new in revision 2, AST4,
+AST5). Slots AST10, AST4, AST5 in the `astrophysics` strand, in that
+teaching order.
+
+**Goal.** Lorentz transformations, the invariant interval, time dilation,
+length contraction, relativistic energy and momentum with collision checks
+and the low-velocity limit (AST10); post-Newtonian orbital precession with
+its approximation stated (AST4); toy cosmological models and observable
+relations (AST5).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F91.
+
+**Acceptance criteria.** The lesson rule; AST10's invariants preserved
+and the Newtonian limit recovered; AST4's precession checked against the
+first-order formula; AST5's distance-redshift relation checked against
+the analytic case.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F93 — Gravitational-wave chirp and exoplanet transit simulations (AST6, AST7)
+
+**Source.** Change request section 4 (A7: AST6, AST7). Slots AST6 and
+AST7 in the `astrophysics` strand; AST6 cross-links M16 (F60) and L5
+(F56), which are not republished.
+
+**Goal.** An approximate binary-inspiral waveform from a transparent
+model, linked to the measured strain of M16 without repeating it (AST6);
+transit flux curves, geometry, and duration effects (AST7), the simulated
+counterpart of AST8.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F91, F60.
+
+**Acceptance criteria.** The lesson rule; AST6's chirp law checked
+against the closed form of `pbc.mechanics.chirp` and the page linking
+M16 instead of showing the measured strain again; AST7's transit depth
+and duration checked against the analytic geometry.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F94 — Materials physics: crystal lattices and phonons, electronic band structure (MAT1, MAT2)
+
+**Source.** Change request section 4 (A8: MAT1, MAT2). Slots MAT1 and
+MAT2; the first lesson feature of the `materials` course (strand
+directory, `pbc.materials`).
+
+**Goal.** Lattice dynamics and dispersion (MAT1); a transparent
+tight-binding model (MAT2).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F71 (W2's modes), F89 (Q3's eigenproblems).
+
+**Acceptance criteria.** The lesson rule; MAT1's dispersion checked
+against the one-dimensional chain's closed form; MAT2's band structure
+checked against the analytic tight-binding bands.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F95 — Materials physics: elasticity and deformation, defects (MAT3, MAT4)
+
+**Source.** Change request section 4 (A8: MAT3, MAT4). Slots MAT3 and
+MAT4 in the `materials` strand; MAT3 may reuse `pbc.fem`.
+
+**Goal.** Stress, strain, boundaries, and a simple mechanical model (MAT3);
+defect effects, diffusion, and the limits of the model (MAT4).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F94, F76 (optional reuse of the finite-element solver).
+
+**Acceptance criteria.** The lesson rule; MAT3's solution checked against
+the closed form of a loaded bar; MAT4's diffusion checked against T1.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F96 — Multimodal physics reasoning and interpretable explanations (AI6, AI7)
+
+**Source.** Change request section 5 (B1: AI6 enhanced in revision 2,
+AI7) and section 7.3. Slots AI6 and AI7 of the physics reasoning path;
+lessons in `agents-llm` with `course: mechanics`.
+
+**Goal.** Interpreting diagrams, plots, field images, and measured
+pictures from the site's own verified figures; testing object properties,
+spatial relations, and image-based counterfactual predictions against
+known constraints, as still images (AI6); distinguishing prediction from
+explanation, with units, physical consistency, and uncertainty as the
+tests of an explanation (AI7).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F09, F46; F65 for the evaluation protocol.
+
+**Acceptance criteria.** The lesson and agent rules; every image is a
+verified figure of the site or a declared sample with rights; the model's
+answers are scored against constraints the build recomputes; the page
+distinguishes the model's explanation from the verified result.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F97 — Physical reasoning from video (AI8)
+
+**Source.** Change request section 5 (B1: AI8, new in revision 2) and
+section 7.3 ("Video reasoning"); requirements decision 28 and non-goals.
+Slot AI8 of the physics reasoning path; lesson in `agents-llm` with
+`course: mechanics`.
+
+**Goal.** For short motion clips the repository generates from verified
+simulations (a bounce, a pendulum, a collision), or approved existing clips
+with recorded rights, compare the direct multimodal-model observation,
+conventional tracking with derived velocity and acceleration, and
+agent-assisted simulation and prediction against the independent ground
+truth; report trajectory and prediction errors, false causal claims,
+confidence, and the limits of frame and sample rates. No webcam, upload,
+hosted processing, or build-time model call.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F96, F06; a rights record for any clip that is not
+generated.
+
+**Acceptance criteria.** The lesson and agent rules; generated clips
+labelled as generated and reproduced by the build; the tracking's offline
+output deterministic and compared with the ground truth by a test; clips
+within the on-demand payload budget and loaded only after a user action;
+no clip of a person.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F98 — Discovery under noise, hidden variables, and generalisation (D10, D11, D12)
+
+**Source.** Change request section 5 (B2: D10, D11, D12). Slots D10 to
+D12 of the law discovery path; lessons in `agents-llm` with `course:
+mechanics`.
+
+**Goal.** Noise, calibration, outliers, and failure analysis in discovery
+(D10); hypotheses with latent effects, observational ambiguity, and
+disambiguating experiments (D11); laws challenged on held-out settings,
+force models, and conditions (D12).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F66, F81.
+
+**Acceptance criteria.** The lesson and agent rules; the held-out worlds
+of D12 never probed by the agent, shown by the trace; the baselines'
+degradation under noise measured (D10).
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F99 — Discovering gravity and unknown physical worlds (D4, D5)
+
+**Source.** Change request section 5 (B2: D4, D5). Slots D4 and D5 of the
+law discovery path; lessons in `agents-llm` with `course: mechanics`
+(D4) and `course: astrophysics` (D5, on the N-body worlds).
+
+**Goal.** Inferring an unknown gravitational relation and testing its
+transfer (D4); unknown forces and couplings in controlled N-body worlds
+with predictive tests (D5), as original contained tasks inspired by the
+published benchmarks, not their assets.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F66, F69, F91.
+
+**Acceptance criteria.** The lesson and agent rules; the transfer test of
+D4 on a world the agent never probed; the N-body truth of D5 unreachable
+and the agent's predictions scored by the build.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F100 — Physics reasoning benchmarks (EV1)
+
+**Source.** Change request section 5 (B3: EV1 enhanced in revision 2).
+Slot EV1 of the agent benchmarking path; lesson in `agents-llm` with
+`course: mechanics`.
+
+**Goal.** Whether models reason about independently checked physics
+problems, visual and tool affordances, and counterfactual predictions,
+with tool-use reasoning separated from calling a software interface; on
+problems from the site's own lessons with recomputed answers.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F96, F65.
+
+**Acceptance criteria.** The agent rule; every problem's answer recomputed
+by the build; the affordance and counterfactual items use verified figures;
+the score and its uncertainty over seeds shown with the failures.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F101 — Robustness, cost, and scientific failure analysis (EV4, EV5)
+
+**Source.** Change request section 5 (B3: EV4, EV5). Slots EV4 and EV5 of
+the agent benchmarking path; lessons in `agents-llm` with `course:
+mechanics`.
+
+**Goal.** Performance against noise, budget, seeds, cost, and model choice
+from recorded runs (EV4); categorised failures (wrong laws, leakage,
+numerical mistakes, hallucinations, overfitting) as reproducible case
+studies with independent audits (EV5).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F81, F98.
+
+**Acceptance criteria.** The agent rule; costs and call counts recorded
+from the runs that produced the fixtures and never measured in CI; each
+failure case reproduced from a frozen trace with the recomputed check
+that exposes it.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F102 — Atomic spectroscopy lab (Q7)
+
+**Source.** Change request section 4 (A6: Q7). Slot Q7, a measured-data
+lab of the `quantum` course; the NIST infrared spectra card is a
+`survey-only` candidate.
+
+**Goal.** Real spectral lines, calibration, and simple line and level
+models with uncertainty.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F89, F51; a spike with a go decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F103 — Quantum measurement statistics lab (Q8)
+
+**Source.** Change request section 4 (A6: Q8 enhanced in revision 2),
+the second half of the linked Q5/Q8 enhancement. Slot Q8, a measured-data
+lab of the `quantum` course; the Sandia gate-set tomography card is a
+`survey-only` candidate, and a Bell-test count dataset is used only if a
+rights-cleared, methodologically suitable one passes the gate.
+
+**Goal.** Genuine documented quantum measurement data with uncertainties,
+detector and selection caveats, and a qualified statistical
+interpretation; Bell-test counts against the Q5 bounds if and only if the
+gate approves a suitable dataset.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F90, F51; a spike with a go decision.
+
+**Acceptance criteria.** The lab rule; the page states which loophole or
+selection the data does not close.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F104 — Exoplanet light curves lab (AST8)
+
+**Source.** Change request section 4 (A7: AST8). Slot AST8, a
+measured-data lab of the `astrophysics` course; the TESS light-curve card
+is a `survey-only` candidate.
+
+**Goal.** Real photometry, cleaning, the AST7 model fitted, and the
+uncertainties of the inferred geometry.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F93, F51; a spike with a go decision; a FITS reader
+only if the go decision needs it.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F105 — Galaxy rotation curves lab (AST9)
+
+**Source.** Change request section 4 (A7: AST9). Slot AST9, a
+measured-data lab of the `astrophysics` course; no candidate card exists.
+
+**Goal.** Real rotation curves against mass models, with the assumptions
+and caveats of the inference stated.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F91, F51; a new candidate card and spike with a go
+decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F106 — X-ray diffraction data lab (MAT5)
+
+**Source.** Change request section 4 (A8: MAT5). Slot MAT5, a
+measured-data lab of the `materials` course; the electron-diffraction
+card is a related `survey-only` candidate and a new X-ray card may be
+needed.
+
+**Goal.** Measured peaks, lattice spacing, and uncertainty against MAT1.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F94, F51; a spike with a go decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F107 — Stress-strain measurements lab (MAT6)
+
+**Source.** Change request section 4 (A8: MAT6). Slot MAT6, a
+measured-data lab of the `materials` course; no candidate card exists.
+
+**Goal.** Real material response, the elastic regime, hysteresis, and
+uncertainty against MAT3.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F95, F51; a new candidate card and spike with a go
+decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### F108 — Turbulence and flow measurements lab (FL8)
+
+**Source.** Change request section 4 (A5: FL8). Slot FL8, a measured-data
+lab of the `fluids` course; the Rostock, Sheffield, and OpenPIV cards are
+`survey-only` candidates distinct from F53's cylinder wake.
+
+**Goal.** Turbulence statistics, uncertainty, and the limited regimes of
+the FL2 and FL3 models.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F79, F53, F51; a spike with a go decision.
+
+**Acceptance criteria.** The lab rule.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes.
+
+### Wave C4 — Research capstone and consolidation
+
+Order within the wave: every lesson feature of this wave after F64 (the
+gates under "Phase 4"); F109 after F19 and F39; F110 after F95, F18, and
+F20; F111 last among the lessons, after F49, F101, and F98; F112 last,
+after every lesson feature of the phase; it may be run earlier as a
+status report that declares no completion (see its block).
+
+### F109 — Evidence maps and reproducible literature evidence (R2, R3)
+
+**Source.** Change request section 5 (B4: R2, R3). Slots R2 and R3 of the
+autonomous research path; lessons in `agents-llm` with `course:
+mechanics`. F19 delivered the evidence map page, not a lesson; R2 is the
+lesson that teaches reading and auditing it.
+
+**Goal.** Linking claims to figures, code, measurements, and limitations
+through the evidence map of F19 (R2); curated source claims, methods,
+citation and provenance, and reproduction feasibility through the
+reference register, with no generic retrieval product (R3).
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F19, F39, F28.
+
+**Acceptance criteria.** The lesson rule; every link rendered from the
+register or the evidence map; no live retrieval; an agent that proposes
+sources logs them for human review and never writes a citation.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F110 — Agent-driven materials discovery (R5)
+
+**Source.** Change request section 5 (B4: R5 enhanced in revision 2).
+Slot R5 of the autonomous research path; lesson in `agents-llm` with
+`course: materials`.
+
+**Goal.** Agents coordinating bounded, reproducible material-property
+simulations of MAT1 to MAT4, comparing candidates against explicit
+multi-objective physical constraints, with uncertainty and validation
+discussed and a model's preference never treated as evidence.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F95, F18, F20.
+
+**Acceptance criteria.** The lesson and agent rules; the constraint checks
+recomputed by the build; the agent's ranking compared with the recomputed
+one.
+
+**Risk.** Medium. **Detailed implementation plan expected.** Yes, short.
+
+### F111 — Autonomous physics research challenge (R6)
+
+**Source.** Change request section 5 (B4: R6) and section 10 ("Part B
+research capstone"). Slot R6 of the autonomous research path; lesson in
+`agents-llm` with the primary course of the chosen unknown system.
+
+**Goal.** From an unknown system to hypotheses, experiments,
+falsification, and an audited report, with controls, honest limitations,
+and an evidence trail; distinct from the subject capstones T11, EM9, and
+FL10 and from F49's paper reproduction.
+
+**Dependencies.** F61, F62, F64, F113 (the gates of this phase), F49, F101, F98, F65.
+
+**Acceptance criteria.** The lesson and agent rules; the report's claims
+typed and each recomputed or marked; the audit by the F18 reviewers shown
+with recomputed checks; the hidden truth revealed only after the audit on
+the page.
+
+**Risk.** High (scope). **Detailed implementation plan expected.** Yes,
+likely several Issues.
+
+### F112 — Curriculum completion audit
+
+**Source.** Change request section 11 ("Curriculum completion") and
+section 10 (Wave 4, "quality consolidation"); requirements "Project goal"
+(the long-term target).
+
+**Goal.** Establish whether the published inventory reconciles to the
+reference curriculum, and say so without rounding. The audit classifies
+every one of the 115 slots as one of: filled by a substantive published
+lesson (the definition of done of section 11); a designated lab whose
+dataset gate recorded defer or reject, with its dossier (requirements
+decision 27: a lab is a target that the gate decides); a slot the human
+removed from the reference structure by a recorded decision that changed
+the curriculum file and the requirements' decision 23 (none exists
+today); or outstanding. A slot whose feature was not scheduled, not
+started, or not finished is outstanding, never deferred: the audit
+reports what is missing and makes no scope decision. Completion
+(requirements "Project goal"; change request section 11) is declared
+only when no slot is outstanding; otherwise the audit is a status report
+that lists the outstanding slots with their features. The audit also
+establishes: eight courses navigable; sixteen designated labs, with the
+gated ones' outcomes recorded and qualified separately from the core
+slots; the four paths with valid lessons; the eleven revision-2 and
+revision-3 additions and the seven enhancements present and
+non-duplicative; a reproducibility audit of a sample of lessons across
+courses from a fresh clone; a screen-reader pass of the path and a lesson
+of each course; no published address broken.
+
+**Dependencies.** F64 and every lesson feature of this phase (F66 to
+F111, and F45, F49, F52, F53, F54, and F55 of the previous phase, which
+fill slots). The audit may be run earlier as a status report; such a run
+declares no completion.
+
+**Acceptance criteria.** The audit recorded in `docs/release-readiness.md`
+with the slot table of this roadmap updated; a test that every slot of
+the curriculum file is classified as filled, gated (with the dossier that
+records the gate's decision), removed by a recorded decision, or
+outstanding, that the four classes add up to 115, and that "complete" is
+written only when the outstanding class is empty; the gated labs listed
+apart from the core slots with their dossiers; the sampled reproductions
+byte-identical at displayed precision; the manual passes recorded.
+
+**Risk.** Low. **Detailed implementation plan expected.** No.
+
 ## Candidate mapping
 
 Every candidate of the change request and its outcome. "Kept" means a
@@ -2941,6 +5119,171 @@ research candidates").
 | CI budget overrun (release readiness) | New feature | F58 | The second response of ADR 003. |
 | Gravitational-wave lab (Section 8.1, 13) | New feature | F60 | The planner's recommended first lab, conditional on F50. |
 
+## Slot mapping (change cycle `final-curriculum`)
+
+Every slot of the reference curriculum (requirements decision 23) with the
+lesson that fills it or the feature that will. "Published" names a lesson
+`id`. A lab is published only after its dataset's go decision; a capstone's
+historical comparison (FL10) is gated separately and is not a lab. The
+teaching order inside a course may differ from the label order, as the
+change request states (T6, T10, T11; EM4 and EM6 to EM9; FL1, FL4, FL9,
+FL5, FL10; AST10 before AST4).
+
+### Part A, 81 slots
+
+| Course | Slot | Working title | Kind | Status, feature |
+|---|---|---|---|---|
+| mechanics | M1 | Kinematics as a program | lesson | Published, `kinematics` (F02) |
+| mechanics | M2 | Newton's laws | lesson | Published, `newtons-laws` (F04) |
+| mechanics | M3 | Projectile motion with drag | lesson | Published, `projectile-with-drag` (F04) |
+| mechanics | M4 | Harmonic oscillator | lesson | Published, `harmonic-oscillator` (F05) |
+| mechanics | M5 | Numerical integrators | lesson | Published, `numerical-integrators` (F05, F30) |
+| mechanics | M6 | Energy conservation | lesson | Published, `energy-conservation` (F06) |
+| mechanics | M7 | Momentum and collisions | lesson | Published, `momentum-and-collisions` (F06) |
+| mechanics | M8 | Kepler orbits | lesson | Published, `kepler-orbit` (F06) |
+| mechanics | M9 | Double pendulum and chaos | lesson | F68 |
+| mechanics | M10 | Lagrangian mechanics | lesson | F68 |
+| mechanics | M11 | Hamiltonian mechanics | lesson | F68 |
+| mechanics | M12 | Resonance and driven oscillators | lesson | F68 (coordinated with F45) |
+| mechanics | M13 | Many-body gravitation | lesson | F69 |
+| mechanics | M14 | Nonlinear dynamics and bifurcations | lesson | F69 |
+| mechanics | M17 | Rotational motion, torque, and angular momentum | lesson, revision 2 | F69 |
+| mechanics | M15 | Experimental: real pendulum or accelerometer data | lab | F83, gated |
+| mechanics | M16 | Experimental: GW150914 gravitational-wave strain | lab | Published, `gravitational-wave-strain` (F60) |
+| thermodynamics | T0 | Gas from simple agents | lesson | Published, `particles-in-a-box` (F11); `course` and `slot` set together by F70, no slot before |
+| thermodynamics | T1 | Random walks and diffusion | lesson | F70 |
+| thermodynamics | T2 | Kinetic theory of gases | lesson | F70 |
+| thermodynamics | T3 | Entropy and thermodynamic equilibrium | lesson | F70 |
+| thermodynamics | T4 | Ising model and phase transitions | lesson | F75 |
+| thermodynamics | T5 | Molecular dynamics | lesson | F75 |
+| thermodynamics | T6 | Heat conduction and diffusion | lesson, enhanced in revision 3 | F76 |
+| thermodynamics | T9 | Heat engines and thermodynamic cycles | lesson, revision 2 | F75 |
+| thermodynamics | T10 | From finite differences to finite elements and meshes | lesson, revision 3 | F76 |
+| thermodynamics | T11 | Applied capstone: thermal engineering of an AI accelerator | capstone, revision 3 | F87 |
+| thermodynamics | T7 | Experimental: heat transfer measurements | lab | F84, gated |
+| thermodynamics | T8 | Experimental: Brownian motion tracking | lab | F85, gated |
+| waves | W1 | The wave equation | lesson | F71 |
+| waves | W2 | Interference and resonance | lesson | F71 |
+| waves | W3 | Refraction and Snell's law | lesson | F77 |
+| waves | W4 | Polarisation and Malus's law | lesson | F77 |
+| waves | W5 | Diffraction and imaging | lesson | F77 |
+| waves | W6 | Inverse optics | lesson | F77 |
+| waves | W9 | Sound waves, resonance, and the Doppler effect | lesson, revision 2 | F71 |
+| waves | W7 | Experimental: real optical diffraction images | lab | F52, gated (unchanged feature; home `waves`) |
+| waves | W8 | Experimental: wave flume measurements | lab | F74 (go decision exists) |
+| electromagnetism | EM1 | Coulomb's law and electric fields | lesson | F72 |
+| electromagnetism | EM2 | Lorentz force and charged particles | lesson | F72 |
+| electromagnetism | EM3 | Faraday's law and induction | lesson | F72 |
+| electromagnetism | EM4 | Maxwell's equations and FDTD | lesson | F78 |
+| electromagnetism | EM5 | RLC circuits and resonance | lesson | F78 |
+| electromagnetism | EM6 | Waveguides and electromagnetic resonances | lesson, enhanced in revision 3 | F78 |
+| electromagnetism | EM7 | Experimental: microwave S-parameters | lab | F54 (go decision exists; unchanged feature; home `electromagnetism`) |
+| electromagnetism | EM8 | Experimental: real RLC circuit measurements | lab | F86, gated |
+| electromagnetism | EM9 | Applied capstone: adaptive phased-array beam steering | capstone, revision 3 | F80 |
+| fluids | FL1 | Advection and diffusion | lesson | F73 |
+| fluids | FL2 | Navier-Stokes fundamentals | lesson | F79 |
+| fluids | FL3 | Vortex formation and flow around obstacles | lesson | F79 |
+| fluids | FL4 | Shock waves and Burgers' equation | lesson | F73 |
+| fluids | FL5 | Shallow-water equations | lesson, enhanced in revision 3 | F73 |
+| fluids | FL6 | Particle-based fluid simulation | lesson | F79 |
+| fluids | FL9 | Finite-volume methods and conservation laws | lesson, revision 2 | F73 |
+| fluids | FL7 | Experimental: particle image velocimetry | lab | F53, gated (unchanged feature; home `fluids`) |
+| fluids | FL8 | Experimental: real turbulence or flow measurements | lab | F108, gated |
+| fluids | FL10 | Applied capstone: reconstructing the 2025 Kamchatka tsunami | capstone, revision 3 | F88 (comparison gated) |
+| quantum | Q1 | Schrödinger equation | lesson | F89 |
+| quantum | Q2 | Quantum tunnelling | lesson | F89 |
+| quantum | Q3 | Quantum harmonic oscillator | lesson | F89 |
+| quantum | Q4 | Spin and Stern-Gerlach measurements | lesson | F90 |
+| quantum | Q5 | Quantum entanglement, Bell and CHSH | lesson, enhanced in revision 2 | F90 |
+| quantum | Q6 | Open quantum systems and decoherence | lesson | F90 |
+| quantum | Q7 | Experimental: atomic spectroscopy | lab | F102, gated |
+| quantum | Q8 | Experimental: quantum measurement statistics | lab, enhanced in revision 2 | F103, gated |
+| astrophysics | AST1 | Three-body problem | lesson | F91 |
+| astrophysics | AST2 | Modified gravity | lesson | F91 |
+| astrophysics | AST3 | Gravitational lensing | lesson | F91 |
+| astrophysics | AST10 | Special relativity and spacetime | lesson, revision 2 | F92 |
+| astrophysics | AST4 | Relativistic orbits | lesson | F92 |
+| astrophysics | AST5 | Cosmic expansion and redshift | lesson | F92 |
+| astrophysics | AST6 | Gravitational-wave chirp simulation | lesson | F93 (cross-links M16, L5) |
+| astrophysics | AST7 | Exoplanet transit simulation | lesson | F93 |
+| astrophysics | AST8 | Experimental: real exoplanet light curves | lab | F104, gated |
+| astrophysics | AST9 | Experimental: galaxy rotation curves | lab | F105, gated |
+| materials | MAT1 | Crystal lattices and phonons | lesson | F94 |
+| materials | MAT2 | Electronic band structure | lesson | F94 |
+| materials | MAT3 | Elasticity and deformation | lesson | F95 |
+| materials | MAT4 | Defects and material properties | lesson | F95 |
+| materials | MAT5 | Experimental: X-ray diffraction data | lab | F106, gated |
+| materials | MAT6 | Experimental: stress-strain measurements | lab | F107, gated |
+
+Count: 17 + 12 + 9 + 9 + 10 + 8 + 10 + 6 = 81, of which 16 labs and 3
+capstones.
+
+### Part B, 33 slots
+
+| Path | Slot | Working title | Status, feature |
+|---|---|---|---|
+| physics reasoning and scientific agents | AI0 | LLM agent designs a projectile experiment | Published, `agent-experiment` (F09) |
+| physics reasoning and scientific agents | AI1 | Agent-assisted physics simulation development | F45 (unchanged feature) |
+| physics reasoning and scientific agents | AI2 | Scientific code verification and debugging | Published, `verifying-scientific-code` (F46) |
+| physics reasoning and scientific agents | AI3 | Counterexample hunting | Published, `counterexample-hunter` (F16) |
+| physics reasoning and scientific agents | AI4 | Multi-agent scientific review | Published, `scientific-review` (F18) |
+| physics reasoning and scientific agents | AI5 | Agent-assisted real experimental physics | F55 (unchanged feature) |
+| physics reasoning and scientific agents | AI6 | Multimodal physics reasoning (still images; enhanced in revision 2) | F96 |
+| physics reasoning and scientific agents | AI7 | Interpretable physics explanations and constraints | F96 |
+| physics reasoning and scientific agents | AI8 | Physical reasoning from video (revision 2) | F97 |
+| scientific law discovery | D1 | Black-box physics: discovering force laws | F66 |
+| scientific law discovery | D2 | Physics without prior knowledge | F66 |
+| scientific law discovery | D3 | Discovering modified physical laws | F66 |
+| scientific law discovery | D4 | Discovering gravity from experiments | F99 |
+| scientific law discovery | D5 | Unknown physical worlds | F99 |
+| scientific law discovery | D6 | Inverse physics: parameter discovery and uncertainty (enhanced in revision 2) | Published, `inverse-physics` (F23) |
+| scientific law discovery | D7 | Symbolic regression for physical laws | F67 |
+| scientific law discovery | D8 | Discovering differential equations | F67 |
+| scientific law discovery | D9 | Active experimental design (enhanced in revision 2) | Published, `experimental-design-agent` (F20) |
+| scientific law discovery | D10 | Scientific discovery under measurement noise | F98 |
+| scientific law discovery | D11 | Hidden forces and unobserved variables | F98 |
+| scientific law discovery | D12 | Generalisation to unseen physical systems | F98 |
+| scientific law discovery | D13 | Discovering conservation laws and physical invariants (revision 2) | F82 |
+| physics agent benchmarking | EV1 | Physics reasoning benchmarks (enhanced in revision 2) | F100 |
+| physics agent benchmarking | EV2 | Interactive discovery benchmarks (enhanced in revision 2) | F81 |
+| physics agent benchmarking | EV3 | Agent versus non-agent baselines | F81 |
+| physics agent benchmarking | EV4 | Robustness, cost, and sample efficiency | F101 |
+| physics agent benchmarking | EV5 | Scientific failure analysis | F101 |
+| autonomous scientific research | R1 | Automated physics analysis pipelines | Published, `automated-analysis-pipelines` (F47) |
+| autonomous scientific research | R2 | Scientific evidence maps | F109 (the page is F19, delivered) |
+| autonomous scientific research | R3 | Scientific literature and reproducible evidence | F109 |
+| autonomous scientific research | R4 | Reproducing a physics paper with multiple agents | F49 (unchanged feature) |
+| autonomous scientific research | R5 | Agent-driven materials discovery (enhanced in revision 2) | F110 |
+| autonomous scientific research | R6 | Autonomous physics research challenge | F111 |
+
+Count: 9 + 13 + 5 + 6 = 33.
+
+### The Lean slot and the lessons beyond the baseline
+
+| Slot | Working title | Status |
+|---|---|---|
+| L1 | Proving what the simulation showed | Published, `proving-what-the-simulation-showed` (F08) |
+| none | Momentum in a collision, proved | Published, `collision-momentum-proved` (F17) |
+| none | What symplectic Euler conserves | Published, `symplectic-euler-conserved-energy` (F17) |
+| none | Lean exercises on your machine | Published, `lean-exercises-on-your-machine` (F21) |
+| none | The chirp law, proved | Published, `chirp-law-proved` (F56) |
+| none | Agent-assisted theorem proving | F22 (unchanged feature) |
+
+Total: 81 + 33 + 1 = 115 slots; 119 lessons and more when complete, the
+Lean lessons beyond the baseline included and never hidden.
+
+### Enhancements of existing slots (revision 2), no new slot
+
+| Enhancement | Where it is delivered |
+|---|---|
+| D6 identifiability, parameter correlations, held-out uncertainty | Delivered by F23 (`pbc.data.fit` and `pbc.data.inverse`) |
+| D9 hypothesis-discriminating information gain under a budget, simulated only | Delivered by F20 (`pbc.agents.design`) |
+| AI6 still-image affordances and counterfactuals | F96 |
+| EV1 physical-tool understanding separated from software interfaces | F100 |
+| EV2 full, partial, and no prior-knowledge comparisons under one protocol | F81, on F65's protocol |
+| R5 physical multi-objective constraints | F110 |
+| Q5 Bell and CHSH inequalities, with Q8 using eligible data only if the gate approves it | F90 (Q5) and F103 (Q8) |
+
 ## Experimental data choice
 
 Planner's recommendation for the first measured-data lab, to be confirmed
@@ -2958,7 +5301,9 @@ or overturned by the evidence of the F50 spike:
    verify in the spike: the processing steps must be explained so that a
    whitened signal is never presented as the measurement, and the model's
    scope must be stated honestly.
-2. **Fallback: NPL S-parameters (F54), after F15.** The most compact and
+2. **Fallback: NPL S-parameters (F54), after F15.** (Since
+   `final-curriculum`: F15 is dropped and F54's course is `electromagnetism`,
+   created by F72; the rest of this item is history.) The most compact and
    technically robust dataset (3.1 MB, Touchstone, CC BY 4.0), but it needs
    RF background the course does not teach and has no published course to
    belong to, and ADR 008 allows no lesson without a primary course. It
@@ -2966,7 +5311,9 @@ or overturned by the evidence of the F50 spike:
    and F15 has chosen an electromagnetism or waves-and-optics course for it;
    the fallback path therefore runs through F15 before F54, and the F50
    dossiers are the evidence for that choice.
-3. **Bridge for F15: the Aalborg wave flume.** The strongest
+3. **Bridge for F15: the Aalborg wave flume.** (Since `final-curriculum`:
+   F15 is dropped; the flume is W8 of the `waves` course created by F71, and
+   F52's home is the same course; the rest of this item is history.) The strongest
    measured-versus-modelled set (CC BY 4.0, measured and CFD series), but
    78.6 MB and a waves subject; it is the natural first lab of a waves and
    optics course if the human chooses that topic for F15, and the spike's
@@ -3045,6 +5392,20 @@ Not features. Each has a trigger for revisiting; until then no Issue.
 | `jidai-nl` organization profile link, repository transfer, project subdomain | Outside this repository; transfer excluded by the requirements | A separate migration decision with its own review |
 | A scheduled link-check workflow | Would add a workflow trigger | Link rot found faster than quarterly manual runs catch it, and a review of the trigger |
 
+Deferred by the change cycle `final-curriculum` (2026-10-12), with no
+feature and no Issue (change request sections 1, 4.1, and 12, decision 11;
+requirements non-goals):
+
+| Candidate | Why deferred | Trigger to revisit |
+|---|---|---|
+| Nuclear and particle physics (4 slots), plasma physics (3), geophysics and climate physics (4): the 126-slot extension | Outside the core curriculum by the requirements | A separate planning decision after the reference curriculum is substantially published |
+| Battery thermal runaway, Formula 1 aerodynamics | Inspiration for T11 and FL2/FL3 only; not selected | A separate planning decision; never an implicit capstone |
+| JWST atmospheric retrieval for A7 | Discussed, not selected; A7's exoplanet lessons stay as enumerated | A separate planning decision |
+| Any capstone for A1, A3, A6, A7, or A8 | The requirements limit capstones to T11, EM9, and FL10 | A requirements change |
+| Physics-informed machine learning, a mathematics curriculum, a generic AI or machine-learning curriculum | Excluded by the requirements | A requirements change |
+| Embedding external benchmark assets (NewtonBench, PhysGym, DiscoverPhysics, GravityBench, PhysBench, PhysToolBench, ...) | Inspiration for original contained tasks; licences and assumptions unchecked | A licence and assumption review recorded on a card, lesson by lesson |
+| Selecting the Lean build with ADR 014 | Requirements, unresolved question 8 | The human's decision with or after F61 |
+
 ## Execution order and first-wave release plan
 
 By dependency, not by number. A wave is a grouping for planning; the human
@@ -3056,18 +5417,33 @@ picks the next feature among those whose dependencies are done.
 | R1 | F44, F57, F37, F35, F36, F39 in parallel worktrees; then F25 (after F57), F26 and F27 (after F37); then F28 (M1 template pilot); then F30's M5 pilot; then F29 (M1 editorial), F30 (M6 to M8), F29 (M2 to M4) | A clear, honest, identified site with the editorial standard proven on both pilots and the mechanics course migrated; a release "clarity" tagged after it |
 | R1, beside | F50 spike (no page) | The go, defer, or reject decisions and the first-lab confirmation |
 | R2 | F42, F38, F40, F41, F31, F32, F33, F34, F59; F46, F45, F16, F17 | All lessons in format 2 with diagrams, hints, glossary, search, one instructor pack; trustworthy scientific coding with one counterexample lesson and further proofs |
-| R3 | F51, then F60 (or F54 as the fallback, after F15 has chosen its course), F43's first component | The first measured-data lab published after its gate |
-| R4 | F54, F53, F52 as their courses exist (F15 gives at most one of them a course; the others wait for a later course feature, or for F53 a justified `mechanics` framing); F55, F23, F47, F18, F19, F56 | Evidence and advanced labs |
+| R3 | F51, then F60 (or F54 as the fallback, after F15 has chosen its course; since `final-curriculum`, F15 is dropped and F54 waits for F72), F43's first component | The first measured-data lab published after its gate |
+| R4 | F54, F53, F52 as their courses exist (F15 gives at most one of them a course; the others wait for a later course feature, or for F53 a justified `mechanics` framing; since `final-curriculum`, F15 is dropped and the courses are F72, F73, and F71, with no `mechanics` framing); F55, F23, F47, F18, F19, F56 | Evidence and advanced labs |
 | R5 | F20, F21, F22, F49 | Research capstones |
 
-Features F13 and F14 keep their approved scope and are scheduled by the
-human after F28, so that their self-check format wraps F28's self-check and
-F38's hints rather than duplicating them. F15 is scheduled when the human
-chooses the course topic; the F50 dossiers inform the choice. F15 yields
-one course; a lab of another subject waits for a later course feature that
-takes the next unused ID when the human asks for it. F12's
-workflow is unchanged; the reference protocol of F28 applies to
-agent-drafted content through `docs/authoring.md`.
+Phase 4, by dependency; the first wave stays reviewable because every
+feature in it is a tooling change with tests (F61, F113, F62, F63) or one
+page with accuracy checks (F64). No lesson of the phase is drafted before
+F61 and F62 have landed, no lesson that takes the count past 32 before
+F113 has, and no lesson of waves C2 to C4 before F64 and F113 have (the
+gates under "Phase 4"); there is no cost exception.
+
+| Wave | Order within the wave | Outcome |
+|---|---|---|
+| C0 | F61 and F62 in parallel worktrees; F113 after F61; then F63; then F64 | Verification proportional to a change within 12 minutes; a full run that fits the timeout at 110 lessons; eight courses, the reference curriculum, and the slots; verified previews; the course-first Learning Path, before the bulk of the lessons |
+| C1 | F65 (may start during C0); after F61 and F62, and after F113 once the lesson count would pass 32: F66 and F67; F68, F70, F71, F72, F73 in parallel worktrees; F69 after F68; F74 after F71; F52, F53, F54, F45, F55 as their dependencies are met | The discovery foundation and its first lessons; the first lessons of thermodynamics, waves, electromagnetism, and fluids; advanced mechanics; the second measured-data lab (W8, go decision in hand) and the already planned labs as their courses exist |
+| C2 | After F64 and F113: F75, F76 after F70; F77 after F71; F78 after F72; F79 after F73; F80 after F78; F81, F82 after the discovery lessons; F83 to F86 through their gates | Core subject expansion, the finite-difference to finite-element bridge, conservative fluid methods, the phased-array capstone, the first benchmarks, invariant discovery, and gated labs |
+| C3 | After F64 and F113: F87 after F76; F88 after F73; F89 to F95 by dependency; F96, F97, F98, F99, F100, F101; F102 to F108 through their gates | The thermal and tsunami capstones (the tsunami comparison only after its gate), quantum, astrophysics with relativity, materials, the remaining reasoning, discovery, and benchmarking lessons, and gated labs |
+| C4 | After F64 and F113: F109, F110, F111; F49 and F22 as their dependencies are met; F112 after every lesson feature of the phase | The research capstone, the last path lessons, and the completion audit, which declares completion only when no core slot is outstanding |
+
+Features F13 (#89) and F14 (#94) are delivered with their approved scope;
+F64 keeps their progress marks and recommendations on the redesigned path.
+F15 is dropped by `final-curriculum` (ADR 013 decision 7) and is never
+scheduled: the courses of the labs F54, F53, and F52 are created by F72,
+F73, and F71, and each lab starts when its course feature and its other
+dependencies are delivered (the Phase 4 waves above). F12's workflow is
+unchanged; the reference protocol of F28 applies to agent-drafted content
+through `docs/authoring.md`.
 
 The first wave stays reviewable because every feature in it is one of:
 a tooling change with tests (F58, F35, F36, F37, F44, F39), a page with
@@ -3091,7 +5467,7 @@ violating input shown by a test; the one deliberate exception is named.
 | Dataset cards and samples | Schema; caps; checksum; rights; a parsing test per sample; the build passes with data portals and external web hosts blocked | F50 |
 | Measured-data figures | Status label from the sample's artifact type; measured-versus-model helpers; review | F51 |
 | Diagrams | Executed cells, `conceptual` label, byte-stable | F32 to F34 |
-| Page payload | Built-site check: initial 1.5 MB, on-demand 3 MB, total 5 MB | F44, F43 |
+| Page payload | Built-site check: initial 3 MB (raised from 1.5 MB by the project owner on 2026-10-10; the F44 block above is the historical record of the 1.5 MB that feature delivered and measured), on demand 3 MB, 5 MB in all; the budget table of `docs/architecture.md` is authoritative | F44, F43 |
 | Widgets and components | The F07 checks plus the observed-value test and the keyframe | F43 |
 | Coding-agent exercises | A test that no workflow, script, or check invokes an agent; the produced reference code and tests verified like any code (ADR 010) | F45 |
 | Harness lessons | Replay without credentials; the ADR 004 boundary tests on every allowlist | F16, F18, F20 |
@@ -3099,10 +5475,29 @@ violating input shown by a test; the one deliberate exception is named.
 | CI structure | Every check in exactly one group; one aggregate required check; permissions | F58 |
 | Local execution | `./scripts/verify.sh` unchanged in meaning; the setup page's required commands equal CI's; optional workflows "not verified" | F39 |
 
+Added by the change cycle `final-curriculum`:
+
+| Artifact | Check | Feature |
+|---|---|---|
+| Lesson input digests and the selection | The digest changes for every input kind and is absent for an unfollowable lesson; the selection equals the changed lessons, or every lesson when a lesson has no digest or a shared input changed; a run on `main` and a run without a base verify everything; the published site is the fully verified one | F61 |
+| The base of a pull request run | Published only after `verify` passed; retrieved read-only and accepted only when the run that produced it is a `push` run on `refs/heads/main` whose `verify` concluded with success, established from that run's recorded event, branch, and conclusion and never from the artifact's name or recency; its contents are data, nothing in it executed or read as configuration; complete and of the current format; an artifact of a pull request run or of a failed `main` run is rejected, and a missing or rejected base runs everything | F61 |
+| The context of a page on a run with a base | An inserted or retitled lesson, or a changed prerequisite or related link, updates the unchanged pages that show it; every page names the commit of the run; the pages that are not lessons are never restored | F61 |
+| The identity of the checks | A change to any input of the identity makes the run a full run that restores nothing from the base; no reproduction compares bytes with a result of the base; a base without an identity runs everything | F61 |
+| The lesson shards and the assembly of a full run | The lesson shards (shares of the lessons derived from their count, not the division of `tests/e2e/shards.json`) cover every lesson exactly once within the lesson-shard size and equal the workflow's; every comparison of bytes is on the machine that computed them; the assembled site's lesson pages equal the shards' reproduced pages; a failing shard or an incomplete assembly fails `verify`; every job of a full run within 35 minutes at the measured size and in the projection to 110 lessons | F113 |
+| The curriculum file and the `slot` field | Schema; 115 slots in the agreed counts; every slot known; no slot filled twice; a planned slot never linked or counted; the home page's planned list derived from it | F62 |
+| The prerequisite graph across strands | A prerequisite in a later strand is accepted (the T0 to T2 progression, a mechanics lesson on a Lean lesson); a later prerequisite in the same strand and a cycle are rejected; the course view orders by the slot order of the curriculum file; every previous address resolves | F62 |
+| Lesson previews | Exactly one per lesson, traced to its figure cell or the fallback, byte-stable, with alt text, within the path page's payload | F63 |
+| The Learning Path page | Equals front matter and the curriculum file; every lesson reachable without scripts through its course and each path; every previous address and graph node resolves; accessibility, keyboard, payload, and width checks | F64 |
+| Discovery environments and benchmark scores | The hidden truth unreachable through the allowlist; scores recomputed from frozen traces; baselines on the same environment and budget; no live call in CI | F65 and every path lesson |
+| Capstone and finite-element lessons | The credibility claim and figure labels present; the reference comparison and the refinement figures generated by the build; the required path within the page budget on the pinned stack; an optional tool's artifact carries a card | F76, F80, F87, F88 |
+| Generated motion clips | Reproduced by the build, labelled generated, within the on-demand budget, loaded after a user action | F97 |
+| Curriculum completion | Every slot classified as filled, gated, removed by a recorded decision, or outstanding, adding up to 115; "complete" only with no outstanding slot; gated labs listed apart with their dossiers; sampled reproductions from a fresh clone; the manual passes recorded | F112 |
+
 Manual gates that stay manual: independent physics and pedagogy reviews per
 lesson (through the existing review workflow); the human's approval of
-identity copy, of the sandbox profile, of any CI or ruleset change, and of
-every go decision on a dataset; a screen-reader pass per release.
+identity copy, of the sandbox profile, of any CI or ruleset change, of
+every go decision on a dataset, of each course's lesson list in its
+Issues, and of the curriculum file; a screen-reader pass per release.
 
 ## Not on the roadmap
 
@@ -3114,5 +5509,15 @@ or runtime LLM calls and any tutor or chat on the site, marketing surfaces
 of any kind, outreach campaigns, a repository transfer or a changed Pages
 URL, changed copyright or licence holders, bundled large or restricted
 datasets, and any claim that a proof establishes a measurement or that
-every experiment has an LLM or Lean counterpart. Adding any of them is a
+every experiment has an LLM or Lean counterpart. Since the change cycle
+`final-curriculum`, also: lessons that build sensor experiments, record
+audio, collect classroom or smartphone data, control instruments, or
+operate a physical laboratory; a mathematics curriculum, a
+physics-informed machine-learning track, or a generic AI or
+machine-learning curriculum; the nuclear and particle, plasma, and
+geophysics and climate expansions; a capstone presented as a calibrated
+digital twin, a fabricated or validated device, or an operational
+forecast, and any capstone beyond T11, EM9, and FL10; a heavyweight
+solver as a mandatory build or CI dependency; and decorative, stock,
+hand-copied, or externally hosted images. Adding any of them is a
 requirements change that returns to Project Grill.

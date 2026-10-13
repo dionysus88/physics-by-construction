@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed with the planning of the change cycle `physics-next-phase`;
-accepted when that planning is approved. Adds one deliberate exception to
+Accepted with the approval of the planning of the change cycle
+`physics-next-phase` (2026-10-09). Adds one deliberate exception to
 ADR 003's rule that every check is in `scripts/verify.conf`: the link check
 is not a verification check at all.
 

@@ -3,23 +3,30 @@
 Physics by Construction is a static educational website whose every code
 listing, figure, proof, and real-data result is produced or checked by the
 same pipeline that publishes it. This document describes the architecture as
-the MVP delivered it and the extensions the next phase adds, and the
-boundaries every feature must respect.
+the MVP delivered it, the extensions the next phase added, and what the
+final curriculum adds, and the boundaries every feature must respect.
 
 - Source of product scope: `docs/PROJECT_REQUIREMENTS.md` (approved
   2026-10-06, re-approved with the change cycle `physics-next-phase` on
-  2026-10-09). Where this document and the requirements disagree, the
-  requirements win and the disagreement is a defect in this document.
-- Decisions with a durable record: `docs/decisions/001` to `011`.
+  2026-10-09 and with the change cycle `final-curriculum` on 2026-10-12).
+  Where this document and the requirements disagree, the requirements win
+  and the disagreement is a defect in this document.
+- Decisions with a durable record: `docs/decisions/001` to `014`.
 - Planning base commits: `502ced0` for the bootstrap planning, when the
   repository held only the workflow template; `2f011ea` for the change cycle
   `physics-next-phase` (`docs/changes/physics-next-phase.md`), when F01 to
-  F12 were delivered and the site published eleven lessons in four strands.
+  F12 were delivered and the site published eleven lessons in four strands;
+  `0580b3a` for the change cycle `final-curriculum`
+  (`docs/changes/final-curriculum.md`), when the site published twenty-two
+  lessons in the same four strands and F58 had just been delivered.
   `docs/roadmap.md` orders the remaining work.
 
-Sections marked **(next phase)** describe what the change cycle adds. Each
-names the roadmap feature that builds it; until that feature is delivered the
-section is a target, not a description of the repository.
+Sections marked **(next phase)** describe what the change cycle
+`physics-next-phase` added; most of it is delivered, and the marker names
+the feature that built it. Sections marked **(final curriculum)** describe
+what the change cycle `final-curriculum` adds. Each names the roadmap
+feature that builds it; until that feature is delivered the section is a
+target, not a description of the repository.
 
 ## System context
 
@@ -106,8 +113,11 @@ site/                    Quarto project: the website source
   _filters/              Pandoc Lua filters of the lesson constructs
   index.qmd              Home page
   about.qmd              About: how the site is built, licences, identity (F57)
-  path/                  Learning path page (generated from lesson metadata)
-  lessons/<strand>/<nn>-<slug>/index.qmd   One directory per lesson
+  path/                  Learning path page (generated from lesson metadata and the curriculum file)
+  curriculum.yaml        The reference curriculum: courses, method paths, slots (final curriculum, F62, ADR 013)
+  lessons/<strand>/<nn>-<slug>/index.qmd   One directory per lesson; a strand per course
+                         (mechanics, thermodynamics, waves, electromagnetism, fluids, quantum,
+                         astrophysics, materials) and the three method strands (ADR 013)
   glossary.qmd           Glossary page, generated from glossary.yaml and the lessons (F42)
   glossary.yaml          Glossary entries; lessons reference them by term (F42)
   evidence.qmd           Evidence map: every claim with its evidence, generated from the lesson sources (F19)
@@ -116,6 +126,15 @@ site/                    Quarto project: the website source
   assets/                Styles, fonts, vendored Lean syntax definition
 src/pbc/                 Importable Python package with all reusable lesson code
   mechanics/             Models and integrators used by the mechanics course
+  thermodynamics/, waves/, electromagnetism/, fluids/, quantum/, astrophysics/, materials/
+                         Models of the other courses, one package each, added by the first
+                         feature of the course (final curriculum); fem/ for the small
+                         triangular finite-element solver shared by T10, T11, and MAT3 (F76),
+                         fluids/ for the conservative finite-volume fluxes shared by FL9, FL5,
+                         and FL10 (F73)
+  discovery/             Physics environments for law discovery with the hidden truth kept
+                         apart from the agent, non-LLM baselines, and the evaluation protocol
+                         (final curriculum, F65)
   verification/          Order estimation, invariant checks, the named checks of the validation
                          contract, and a gallery of deliberately faulty steppers (F46)
   abm/                   Agent-based models
@@ -146,7 +165,8 @@ lean/                    One Lake project for all proofs
   PhysicsByConstruction/<Course>/<Topic>.lean
   PhysicsByConstruction/Exercises/<Name>.lean   Checked solutions of the exercise stubs (F21, ADR 011)
   Exercises/<Name>.lean  Exercise stubs with `sorry`, outside the library glob (F21, ADR 011)
-scripts/verify.sh        Existing single verification entry point
+scripts/verify.sh        Existing single verification entry point; with a base, selects the
+                         lessons whose inputs changed (final curriculum, F61, ADR 014)
 scripts/verify.conf      Existing list of required checks; project checks are added here
 scripts/check-links.sh   On-demand link maintenance check, never a required check (next phase, F39, ADR 009)
 scripts/fetch-data.sh    Learner-side download of a full dataset by its card (F50)
@@ -155,7 +175,10 @@ scripts/*.sh, .agents/   Existing agentic development workflow
 .github/actions/prepare  The preparation of a runner, shared by the jobs of the workflow (F58)
 CITATION.cff             Citation metadata: actual authors, project URL, no DOI (next phase, F57)
 docs/                    Requirements, architecture, roadmap, ADRs, authoring guide,
-                         scientific validation contract (validation-contract.md, F46)
+                         scientific validation contract (validation-contract.md, F46),
+                         discovery evaluation protocol (discovery-protocol.md, final
+                         curriculum, F65; docs/evaluation.md is the review-criteria
+                         document of the development workflow and stays separate)
 pyproject.toml, uv.lock, .python-version   Python toolchain pins
 LICENSE, LICENSE-CONTENT MIT for code, CC BY 4.0 for lesson text and figures
 ```
@@ -165,16 +188,17 @@ LICENSE, LICENSE-CONTENT MIT for code, CC BY 4.0 for lesson text and figures
 | Component | Responsibility | Must not |
 |---|---|---|
 | **Lesson pages** (`site/lessons/`) | Explanation, assumptions, worked examples, exercises with solutions, the "Reproduce this" section; in the next phase also the physical question, outcomes, interpretation, limits, self-check, and optional "Go deeper" references. Display code, outputs, figures, proofs, and data only through the verified display forms below. | Contain hand-copied code, pasted figures, hand-typed results, image files, or a curated external link that is not in the reference register (the structural links helpers generate are named in I22). |
-| **Lesson code package** (`src/pbc/`) | All reusable simulation and analysis code: models, integrators, analysis helpers, data readers. Unit-tested. The code learners import when they reproduce a lesson and the functions agents are allowed to call. | Depend on the site generator, on network access, or on an LLM provider SDK outside `pbc.agents`. Fetch data from a portal. |
+| **Lesson code package** (`src/pbc/`) | All reusable simulation and analysis code: models, integrators, analysis helpers, data readers; in the final curriculum one package per course, the shared finite-element and finite-volume solvers, and the discovery environments. Unit-tested. The code learners import when they reproduce a lesson and the functions agents are allowed to call. | Depend on the site generator, on network access, or on an LLM provider SDK outside `pbc.agents`. Fetch data from a portal. Depend on an optional comparator (FEniCSx, Gmsh, REBOUND, QuTiP, GeoClaw, PySR, ...) in a required code path. |
+| **Curriculum file** (site/curriculum.yaml, final curriculum, ADR 013) | The reference curriculum as data: the eight courses, the four method paths, and every slot with its label, working title, home, position, and kind. Lessons fill slots through their `slot` field; the path page and the home page derive the planned structure from it and every published fact from front matter. | Hold anything front matter holds (titles of published lessons, descriptions, outcomes, prerequisites, difficulty, methods), or name a lesson that does not exist. |
 | **Lean project** (`lean/`) | All formal proofs, built with `lake build` against pinned Lean 4 and Mathlib. | Contain `sorry`, `admit`, or project-declared `axiom`s. Claim anything about the Python code or about the physical accuracy of a measurement. |
 | **Widgets** (`site/widgets/`) | Optional interactive visualizations that enhance a static figure already present in the page; in the next phase a small set of science-first components (F43). | Load code or data from another origin, load data before the reader asks for it, store or transmit learner data, compute physics the page did not verify, alter claimed observed values, or be required to read a lesson. |
 | **Dataset registry and samples** (`data/`, next phase, ADR 007) | One card per surveyed dataset with provenance, rights, artifact types, schema, units, cadence, uncertainty, checksums, and the feasibility decision; small rights-cleared samples under the size cap, each parsed by a test. | Hold a file above the cap, a restricted or unlicensed sample, a file without a card, or anything a build could regenerate. |
 | **Reference register** (`site/references.yaml`, next phase, ADR 009) | The selection evidence of every curated external link: concept, URL, author or publisher, section, pedagogical role, statement checked, alternatives, last-checked date, licence note. Pages render links from it. | Be required by the build to be reachable; hold a paywalled or sign-in-only core reference. |
 | **Site generator** (Quarto, ADR 001) | Executes lesson pages, renders equations to MathML, highlights code at build time, emits static HTML. | Add third-party runtime resources (CDN scripts, web fonts, analytics). |
 | **Content checks** (`tests/lessons`, `tests/integration`, `tests/e2e`) | Enforce the invariants in this document on lesson sources, dataset cards, the reference register, and the built site. | Depend on network access or credentials. |
-| **Verification entry point** (`scripts/verify.sh`, `scripts/verify.conf`, `scripts/verify-workflow.conf`) | Run every required check with one command. Every product check runs identically on a laptop and in CI (ADR 003); the workflow self-tests run in CI always and locally when a workflow file changed (ADR 005). | Have CI-only checks, or skip a product check locally. |
+| **Verification entry point** (`scripts/verify.sh`, `scripts/verify.conf`, `scripts/verify-workflow.conf`) | Run every required check with one command. Every product check runs identically on a laptop and in CI (ADR 003); the workflow self-tests run in CI always and locally when a workflow file changed (ADR 005). With a base (final curriculum, ADR 014) it computes the input digest of every lesson and the identity of the checks, names the lessons whose digest changed, and the lesson checks run for those; a lesson without a digest, a changed shared input, a check identity that differs from the base's, or no base makes the run a full run that executes every lesson. It assigns the lessons to the same-machine lesson shards of a full run and derives their number (ADR 014 decision 11, F113). | Have CI-only checks, or skip a product check locally. Select a lesson out by anything but its digest, reuse a check whose implementation changed, or run selectively on `main`. |
 | **Link maintenance check** (`scripts/check-links.sh`, next phase, ADR 009) | On demand, open every URL in the reference register and report what no longer resolves to its section. | Be listed in `scripts/verify.conf`, block a merge, or run in the build. |
-| **CI/CD workflow** (`.github/workflows/ci.yml`) | Install pinned toolchains, restore caches, run groups of the checks of `verify.conf` in parallel jobs through `./scripts/verify.sh --only`, behind one aggregate required check named `verify` (ADR 012), publish the verified artifact from `main`. | Rebuild the site in the deploy job, hold LLM keys, fetch a dataset, grant write permissions to pull request runs, or declare a check that is not in `verify.conf`. |
+| **CI/CD workflow** (`.github/workflows/ci.yml`) | Install pinned toolchains, restore caches, run groups of the checks of `verify.conf` in parallel jobs through `./scripts/verify.sh --only`, behind one aggregate required check named `verify` (ADR 012), publish the verified artifact from `main`. In the final curriculum (ADR 014): on a pull request, retrieve the base (the executed results, the digests, and the check identity of the latest successful run on `main`) read-only and pass it to the script; on `main`, run without a base and publish the base for the next pull requests after `verify` passed; run the group `build` in the lesson shards the script derives and assemble their results into the one built site (F113). | Rebuild the site in the deploy job, hold LLM keys, fetch a dataset, grant write permissions to pull request runs, declare a check that is not in `verify.conf`, or pass a base to a run on `main`. |
 | **Agent harness** (`src/pbc/agents/`, ADR 004) | Run an LLM-driven experiment loop over an explicit allowlist of simulation and analysis functions, live on the learner's machine or as a deterministic replay in CI. Serves the experiment, counterexample, and review agent lessons. | Execute model-generated code, shell commands, or network calls; print or log credentials. |
 | **Coding-agent exercises** (documented local workflows, next phase, ADR 010) | Let a learner drive a coding agent on their own machine, with their own account, under a sandbox profile, from an approved specification to tested code or a checked proof; the site shows the specification, the verified reference solution, the tests, and a review rubric. | Run in CI or in the build; replay agent-written code; show an agent transcript as verified. |
 | **Agentic development workflow** (`scripts/`, `.agents/`, existing) | Plan, implement, review, and triage repository changes. Development tooling, not part of the product. In the next phase its content agents may research references and log evidence (F12 extension) but never accept a link or rewrite a citation without human review. | Be confused with the "AI agents" lesson strands. |
@@ -192,20 +216,28 @@ facets:
 
 | Facet | What it is | Where it is defined |
 |---|---|---|
-| **Course** | A physics subject: `mechanics` now; later candidates such as waves and optics (F15). Every lesson, including an agent, proof, or measured-data lesson, belongs to exactly one primary course. The learning path page is organised by course. | `pbc.authoring.path` (`COURSES`); lesson front matter `lesson.course` (F37). |
+| **Course** | A physics subject. Eight courses with fixed identifiers (final curriculum, ADR 013): `mechanics`, `thermodynamics`, `waves`, `electromagnetism`, `fluids`, `quantum`, `astrophysics`, `materials`; `mechanics` is the one with lessons today. Every lesson, including an agent, proof, or measured-data lesson, belongs to exactly one primary course. The learning path page is organised by course. | `pbc.authoring.path` (`COURSES`, from the curriculum file after F62); lesson front matter `lesson.course` (F37). |
 | **Method** | A cross-cutting way of working: `simulation`, `llm-agents`, `abm`, `lean`, `measured-data`, `coding-agents`. A lesson lists the methods it uses; the path page shows one method path per method across courses, and lesson pages cross-link related lessons. | `pbc.authoring.path` (`METHODS`); `lesson.methods` and `lesson.related` (F37). |
-| **Strand** | The URL group and ordering key a lesson lives in: `mechanics`, `agents-llm`, `agents-abm`, `lean`, unchanged in identifier and address. Strand order and `lesson.order` still define the one linear learning path; previous and next links follow it. | `pbc.authoring.path` (`STRANDS`); `lesson.strand`, `lesson.order` (existing). |
+| **Strand** | The URL group and ordering key a lesson lives in: `mechanics`, `agents-llm`, `agents-abm`, `lean`, unchanged in identifier and address; in the final curriculum every course is a strand with the same identifier, created by the first feature that publishes a lesson of it (ADR 013). Strand order (the eight courses in curriculum order, then the three method strands) and `lesson.order` still define the one linear learning path; previous and next links follow it. That order is a reading route, not the dependency order: a prerequisite may live in a later strand (ADR 013 decision 8). | `pbc.authoring.path` (`STRANDS`); `lesson.strand`, `lesson.order` (existing). |
+| **Slot and method path** (final curriculum, ADR 013) | The place of a lesson in the reference curriculum: a label such as `M17`, `T10`, or `D13` that the curriculum file defines with a working title, a home (a course, or one of the four method paths with a position in it), and a kind (lesson, measured-data lab, applied capstone). A lesson fills at most one slot; a slot is filled by at most one lesson; a lesson without a slot (the Lean lessons beyond the baseline) is allowed. The four method paths (physics reasoning and scientific agents, scientific law discovery, physics agent benchmarking, autonomous scientific research) are a view over the lessons whose slots belong to them, never courses, strands, or pages. | site/curriculum.yaml; lesson front matter `lesson.slot` (F62). |
 
 Placement rule for new lessons: a lesson whose subject is the physics of a
-course, including a measured-data lab of that course, lives in the course's
-strand directory and takes the next free order there (a mechanics lesson
-after whatever mechanics lesson landed last, so F46 and F60 each take the
-next order when they land, not a fixed number); a lesson whose subject is
-the method itself lives in the method's strand directory (`agents-llm`,
-`agents-abm`, `lean`). A new strand directory is created only by a roadmap
-feature and only with a course (F15), and no lesson is placed by a method
-tag alone (ADR 008 decision 4). A strand's display title may change; its
-identifier and address never do.
+course, including a measured-data lab or an applied capstone of that
+course, lives in the course's strand directory and takes the next free
+order there (a mechanics lesson after whatever mechanics lesson landed
+last, so F46 and F60 each took the next order when they landed, not a fixed
+number); a lesson whose subject is the method itself, which includes the
+lessons of the four method paths, lives in the method's strand directory
+(`agents-llm`, `agents-abm`, `lean`). The strand directory of a course is
+created by the first roadmap feature that publishes a lesson of that course
+(ADR 013 decision 2, in place of ADR 008 decision 4), never by a
+placeholder; no lesson is placed by a method tag alone. A strand's display
+title may change; its identifier and address never do. A published lesson
+changes its primary course by front matter only when its course comes into
+existence: the gas lesson of F11 becomes a thermodynamics lesson (slot
+`T0`) under its `agents-abm` address with the first thermodynamics lessons
+(F70), which set `course` and `slot` together; before F70 the lesson has no
+slot and T0 is an unfilled planned slot (ADR 013 decision 6).
 
 Front matter, validated by a check. The exact schema is fixed by the feature
 that adds each field; "No other key is allowed" stays the rule between
@@ -217,13 +249,15 @@ features:
 | `title`, `description` | Lesson title and one-sentence description. | F02 |
 | `strand`, `order` | Position in the learning path. | F02 |
 | `difficulty` | Ordinal level on one site-wide scale (1 to 3). | F02 |
-| `prerequisites` | Lesson `id`s that must come earlier in the path, plus outside prerequisites written `Term: detail`, each term an entry of the glossary (F42). | F02 |
+| `prerequisites` | Lesson `id`s the reader should have read: each must exist, the graph must have no cycle, and a prerequisite in the same strand must come earlier in that strand; a prerequisite in another strand may come later in the linear order (final curriculum, ADR 013 decision 8; until F62, every prerequisite comes earlier in the linear order). Plus outside prerequisites written `Term: detail`, each term an entry of the glossary (F42). | F02 |
 | `lean-modules` | Lean modules this lesson displays, when any. | F08 |
 | `course` | The primary physics course. Required. | F37 |
 | `methods` | The methods the lesson uses, from the fixed vocabulary; at least one. | F37 |
 | `outcomes` | Two to five sentences of what the reader can do afterwards; rendered as "What you'll learn" and on the learning-path cards. | F37 |
 | `related` | Lesson `id`s the page cross-links as extensions (its agent, measured-data, or Lean counterparts); a related lesson must exist and must not already be among this lesson's prerequisites. Links are one-directional, written from the prerequisite side. | F37 |
 | `format` | The lesson format version (`1`: the MVP template; `2`: the progressive-depth template). The checks of a version apply to the lessons that declare it; the default flips to `2` once every lesson has migrated. | F28 |
+| `slot` | The label of the reference-curriculum slot the lesson fills, from the curriculum file; optional; unique across lessons; a slot homed in a course is filled only by a lesson of that course, a slot of a method path by a lesson of any course (final curriculum, ADR 013). | F62 |
+| `preview` | The label of the figure cell whose verified figure is the lesson's thumbnail on the learning path; optional; without it the path shows the repository-generated conceptual fallback (final curriculum). | F63 |
 
 Required sections of format 1, checked for presence: assumptions,
 explanation, code, worked examples, exercises (with on-page solutions) or an
@@ -267,6 +301,35 @@ are courses, solid arrows are prerequisites, dashed arrows are related
 lessons, each node links to its lesson, and a visually hidden list of
 sentences ("M4 requires M2") is the accessible alternative. It needs no
 browser script.
+
+**The reference curriculum and the learning path page (final curriculum,
+ADR 013, F62 to F64).** The curriculum file is the one declared source of
+what is planned: the eight courses, the four method paths, and the 115
+slots of the requirements' decision 23, each with a label, a working
+title, a home, and a kind. Everything published comes from front matter;
+the file adds only the structure around it. The path page is course-first:
+one panel per course that has a lesson, with its description, its real
+published-lesson count, a verified miniature, and its entry point; the
+course's lessons, in the order the curriculum file lists their slots (the
+teaching order) with the lessons without a slot after them (ADR 013
+decision 8), behind native progressive disclosure (`<details>` and
+`<summary>`), closed by default, as compact cards (title, one-sentence
+physical question, difficulty, a small verified thumbnail, chips for
+simulation, experimental data, and AI extensions) whose details (outcomes,
+prerequisites, what the reader builds, related extensions, the capstone
+classification, reproduce links) open on demand; the slots of the course
+that no lesson fills shown as planned, visibly distinguished, with label and
+working title only and no link; the four method paths, agent-based
+modelling, and Lean as a secondary view over the same pages; the
+prerequisite graph with its text alternative under an optional
+dependency-map disclosure, with course-scoped subsets allowed; optional
+filters by course, method, difficulty, and publication state that
+coordinate with the self-hosted search and need no script to reach any
+lesson. A thumbnail is the lesson's own verified figure named by `preview`,
+rendered small by the same executed cell during the build, or a conceptual
+SVG the repository generates; never a committed, copied, or external image.
+Every existing link, bookmark, and graph node address stays valid. A test
+compares the page with the front matter and the curriculum file.
 
 ### Verified display forms
 
@@ -318,8 +381,10 @@ pinning") with a fix hint.
    install-time dependency, I20), then `lake build` for every module in
    `lean/`. Fails on `sorry` and on project-declared axioms.
 4. **Lesson source checks**: front matter schema, required sections of the
-   lesson's format, prerequisite graph (references exist, no cycles,
-   prerequisites come earlier), "not verified" markers; in the next phase
+   lesson's format, prerequisite graph (references exist, no cycles, a
+   prerequisite in the same strand comes earlier in it; since F62 a
+   prerequisite in another strand may come later in the linear order, ADR
+   013 decision 8), "not verified" markers; in the next phase
    also course and method vocabulary, claim labels, figure status, reference
    keys that exist in the register, and register entries that a lesson uses.
 5. **Dataset checks (next phase, ADR 007)**: every file under `data/samples/`
@@ -358,6 +423,48 @@ pinning") with a fix hint.
    first.
 9. **Workflow self-tests**: the existing shell tests of the workflow scripts
    (ADR 005).
+
+**Selection by what changed (final curriculum, ADR 014, F61).** A run with
+a base, which CI gives only to pull requests, computes the input digest of
+every lesson (its directory, the `src/pbc` modules its cells import
+transitively, the samples and cards its cells use, the Lean modules it
+displays with the toolchain and manifest, the Python pins, and every shared
+file of the site project including `src/pbc/authoring`) and compares it
+with the digests of the base, the executed results and digests that the
+latest successful run on `main` published. Step 6 executes only the lessons
+whose digest changed and renders every page from the base's results
+otherwise; what a page shows of its context (the header
+with previous, next, prerequisites, related lessons, course, and slot; the
+commit named by "Reproduce this" and by the code and Lean excerpts) and
+every page that is not a lesson are produced by this build from the
+current front matter, curriculum file, and commit, never taken from the
+base (ADR 014 decision 9); step 8 starts its second build from the same
+restored state; the reproduction of step 7 runs for the changed lessons;
+the checks of one page run for every page whose built bytes, with the
+build commit normalised, differ from the base's; steps 1 to 5, the checks
+of the site as a whole, and the Lean build run in full. The base also
+records the identity of the checks (a digest over the verification script
+and its configuration, the build and determinism scripts, `tests/e2e`,
+`tests/support`, `tests/integration`, `tests/e2e/shards.json`, the
+Python pins, and the browser tooling, ADR 014 decision 10); when the current tree's
+identity differs, nothing of the base is reused and the run is a full run
+with the current checks. A full run executes every lesson: every run on
+`main` and every local run without the option, a run without a readable
+base of the current format, a run in which the inputs of a lesson cannot
+be followed (the lesson has no digest), a run in which a shared input
+changed (`src/pbc/authoring`, the templates, filters, assets, and shared
+site files, `_quarto.yml`, the Python pins, the Lean toolchain and
+manifest, or a `src/pbc` module whose importers cannot be followed), and
+a run whose check identity differs from the base's. A changed module of
+`src/pbc` selects every lesson that imports it, directly or through
+another module. A reproduction compares bytes only with a result this run
+computed on the machine of the comparison, so a lesson selected for
+reproduction is always a lesson this run executed. In CI a full run
+executes the lessons in same-machine lesson shards of at most 32 lessons
+(shares of the lessons the script derives from their count, distinct from
+the division of the built-site tests in `tests/e2e/shards.json`) and one
+assembly renders the one built site from their results (ADR 014 decision
+11, F113). No check is dropped.
 
 Not part of verification, by decision: the link maintenance check of the
 reference register (ADR 009) and any contact with an LLM provider, a coding
@@ -406,6 +513,92 @@ of a live provider, so tool results on the page are recomputed, not recorded
    the same commands CI uses. A contribution that follows reaches the
    repository only through the ordinary pull request path, where CI verifies
    the code and proofs; the agent's transcript is never an input to CI.
+
+### Applied capstone and numerical-engineering lesson (final curriculum)
+
+The three capstones (T11, thermal engineering of a hypothetical AI
+accelerator; EM9, adaptive phased-array beam steering; FL10, propagation of
+the 2025 Kamchatka tsunami) and the finite-element bridge T10 follow the
+lesson model with these additions (requirements decision 26, non-goals,
+"Content integrity"):
+
+1. **Progression from verified foundations.** T6 (finite differences) to
+   T10 (triangular finite elements, sparse linear systems, mesh refinement)
+   to T11; EM4 and EM6 with W2 to EM9; FL1 to FL4 to FL9 (conservative
+   finite volumes) to FL5 (shallow water) to FL10. Each capstone lists its
+   precursors among its prerequisites and reuses their code in `src/pbc`
+   (`pbc.fem`, the finite-volume fluxes of `pbc.fluids`, the array model of
+   `pbc.electromagnetism`): no second solver stack.
+2. **A bounded professional workflow on the page.** Physical requirements,
+   model and assumptions, discretisation or geometry where the physics
+   needs one, solve, verification by refinement (mesh, time step, or
+   parameter), comparison with an analytical, manufactured, independent, or
+   trusted numerical reference, uncertainty and limitations, and a
+   qualified decision or inference with its metrics. Every figure is
+   generated by verified code and labelled; a capstone output supports a
+   trade-off, never only an animation.
+3. **Credibility boundaries, stated on the page and typed as claims.** T11
+   is a digital-twin-style teaching prototype with hypothetical loads, not
+   a calibrated twin of vendor hardware; EM9 is an array-factor model, not
+   a full-wave or metasurface design and no fabricated device; FL10 is
+   teaching-scale, not for warning, inundation, or hazard forecasting, with
+   its simplified source, coastline, and ocean physics explicit. Solver
+   convergence, a colourful plot, and a digital-twin label are never
+   physical validation.
+4. **Required path on the pinned stack, heavy tools optional.** The
+   deterministic path of every lesson runs on NumPy and SciPy within the
+   30-second page budget, with small meshes, regionally cropped grids, and
+   bounded tests. FEniCSx, Gmsh, GeoClaw, Clawpack, Dedalus, REBOUND, QuTiP,
+   PySR, and the like are optional local comparators. What such a tool
+   produces for a page (a reference solution on a mesh, a reference
+   waveform) is a declared input under ADR 007: a card in `data/registry/`
+   with artifact type `modelled-reference`, the generating script and the
+   tool versions as its provenance, the project's own licence as its
+   rights, a checksum, and the sample caps; a figure of it is `simulated`
+   and names its card. Heavier reruns live outside `verify.conf` as
+   documented, "not verified" extend paths.
+5. **A historical-observation comparison is gated.** FL10's comparison with
+   DART station records and bathymetry passes the feasibility gate of F50
+   before publication, is a validation component of the capstone and not a
+   designated lab, and its measured, processed, modelled, and assumed
+   artifacts stay distinct on the page; until the gate grants it, the
+   capstone is published as clearly simulated with its benchmark suite.
+
+### Law-discovery environment and agent benchmark (final curriculum, F65)
+
+The lessons of the four method paths reuse the models of the courses
+through `pbc.discovery`:
+
+1. **An environment** wraps a model of `src/pbc` as a system with controls,
+   observations with units and noise, a budget, and a reset; the hidden
+   truth (the force law, the parameters, the invariant) is held by the
+   environment and never passed to the agent, the prompt, or the page's
+   displayed data. A test shows that the agent's tool allowlist cannot
+   reach it.
+2. **Baselines without an agent** (random probing, grid search, least
+   squares, symbolic regression or sparse identification implemented in
+   the locked environment or as an optional comparator with a recorded
+   reference artifact) run on the same environment with the same budget.
+3. **Evaluation** uses held-out initial conditions, worlds, or force models
+   that the agent never probed, several seeds where the result depends on
+   them, explicit scoring, and the model, prompt, and budget versioned with
+   the replay fixture (ADR 004). The page shows the recomputed score, the
+   frozen trace labelled as recorded, the baseline comparison, and the
+   failures; an agent's claim about a law is typed only as the recomputed
+   evidence supports.
+4. **Cost.** A benchmark that cannot run within the page budget keeps a
+   small deterministic replay on the page and its full run outside
+   `verify.conf`, documented and marked "not verified" where shown; model
+   costs and call counts are recorded from the run that produced the
+   fixture, never measured in CI.
+5. **The protocol's document.** The protocol (splits, held-out worlds,
+   budgets, seeds, scoring, the versioned prompt and model, the frozen
+   trace, the cost record) is written in docs/discovery-protocol.md
+   (a file F65 creates and registers in `docs/project-map.md`), a product
+   document beside `docs/validation-contract.md`; the authoring guide's
+   "Discovery lessons" section states how a lesson uses it. It is not
+   `docs/evaluation.md`, the review-criteria document of the development
+   workflow.
 
 ### Measured-data lab (next phase, ADR 007)
 
@@ -558,9 +751,9 @@ shown.
 | I3 | No analytics, tracking, cookies, or third-party runtime resources. All scripts, styles, fonts, and images are served from the site's own origin. Outbound links are the only contact with other sites. | Built-site check (F01). |
 | I4 | All text, code, equations, diagrams, proof explanations, and static figures are readable with JavaScript disabled. Interactives enhance a static fallback. | Built-site check with scripting disabled (F01, F07). |
 | I5 | Code, outputs, figures, proofs, data, and claims on the site come only through the verified display forms. Unverified material is visibly marked. | Lesson source check (F02, F28); ADR 002, 007, 009, 010. |
-| I6 | Generated artifacts are never committed. Figures, outputs, and rendered pages are regenerated by every build. The only committed inputs a build cannot regenerate are the replay fixture of an agent lesson and the dataset samples under `data/samples/`, each at its declared location, free of credentials and restricted material, and checked on every build (recorded tool results against recomputed ones; sample checksums against their cards). | Lesson source check and `.gitignore` (F02); replay (F09); dataset checks (F50); ADR 002, 004, 007. |
+| I6 | Generated artifacts are never committed. Figures, outputs, and rendered pages are regenerated by every build. The only committed inputs a build cannot regenerate are the replay fixture of an agent lesson and the dataset samples under `data/samples/`, including the reference artifacts of optional tools declared as `modelled-reference` (final curriculum), each at its declared location, free of credentials and restricted material, and checked on every build (recorded tool results against recomputed ones; sample checksums against their cards). An execution cache restored from a verified artifact of `main` is a build input of a pull request run, never a committed file (ADR 014). | Lesson source check and `.gitignore` (F02); replay (F09); dataset checks (F50); ADR 002, 004, 007, 014. |
 | I7 | A lesson whose code fails, whose proof does not compile, whose sample does not parse, or whose page does not build cannot be merged. | Required status check on `main` (F01, F58). |
-| I8 | CI and local verification run the same product checks through `./scripts/verify.sh`. CI also runs the workflow self-tests on every run; a local run includes them when a workflow file changed. Parallel CI jobs run groups of the same `verify.conf` checks behind one aggregate required check; every group runs in exactly one job. | Workflow calls only that script, and a test compares the declared groups with the groups the jobs run (F01, F58); ADR 003, ADR 005, ADR 012. |
+| I8 | CI and local verification run the same product checks through `./scripts/verify.sh`. CI also runs the workflow self-tests on every run; a local run includes them when a workflow file changed. Parallel CI jobs run groups of the same `verify.conf` checks behind one aggregate required check; every group runs in exactly one job, or, for the group that executes the lessons, in one lesson-shard matrix whose lesson shards the script derives (ADR 014 decision 11). | Workflow calls only that script, and a test compares the declared groups with the groups the jobs run (F01, F58); ADR 003, ADR 005, ADR 012. |
 | I9 | The deployed site is the artifact the CI run built for that `main` commit, and the one its jobs checked. The deploy job does not build, and runs only after the required check passed. | Workflow structure (F01); the comparison of the downloaded site with its recorded checksums (F58); ADR 003, ADR 012. |
 | I10 | Toolchains are pinned: Python version and `uv.lock`; Lean toolchain and Mathlib revision; Quarto version; the browser build through the Playwright version in `uv.lock`; GitHub Actions by commit SHA; any JavaScript dependency by version and checksum. | Lock files; frozen installs in verification (F01). |
 | I11 | Builds are deterministic: the same commit produces byte-identical output. | Determinism check (F01). |
@@ -578,6 +771,10 @@ shown.
 | I23 | One canonical project description and attribution, discreet, truthful, and consistent across home, footer, About, README, instructor packs, and citation metadata; no marketing surface, lead form, mailing list, analytics, or endorsement claim. | Built-site check that the canonical text appears where required and nowhere else (F57); review. |
 | I24 | Coding agents and Lean generation run only on the learner's machine under a sandbox profile with an allowlist, a budget, and human review. The site and CI verify the produced code, tests, and proofs and never run an agent. | Authoring rule and workflow test (F45); ADR 010. |
 | I25 | Every page stays within the payload budget below; heavy interactive data loads only on demand from the site's own origin. | Built-site check (F44, F43). |
+| I26 | A run on `main` executes and checks every lesson. A pull request run executes and checks every lesson whose inputs changed and every page whose bytes differ from the verified base; when the inputs of a lesson cannot be followed, when a shared input changed, or when the checks differ from those that produced the base, every lesson is executed; a page's navigation and the commit it names are never taken from the base; a comparison of bytes is made only against a result the run computed on the machine of the comparison; the selection is made by `./scripts/verify.sh` from content digests, never by a path filter in the workflow; no check is dropped; and every job of a full run fits the job timeout at 110 lessons (final curriculum). | The verification script and its tests; the workflow passes a base only on pull requests (F61); the lesson shards and the assembly (F113); ADR 014. |
+| I27 | The hidden truth of a discovery environment (the law, the parameters, the invariant, the held-out worlds) is never reachable by the agent's tools, the prompt, or the displayed data; a benchmark score shown on the site is recomputed by the build from a frozen trace, with its non-agent baselines (final curriculum). | Allowlist tests of `pbc.discovery` and replay (F65); ADR 004. |
+| I28 | The reference curriculum has one declared source, lessons fill its slots by front matter, no slot is filled twice, and a planned slot is never shown as published or counted; the site's course-first path and its method paths are views over the canonical lesson pages (final curriculum). | Lesson source check and path page test (F62, F64); ADR 013. |
+| I29 | An applied capstone is labelled with its credibility boundary (teaching prototype, array-factor model, teaching-scale propagation model), compares with a stated reference, shows refinement and failure modes, and says which aspects are physically validated; its required path runs on the pinned stack, and any heavy tool is optional and its output a declared `modelled-reference` input (final curriculum). | Lesson source check for the required claim and figure labels; review (F76, F80, F87, F88); ADR 007. |
 
 Boundaries for agents working in this repository, in addition to `AGENTS.md`:
 
@@ -614,7 +811,7 @@ There is no application runtime. The only executing code is:
 | Toolchain | Pin | Installed by |
 |---|---|---|
 | Python | `.python-version`, `pyproject.toml`, `uv.lock` | `uv` (frozen sync) |
-| Python packages | NumPy, SciPy, Matplotlib, PyYAML (lesson code and authoring); pytest, Ruff (quality); Jupyter kernel (execution); Playwright with an axe-core binding (built-site checks). LLM provider SDK only as an optional extra (F09). Readers for approved data formats are ordinary locked dependencies when a library is needed; F50 added none: the spike samples are read from the plain-text strain product and by a minimal in-repository Touchstone parser (`src/pbc/data/`). F51 kept that parser (Issue #66; recorded in `docs/datasets/npl-onwafer-sparameters.md`) and added no dependency. HDF5, MAT, or FITS readers are added only by a lab with a go decision that needs them. | `uv` |
+| Python packages | NumPy, SciPy, Matplotlib, PyYAML (lesson code and authoring); pytest, Ruff (quality); Jupyter kernel (execution); Playwright with an axe-core binding (built-site checks). LLM provider SDK only as an optional extra (F09). Readers for approved data formats are ordinary locked dependencies when a library is needed; F50 added none: the spike samples are read from the plain-text strain product and by a minimal in-repository Touchstone parser (`src/pbc/data/`). F51 kept that parser (Issue #66; recorded in `docs/datasets/npl-onwafer-sparameters.md`) and added no dependency. HDF5, MAT, or FITS readers are added only by a lab with a go decision that needs them. In the final curriculum a pure-Python discovery library (for example PySINDy) may be locked by F65 or F67 when its licence and weight are recorded; a reference solver that needs Julia, a compiler, or a system library (PySR, FEniCSx, Gmsh, GeoClaw, Dedalus, REBOUND, QuTiP) is never locked and never required. | `uv` |
 | Quarto | `quarto-cli` version in `uv.lock`; the package fetches the matching Quarto release | `uv` |
 | Lean 4 | `lean/lean-toolchain` | `elan` |
 | Mathlib | Tagged revision in the lakefile, resolved in `lean/lake-manifest.json` | `lake`, with the Mathlib cache |
@@ -682,7 +879,21 @@ One workflow, triggered by `pull_request` and by `push` to `main`:
   `./scripts/verify.sh --all --only <groups>`. `build` uploads the site
   artifact with the checksums of its files; the jobs after it download that
   site and compare it with the checksums before they check it.
-  Workflow-level permissions: `contents: read`.
+  Workflow-level permissions: `contents: read`. In the final curriculum
+  (ADR 014 decision 11, F113) `build` is a matrix of same-machine lesson
+  shards (shares of the lessons; the `e2e-pages` jobs keep their own
+  division of the built-site tests in `tests/e2e/shards.json`), each
+  executing at most 32 lessons twice and reproducing them against its
+  own render, and an `assemble` job after the lesson shards renders every
+  page from their executed results without executing a scientific cell
+  of any lesson (it runs only the context cells of ADR 014 decision 9,
+  if F61 keeps them as executed cells, and its runner holds the Lean
+  build record they read), checks
+  the determinism of that render on its own machine, requires that each
+  lesson page equals the page its lesson shard reproduced, and uploads
+  the one site; the `e2e` jobs then wait for `assemble`. At 110 lessons
+  that is four lesson shards; the script derives the number from the
+  lesson count and a test keeps the workflow's lesson shards equal to it.
 - **verify** (always, also after a failure): passes only when every job
   above succeeded.
 - **deploy job** (only `push` to `main`, after verify succeeds): publish the
@@ -691,15 +902,31 @@ One workflow, triggered by `pull_request` and by `push` to `main`:
 
 `verify` is the one required status check in the `main` ruleset. No path
 filters: every pull request runs every check, and every group of checks
-runs in exactly one job.
+runs in exactly one job. In the final curriculum (ADR 014, F61) a pull
+request run retrieves the base published by the latest successful run on
+`main` (the executed results of every lesson, their input digests, and the
+identity of the checks) with a read-only permission on earlier runs. It
+accepts the base only when the run that produced it is a `push` run on
+`refs/heads/main` whose `verify` concluded with success, established from
+that run's recorded event, branch, and conclusion and never from the
+artifact's name or recency, since pull request runs upload artifacts too;
+the base's contents are data, and nothing in it is executed or read as
+configuration. The lesson checks of the `build` and `e2e` jobs run on the lessons and
+pages the verification script selects from it; when the checks themselves
+changed, when a shared input changed, or when a lesson's inputs cannot be
+followed, the pull request is a full run. A run on `main` runs without a
+base, verifies everything, and publishes the next base after `verify`
+passed.
 
 Budget (required by the requirements; rationale in ADR 003):
 
 | Measure | Budget |
 |---|---|
-| Typical pull request, warm caches, wall clock | 12 minutes or less |
-| Cold caches (for example after a Mathlib bump) | 25 minutes or less |
-| Job timeout | 45 minutes per job (30 in ADR 003; raised by the owner on 2026-10-11, and kept by ADR 012, decision 9: the longest job measured takes 20 minutes and grows with every lesson) |
+| Typical pull request, warm caches, wall clock | 12 minutes or less, with a base (ADR 014); the acceptance criterion of F61 at the lesson count of its day and projected to 110 lessons |
+| Cold caches (for example after a Mathlib bump) | 25 minutes or less, for a pull request |
+| Run on `main`, or any full run | Verifies everything; grows with the curriculum; no wall-clock budget, but every job of it fits the job timeout at 110 lessons (ADR 014, decision 7) |
+| One job of a full run | 35 minutes with cold caches, leaving 10 minutes of the timeout for a runner slower than any measured; a shard of the build holds at most 32 lessons, about 27 minutes at 41 seconds per lesson over about 5 minutes of fixed cost, both derived from the slowest run F58 measured (the cold `build` job, 20 min 27 s at twenty-two lessons), so about 8 minutes under the budget on that runner; the shard size is confirmed or lowered by the per-lesson cost F61 and F113 measure on the slowest runner of their runs (ADR 014, decisions 7 and 11; F113) |
+| Job timeout | 45 minutes per job (30 in ADR 003; raised by the owner on 2026-10-11, kept by ADR 012, decision 9, and by ADR 014, decision 7, which bounds a full run with shards instead of raising it) |
 | Unit tests | 2 minutes or less |
 | Lean build after the Mathlib cache is in place | 3 minutes or less |
 | One lesson page, executed | 30 seconds or less |
@@ -718,10 +945,19 @@ executed three times in a run, and the comparisons of bytes with the built
 site have to run on the machine of the build. The project owner decided on
 2026-10-12 that the 12 minutes become an acceptance criterion of the feature
 that makes verification proportional to what a pull request changes (ADR
-012, decision 8). Until then every page adds to the executed and checked
-time, and the per-check budgets stay the guard. Dropping a check, adding
-path filters, or moving a check to a schedule stays unavailable without a
-new ADR.
+012, decision 8): that feature is F61, with ADR 014 as its decision record,
+and it precedes the first block of new lessons. Until then every page adds
+to the executed and checked time, and the per-check budgets stay the guard.
+The `build` job of a full run, which holds the three executions of every
+lesson, took 20 min 27 s with cold caches at twenty-two lessons; at the
+measured cost it leaves the full-run budget of 35 minutes at about 40
+lessons and would need about 80 minutes at 110. F113 splits it into
+same-machine lesson shards before the lesson count reaches the lesson-shard
+size of 32;
+F61 records the projection and the count.
+Dropping a check, adding path filters, or moving a check to a schedule
+stays unavailable: ADR 014 selects by content, in the verification script,
+and fails safe.
 
 Per-page and per-lesson budgets that the next phase adds:
 
@@ -731,7 +967,8 @@ Per-page and per-lesson budgets that the next phase adds:
 | Committed dataset sample | 2 MB per file, 8 MB per dataset, 32 MB for all of `data/samples/` | Dataset check (F50, ADR 007) |
 | Initial payload of a page (HTML, CSS, fonts, static figures, embedded widget data), measured for the page opened on its own, so shared files count for every page | 3 MB transferred | Built-site check (F44) |
 | Search index (`search.json`), fetched when a reader searches | 1 MB | Built-site check (F41) |
-| Optional data a page loads on demand (animation frames, field data) | 3 MB per page, from the site's own origin, only after a user action, never required to read the page | Built-site check (F43) |
+| Optional data a page loads on demand (animation frames, field data, the short motion clips of the video-reasoning lesson) | 3 MB per page, from the site's own origin, only after a user action, never required to read the page | Built-site check (F43) |
+| Reference artifact of an optional tool (a mesh, a reference solution, a reference waveform), as a `modelled-reference` sample | The sample caps above | Dataset check (F50, ADR 007) |
 | Everything a page can load | 5 MB | Built-site check (F43) |
 
 ### Deployment and recovery
@@ -751,6 +988,7 @@ Per-page and per-lesson budgets that the next phase adds:
 | Figures, outputs, rendered site | Build output only, never committed | Replaced by each build. |
 | Agent replay fixtures (recorded model messages and the expected tool results, no credentials) | Git repository, at the declared fixture location in the lesson directory (ADR 002) | Git history. Verification inputs: re-recorded when the replay fails. |
 | Dataset samples (small, version-pinned, rights-cleared, next phase) | Git repository, `data/samples/<dataset>/`, with a card in `data/registry/` (ADR 007) | Git history. Verification inputs: replaced only with a new card version. |
+| The base of selective verification: the executed results and input digests of every lesson, and the identity of the checks that produced them (final curriculum, ADR 014) | Artifact of the latest successful run on `main`, published after `verify` passed; never committed | The artifact retention of GitHub Actions; a pull request without a base, or whose checks differ from the base's, runs in full. |
 | Full datasets | The portal of record, never the repository | Not retained here; the card pins version, URL, and checksum. |
 | Published site | GitHub Pages artifact | Replaced by each deployment. |
 | Learner state (F13) | Learner's browser local storage | Until the learner clears it. No recovery. |
@@ -801,7 +1039,7 @@ Choices the requirements left to planning, and where they are settled:
 | Generated artifacts: regenerate or commit | Regenerate on every build, never commit. Agent replay fixtures and dataset samples are committed verification inputs, checked on every build | ADR 002, 004, 007 |
 | CI time budget | 12 minutes typical for the wall clock of a run, 45 minute timeout per job (30 in ADR 003, raised on 2026-10-11); parallel jobs behind one aggregate check | This document; ADR 003; ADR 012; F58 |
 | Python packages | NumPy, SciPy, Matplotlib, PyYAML, pytest, Ruff; minimal data readers of F50 in `pbc.data` (no new dependency), extended by F51 | Toolchains table |
-| Exact mechanics lesson list | Eight lessons | `docs/roadmap.md` |
+| Exact mechanics lesson list | Eight lessons in the MVP; 17 slots in the reference curriculum (final curriculum) | `docs/roadmap.md`, "MVP lesson list" and "Slot mapping" |
 | Agent-based-modelling lesson in the MVP or after (unresolved question 4) | Delivered as F11 and included in the first release | `docs/roadmap.md`, `docs/release-readiness.md` |
 | How agent lessons are verified without credentials in CI | Deterministic replay | ADR 004 |
 | Default LLM provider (unresolved question 1) | OpenAI is the default live provider (`PROVIDER` in `src/pbc/agents/providers.py`), as an optional dependency behind the client interface | F09; ADR 004 |
@@ -812,6 +1050,11 @@ Choices the requirements left to planning, and where they are settled:
 | Link checking | A non-blocking maintenance check run on demand, outside `verify.conf` | ADR 009 |
 | Citation metadata | `CITATION.cff` with the actual authors and the project URL, no DOI until a release policy exists | F57 |
 | Courses, methods, and the existing strands | Course and method facets in front matter; strand identifiers and URLs unchanged | ADR 008 |
+| Eight courses, their identifiers, and where their lessons live (decisions 23 and 24) | Eight fixed course identifiers; every course a strand with the same identifier, created by its first lesson feature; the reference curriculum as declared data that lessons fill by `slot`; F15 reconciled as dropped | ADR 013; F62 |
+| The four method paths (decision 25) | A facet derived from the slot: a view over the canonical pages, no course, strand, or page of its own | ADR 013; F62, F64 |
+| Planned lessons without placeholder pages (recommended default of the change cycle) | Unfilled slots of the curriculum file, shown as planned with label and working title only, never linked or counted | ADR 013; F62, F64 |
+| Verification that scales with the curriculum (decision 30) | Content digests per lesson against the verified result of `main`, restored and never committed; the navigation and the commit of a page regenerated on every build; the checks versioned with the base; an unfollowable lesson, a shared input, or changed checks make a full run; `main` runs everything, in same-machine lesson shards that fit the timeout at 110 lessons; selection in the verification script; Lean in full | ADR 014; F61, F113 |
+| Heavy solvers and discovery tools (candidates of the requirements) | Optional comparators; their outputs are declared `modelled-reference` inputs under ADR 007; the required path runs on the pinned stack | This document; ADR 007 |
 | Coding-agent exercises | Learner-operated local workflows under a sandbox profile; the site verifies only the produced code and proofs | ADR 010 |
 | First measured-data lab | Decided by the feasibility gate of F50; the planner's recommendation is the gravitational-wave strain lab (F60) with the microwave S-parameter lab (F54) as the compact fallback once F15 has given it a course, because every lesson needs a primary course (ADR 008, I18) | `docs/roadmap.md`, "Experimental data choice" |
 
@@ -821,8 +1064,9 @@ that must settle them:
 | Unresolved question | Settled when | Effect on the architecture |
 |---|---|---|
 | 5. JIDAI B.V. as a named copyright holder | Out of scope; only with a legal review recorded as its own decision | None: I19 holds. |
-| 6. Second course topic | F15, by the human, with the lesson list | A second course directory and the course facet of ADR 008. |
+| 6. Second course topic | Settled by the change cycle `final-curriculum`: the eight courses and their slots are named by the human (requirements decisions 23 and 24, ADR 013); the human still approves each course's concrete lesson list in its Issues | The eight course strands and the curriculum file (F62). |
 | 7. Release citation and DOI | When a release policy exists | `CITATION.cff` gains a DOI then (F57 leaves the field out). |
+| 8. Lean build under selective verification | By the human, with or after F61 | None until then: ADR 014 decision 8 keeps the Lean build in full on every pull request. |
 
 ## Assumptions and risks
 
@@ -853,10 +1097,56 @@ that must settle them:
 - **Automated accessibility checks cover only part of WCAG 2.1 AA.** A manual
   audit is part of each release gate.
 - **Page time grows with content.** Every lesson adds up to 30 seconds of
-  execution and its share of the built-site checks; F58 is the structural
-  answer and the per-check budgets stay the guard. A measured-data lesson
-  must choose its sample size for the 30 second budget, which may mean a
-  coarser or shorter sample than the full dataset.
+  execution and its share of the built-site checks; F58 ran the checks in
+  parallel, and F61 (ADR 014) makes a pull request pay only for what it
+  changed. A measured-data lesson must choose its sample size for the 30
+  second budget, which may mean a coarser or shorter sample than the full
+  dataset; a finite-element or tsunami lesson chooses its mesh and grid for
+  it.
+- **Rendering without execution still costs time.** With a base, Quarto
+  renders every page even when it executes few; at 110 lessons the render
+  alone may approach the budget. F61 measures the per-page render cost and
+  records it; if the render is the bottleneck, the next response is a
+  decision of its own, not a dropped check.
+- **The input digest can miss an input.** The digest follows names and
+  files, not behaviour; its fail-safe makes a run with an unfollowable
+  lesson a full run, a test shows that every input kind of ADR 014
+  decision 1 changes the digest, and `main` always runs in full, so a
+  missed input delays a failure to the merge at worst and never to the
+  published site.
+- **A full run outgrows the job timeout.** The job that executes every
+  lesson needs about 80 minutes at 110 lessons against a 45-minute
+  timeout, and a run on `main` that times out publishes nothing. ADR 014
+  decision 11 splits it into same-machine lesson shards of at most 32
+  lessons with one assembly (F113), due before the lesson count reaches that
+  size; F61 records the projection. If the hosted runners show that a
+  page rendered from the same executed results differs between machines,
+  the assembly's comparison fails the run rather than publishing a page
+  that was not reproduced, and the fallback is an explicit revision of
+  the timeout, never a tolerance.
+- **The base expires or breaks.** GitHub artifacts are retained for a
+  limited time, and a change to the digest format invalidates older bases;
+  both cases run in full, which is slow, never wrong.
+- **A cached page could show stale context.** The header and the
+  provenance of a page depend on other lessons and on the commit, which no
+  lesson digest covers; ADR 014 decision 9 keeps them out of the store and
+  F61 tests that an inserted or retitled lesson updates the unchanged
+  pages around it and that every page names the commit of the run.
+- **A changed check could be skipped on unchanged pages.** The check
+  identity of ADR 014 decision 10 makes the run a full run when anything
+  of the checks changed, so that no reproduction compares bytes with a
+  result another runner computed; the cost is a full run on the pull
+  requests that change the checks, the same as for a shared-code change.
+- **Optional tools drift.** A reference artifact produced by FEniCSx, GeoClaw,
+  or REBOUND is pinned by its card (script, tool versions, checksum); a
+  newer tool version is a new card, and the lesson's required path never
+  depends on the tool.
+- **Rights of clips, DART records, bathymetry, and benchmark assets.** The
+  video-reasoning lesson uses clips the repository generates from verified
+  simulations or clips with recorded rights; the tsunami comparison and
+  every new lab pass the F50 gate; external benchmark assets are not
+  embedded before their licences and assumptions are checked. No approval
+  is assumed by this document.
 - **Rights of real data.** Four of the five shortlisted records (GWOSC
   GW150914, Aalborg wave flume, NPL S-parameters, cylinder-wake PIV) state
   CC BY 4.0 on their record pages as read on 2026-10-09. For the Fraunhofer
@@ -879,9 +1169,43 @@ that must settle them:
 
 ## Repository state compared with the requirements
 
-Checked at the change-cycle base commit `2f011ea` against the re-approved
-requirements. No material conflict was found. The following gaps are the
-work of the roadmap features named:
+Checked at the change-cycle base commit `0580b3a` (2026-10-12) against the
+requirements re-approved with `final-curriculum`. No material conflict was
+found; the reconciliation of lessons, features, and ADRs is in
+`docs/roadmap.md`, "State at the change cycle `final-curriculum`". The
+following gaps are the work of the roadmap features named:
+
+- Twenty-two lessons are published, all with `course: mechanics`, in the
+  four original strands; eighteen fill a slot of the reference curriculum
+  (seventeen take their `slot` in F62, the gas lesson T0 in F70 with its
+  course) and four are Lean lessons beyond its baseline. The course vocabulary has
+  one course, there is no curriculum file, no `slot` field, no method-path
+  view, and the home page's planned list is a hand-kept tuple in
+  `pbc.authoring.home` that still names F60 (delivered) and F15 (dropped)
+  (F62).
+- The learning path page is one page of long cards per course and per
+  method with the whole graph shown; there are no course panels, no
+  disclosures, no thumbnails, and no planned slots (F63, F64).
+- Verification executes every lesson three times on every pull request; a
+  run takes 18 to 25 minutes with twenty-two lessons, against a budget of
+  12 minutes, and there is no base, no digest, and `freeze: false` (F61).
+  The three executions of every lesson are in one `build` job that would
+  need about 80 minutes at 110 lessons against its 45-minute timeout
+  (F113).
+- `src/pbc` has packages for mechanics, agent-based modelling, the agent
+  harness, data, verification, and authoring; there is no package for any
+  other course, no finite-element or finite-volume code, and no discovery
+  environment (the course features, F65, F73, F76).
+- Three datasets have a go decision (GW150914 strain, used by F60; the
+  Aalborg wave flume and the NPL S-parameters, unused because their
+  courses do not exist); twenty-two cards are `survey-only`; no card exists
+  for a pendulum, heat-transfer, Brownian-motion, RLC, spectroscopy,
+  rotation-curve, X-ray-diffraction, stress-strain, turbulence, or
+  Kamchatka DART candidate (the lab features and F88, each through the F50
+  gate).
+
+The gaps recorded at the previous base commit `2f011ea`, kept for the
+history of the next phase:
 
 - The home page names the three activities "Construct, Investigate, Verify"
   and shows published versus planned content honestly (F25, delivered).
