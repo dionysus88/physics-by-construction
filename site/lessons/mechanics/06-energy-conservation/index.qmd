@@ -10,6 +10,7 @@ lesson:
   order: 6
   difficulty: 2
   course: mechanics
+  slot: M6
   methods: [simulation]
   outcomes:
     - Compute work and potential energy along a simulated motion

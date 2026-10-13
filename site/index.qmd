@@ -43,8 +43,8 @@ print(home.example(CONSTRUCT_EXAMPLE) + ", which compares four ways of stepping 
 ### Investigate {#investigate}
 
 The aim is to work from real measurements: quantify uncertainty, fit models,
-and design experiments. No lesson on measured data is published yet; the
-planned labs are listed below. What is published today is an experiment on a
+and design experiments. The planned courses and method paths, with their
+labs, are listed below. What is published today is an experiment on a
 simulation, run by an AI agent on your own machine with your own API key.
 Published example:
 

@@ -116,13 +116,17 @@ def test_lesson_made_from_the_template_builds_with_every_construct(
     header = (built / page).read_text().split('class="lesson-header"')[1]
     # The header places it in its course, after the lessons the course has.
     in_course = len(PATH.in_course(PATH.courses[0]))
-    assert f"lesson {len(MECHANICS) + 1} of {in_course + 1}" in header
+    # It has no slot, so the course view puts it after every lesson with one
+    # and, among those without, by the linear order.
+    courses = PATH.in_course(PATH.courses[0])
+    before = sum(1 for item in courses if item.slot or item.strand == STRANDS[0].id)
+    assert f"lesson {before + 1} of {in_course + 1}" in header
     assert "Replace: what the reader can do after the lesson" in header
     previous = Path(MECHANICS[-1].page).parent.name
     assert f'href="../{previous}/index.html"' in header
     # Each entry of the path page links the lesson, its prerequisites, and its
-    # related lessons, in the course and in every method path the lesson is
-    # listed under.
+    # related lessons, in the course, in its method path, and in every method
+    # the lesson is listed under.
     path_page = (built / "path/index.html").read_text()
     new = Lesson(
         **{
@@ -130,11 +134,18 @@ def test_lesson_made_from_the_template_builds_with_every_construct(
             "strand": "mechanics",
             "prerequisites": (),
             "related": (),
+            "slot": "",
         }
     )
     mechanics_ids = {lesson.id for lesson in MECHANICS}
+
+    def path_slot(lesson: Lesson) -> bool:
+        # A lesson of a method path is also listed under its path.
+        slot = PATH.slot_of(lesson)
+        return bool(slot and slot.path)
+
     links = sum(
-        (1 + len(lesson.methods))
+        (1 + len(lesson.methods) + path_slot(lesson))
         * (
             (lesson.strand == "mechanics")
             + sum(p in mechanics_ids for p in lesson.prerequisites)

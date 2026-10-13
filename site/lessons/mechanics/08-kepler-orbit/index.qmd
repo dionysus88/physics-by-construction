@@ -11,6 +11,7 @@ lesson:
   order: 8
   difficulty: 3
   course: mechanics
+  slot: M8
   methods: [simulation]
   outcomes:
     - Reduce two bodies under gravity to one

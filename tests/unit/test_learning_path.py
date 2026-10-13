@@ -75,7 +75,16 @@ LESSONS = [PROOF, ENERGY, KINEMATICS, NEWTON]
 
 
 def test_the_courses_and_methods_are_defined_once():
-    assert [course.id for course in COURSES] == ["mechanics"]
+    assert [course.id for course in COURSES] == [
+        "mechanics",
+        "thermodynamics",
+        "waves",
+        "electromagnetism",
+        "fluids",
+        "quantum",
+        "astrophysics",
+        "materials",
+    ]
     assert [method.id for method in METHODS] == [
         "simulation",
         "llm-agents",
@@ -89,7 +98,7 @@ def test_the_courses_and_methods_are_defined_once():
 
 def test_the_strands_and_the_scale_are_defined_once_in_order():
     assert [strand.id for strand in STRANDS] == [
-        "mechanics",
+        *(course.id for course in COURSES),
         "agents-llm",
         "agents-abm",
         "lean",
@@ -236,11 +245,12 @@ def test_unknown_prerequisite_is_reported():
 
 def test_prerequisite_later_in_the_path_is_reported():
     # Nothing depends on the first lesson, so this is not a cycle.
-    early = lesson("kinematics", prerequisites=("proof",))
+    early = lesson("kinematics", prerequisites=("newton",))
     second = lesson("newton", order=2)
 
     assert messages([early, second, ENERGY, PROOF]) == [
-        f"{early.page}: prerequisite 'proof' does not come earlier in the learning path"
+        f"{early.page}: prerequisite 'newton' does not come earlier in its strand"
+        " 'mechanics'"
     ]
 
 
@@ -253,6 +263,29 @@ def test_cycle_is_reported_once_with_its_members():
         " -> kinematics"
     ) in found
     assert sum("cycle" in message for message in found) == 1
+
+
+def test_cycle_reachable_from_a_lesson_outside_it_is_reported():
+    first = lesson("kinematics", prerequisites=("newton",))
+    newton = lesson("newton", order=2, prerequisites=("energy",))
+    energy = lesson("energy", order=3, prerequisites=("newton",))
+    found = messages([first, newton, energy, PROOF])
+
+    assert any(
+        message.endswith("prerequisites form a cycle: newton -> energy -> newton")
+        for message in found
+    )
+    assert sum("cycle" in message for message in found) == 1
+
+
+def test_cycles_sharing_lessons_are_all_reported():
+    first = lesson("kinematics", prerequisites=("newton", "energy"))
+    newton = lesson("newton", order=2, prerequisites=("kinematics",))
+    energy = lesson("energy", order=3, prerequisites=("newton", "kinematics"))
+    found = messages([first, newton, energy, PROOF])
+
+    assert any("kinematics -> newton -> kinematics" in m for m in found)
+    assert any("kinematics -> energy -> kinematics" in m for m in found)
 
 
 def test_gap_in_the_order_of_a_strand_is_reported():
@@ -383,7 +416,7 @@ def test_header_shows_course_methods_outcomes_prerequisites_and_neighbours(
     shown = LessonHeader(path, NEWTON)._repr_markdown_()
 
     assert (
-        "Course\n:   [Mechanics](../../../path/index.html#course-mechanics),"
+        "Course\n:   [Classical mechanics](../../../path/index.html#course-mechanics),"
         " lesson 2 of 4" in shown
     )
     assert (
@@ -490,7 +523,7 @@ def test_overview_lists_courses_with_core_lessons_and_extensions_then_methods(
         "## Difficulty {#difficulty}",
         "## Order {#order}",
         "## Courses {#courses}",
-        "### Mechanics {#course-mechanics}",
+        "### Classical mechanics {#course-mechanics}",
         "#### Core lessons {#course-mechanics-core}",
         "#### Extensions {#course-mechanics-extensions}",
         "## Methods {#methods}",
@@ -554,7 +587,7 @@ def test_overview_explains_what_previous_and_next_mean(path: LearningPath):
     section = section.split("## Courses")[0]
 
     assert "Previous and next" in section
-    assert "Mechanics, then Formal proofs" in section
+    assert "Classical mechanics, then Formal proofs" in section
     assert "course order" in section
     assert "prerequisites" in section
 

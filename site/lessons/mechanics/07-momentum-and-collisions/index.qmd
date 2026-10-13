@@ -11,6 +11,7 @@ lesson:
   order: 7
   difficulty: 2
   course: mechanics
+  slot: M7
   methods: [simulation]
   outcomes:
     - Write pairwise forces on the stepping interface

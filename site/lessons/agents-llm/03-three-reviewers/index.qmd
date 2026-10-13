@@ -12,6 +12,7 @@ lesson:
   order: 3
   difficulty: 3
   course: mechanics
+  slot: AI4
   methods: [simulation, llm-agents]
   outcomes:
     - Give each of several review agents its own bounded list of checks over the same code

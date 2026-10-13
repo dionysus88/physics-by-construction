@@ -2,16 +2,16 @@
 
 What the home page says is published comes from the lesson front matter, read
 with the same code as the learning path, so a number or a title on the home
-page cannot differ from the lessons. What is planned is the short list below:
-every item names its roadmap ID (``docs/roadmap.md``), is labelled planned,
-and is never a link. ``tests/unit/test_home.py`` checks the list against the
-roadmap.
+page cannot differ from the lessons. What is planned comes from the
+curriculum file (``site/curriculum.yaml``, ADR 013): the courses and the
+method paths of the reference curriculum with their published and planned
+counts. A planned item is labelled planned and is never a link.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from pbc.authoring.path import LearningPath, _href, _link
+from pbc.authoring.path import COURSES, LearningPath, _href, _link
 from pbc.authoring.website import PAGE_FILE, project_root
 
 HOME_PAGE = PAGE_FILE
@@ -20,28 +20,6 @@ HOME_PAGE = PAGE_FILE
 CONSTRUCT_EXAMPLE = "numerical-integrators"
 INVESTIGATE_EXAMPLE = "agent-experiment"
 VERIFY_EXAMPLE = "proving-what-the-simulation-showed"
-
-
-@dataclass(frozen=True)
-class Planned:
-    roadmap_id: str
-    title: str
-    kind: str
-
-
-# Planned, not published. No date is promised. Keep to the items of the
-# roadmap; remove an item when its feature is delivered.
-PLANNED = (
-    Planned(
-        "F60",
-        "Gravitational-wave strain lab: from Kepler's orbit to a chirp",
-        "measured-data lab",
-    ),
-    Planned("F54", "Microwave S-parameter lab", "measured-data lab"),
-    Planned("F53", "Flow measurement lab with PIV fields", "measured-data lab"),
-    Planned("F52", "Optical diffraction lab", "measured-data lab"),
-    Planned("F15", "A second course beyond mechanics", "further course"),
-)
 
 
 def _count(number: int, noun: str) -> str:
@@ -89,18 +67,35 @@ class HomeContent:
             " for every lesson with its difficulty and prerequisites, and"
             " [by method](" + _href(self.page, "path/index.qmd", "methods") + ")"
             " for the paths of simulation, LLM agents, agent-based modelling,"
-            " and formal proofs."
+            " and formal proofs, or [by method path]("
+            + _href(self.page, "path/index.qmd", "paths")
+            + ") for the four paths of the reference curriculum."
         )
         return "\n".join(lines)
 
     def planned(self) -> str:
+        path = self.path
+        curriculum = path.curriculum
         lines = [
-            "Planned means not published. No date is promised. The IDs are"
-            " those of the project roadmap in the repository.",
+            "Planned means not published. No date is promised. The reference"
+            f" curriculum plans {_count(len(curriculum.slots), 'lesson')}: those"
+            " of eight courses and four method paths, and one proof. The"
+            " published count of an item is the lessons that exist; a planned"
+            " lesson has no page and is not part of it.",
             "",
         ]
-        for item in PLANNED:
-            lines.append(f"- Planned, {item.roadmap_id}: {item.title} ({item.kind}).")
+        for course in COURSES:
+            published = _count(len(path.in_course(course)), "lesson")
+            lines.append(
+                f"- {course.title}, course: {published}"
+                f" published, {len(path.planned_in_course(course))} planned."
+            )
+        for method_path in path.paths:
+            lines.append(
+                f"- {method_path.title}, method path:"
+                f" {_count(len(path.in_path(method_path)), 'lesson')} published,"
+                f" {len(path.planned_in_path(method_path))} planned."
+            )
         return "\n".join(lines)
 
 

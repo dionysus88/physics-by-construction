@@ -87,6 +87,9 @@ def test_the_export_lists_the_lessons_in_path_order_with_pages_from_the_site_roo
         "difficulty",
         "prerequisites",
         "related",
+        "slot",
+        "path",
+        "position",
     }
 
 

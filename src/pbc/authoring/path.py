@@ -40,24 +40,87 @@ PATH_PAGE = "path/index.qmd"
 
 
 @dataclass(frozen=True)
+class Course:
+    id: str
+    title: str
+    description: str
+
+
+# The eight courses of the reference curriculum (ADR 013 decision 1), in the
+# order of the learning path. An identifier never changes and is never
+# reused. A lesson belongs to one primary course; a course appears on the
+# learning path page once it has a lesson, and until then it is only named.
+COURSES = (
+    Course(
+        "mechanics",
+        "Classical mechanics",
+        "Mechanics with numerical simulation: a model and its assumptions, a"
+        " short program that steps it forward in time, and a comparison with"
+        " what theory predicts. The core lessons are the mechanics lessons;"
+        " the extensions repeat the course's results with an agent, with"
+        " many agents, and with a proof.",
+    ),
+    Course(
+        "thermodynamics",
+        "Thermodynamics and statistical physics",
+        "Heat, entropy, and equilibrium built from the motion of many"
+        " particles: random walks, kinetic theory, the Ising model, and"
+        " molecular dynamics.",
+    ),
+    Course(
+        "waves",
+        "Waves and optics",
+        "Waves and what they do: interference, refraction, polarisation,"
+        " diffraction, and the inverse problem of imaging.",
+    ),
+    Course(
+        "electromagnetism",
+        "Electromagnetism",
+        "Electric and magnetic fields from Coulomb's law to Maxwell's"
+        " equations, solved on a grid and checked against measurements.",
+    ),
+    Course(
+        "fluids",
+        "Fluid dynamics",
+        "Flow from advection and diffusion to the Navier-Stokes equations,"
+        " shocks, and shallow water, with finite-volume methods.",
+    ),
+    Course(
+        "quantum",
+        "Quantum physics",
+        "The Schrodinger equation, tunnelling, spin, entanglement, and"
+        " decoherence, computed and then measured.",
+    ),
+    Course(
+        "astrophysics",
+        "Astrophysics, cosmology, and relativity",
+        "Gravity beyond two bodies, special and general relativity, cosmic"
+        " expansion, gravitational waves, and observations of the sky.",
+    ),
+    Course(
+        "materials",
+        "Condensed matter and materials physics",
+        "Crystals, phonons, bands, elasticity, and defects, and how their"
+        " properties show in measurements.",
+    ),
+)
+
+
+@dataclass(frozen=True)
 class Strand:
     id: str
     title: str
     description: str
 
 
-# The strands in learning path order (docs/architecture.md, "Lesson model").
+# The strands in learning path order (docs/architecture.md, "Lesson model";
+# ADR 013 decision 2): every course is a strand with its identifier, then the
+# three method strands. A course's directory exists once it has a lesson.
 STRANDS = (
-    Strand(
-        "mechanics",
-        "Mechanics",
-        "Mechanics with numerical simulation: a model and its assumptions, a"
-        " short program that steps it forward in time, and a comparison with"
-        " what theory predicts.",
-    ),
+    *(Strand(course.id, course.title, course.description) for course in COURSES),
     Strand(
         "agents-llm",
-        "LLM agents",
+        "Physics and AI: LLM agents",
         "Experiments driven by LLM agents: an agent proposes hypotheses and"
         " tests them by running the simulation code of earlier lessons, on"
         " your own machine with your own API key.",
@@ -103,28 +166,6 @@ DIFFICULTIES = (
         "Advanced",
         "Longer derivations, experiments, or proofs, with exercises that"
         " leave the route to you.",
-    ),
-)
-
-
-@dataclass(frozen=True)
-class Course:
-    id: str
-    title: str
-    description: str
-
-
-# The courses of the site (ADR 008). A lesson belongs to one primary course;
-# a course appears on the learning path page once it has a lesson.
-COURSES = (
-    Course(
-        "mechanics",
-        "Mechanics",
-        "Mechanics with numerical simulation: a model and its assumptions, a"
-        " short program that steps it forward in time, and a comparison with"
-        " what theory predicts. The core lessons are the mechanics lessons;"
-        " the extensions repeat the course's results with an agent, with"
-        " many agents, and with a proof.",
     ),
 )
 
@@ -200,6 +241,249 @@ class Lesson:
     methods: tuple[str, ...]
     outcomes: tuple[str, ...]
     related: tuple[str, ...]  # lesson ids the lesson links as extensions
+    slot: str = ""  # the label of the curriculum slot the lesson fills, or ""
+
+
+# --- The reference curriculum -------------------------------------------------
+
+# Where the curriculum file sits in the website project (ADR 013 decision 3).
+CURRICULUM_FILE = "curriculum.yaml"
+
+KINDS = ("lesson", "measured-data lab", "applied capstone")
+
+# The one slot that has neither a course nor a method path as its home is the
+# Lean slot of the baseline; its home is the strand.
+HOME_STRANDS = ("lean",)
+
+_LABEL = re.compile(r"[A-Z]+[0-9]+")
+_PATH_ID = re.compile(r"[a-z][a-z0-9]*(-[a-z0-9]+)*")
+_SLOT_KEYS = {"label", "title", "kind", "course", "path", "position", "strand"}
+# What a lesson's front matter holds; the curriculum file must not.
+_FRONT_MATTER_FIELDS = {
+    "id",
+    "description",
+    "outcomes",
+    "prerequisites",
+    "difficulty",
+    "methods",
+    "related",
+    "order",
+    "format",
+    "lean-modules",
+    "lessons",
+    "outside",
+}
+
+
+@dataclass(frozen=True)
+class MethodPath:
+    """One of the four method paths of the reference curriculum: a secondary
+    view over lessons that fill its slots, never a course or a strand."""
+
+    id: str
+    title: str
+
+
+@dataclass(frozen=True)
+class Slot:
+    """One planned lesson of the reference curriculum: what the file declares.
+
+    The home is one of ``course``, ``path`` (with its ``position``), or
+    ``strand``; the other two are empty.
+    """
+
+    label: str
+    title: str
+    kind: str
+    course: str = ""
+    path: str = ""
+    position: int = 0
+    strand: str = ""
+
+
+@dataclass(frozen=True)
+class Curriculum:
+    """The reference curriculum as declared data: the method paths and every
+    slot, in teaching order. It holds what is planned; what is published
+    comes from the front matter of the lessons."""
+
+    paths: tuple[MethodPath, ...] = ()
+    slots: tuple[Slot, ...] = ()
+
+    @classmethod
+    def read(cls, site: Path) -> Curriculum:
+        """Read ``curriculum.yaml`` of the website project ``site``; a site
+        without the file has an empty curriculum. Raises ``ValueError`` when
+        the file is outside the schema; the message lists every problem."""
+        file = site / CURRICULUM_FILE
+        if not file.is_file():
+            return cls()
+        try:
+            data = yaml.safe_load(file.read_text(encoding="utf-8"))
+        except yaml.YAMLError as error:
+            raise ValueError(f"{CURRICULUM_FILE} is not valid YAML: {error}") from None
+        return cls.parse(data)
+
+    @classmethod
+    def parse(cls, data: object) -> Curriculum:
+        found = curriculum_problems(data)
+        if found:
+            raise ValueError(
+                f"{CURRICULUM_FILE} is outside its schema:\n"
+                + "\n".join(f"  {message}" for message in found)
+            )
+        assert isinstance(data, dict)
+        return cls(
+            tuple(MethodPath(item["id"], item["title"]) for item in data["paths"]),
+            tuple(
+                Slot(
+                    label=item["label"],
+                    title=item["title"],
+                    kind=item["kind"],
+                    course=item.get("course", ""),
+                    path=item.get("path", ""),
+                    position=item.get("position", 0),
+                    strand=item.get("strand", ""),
+                )
+                for item in data["slots"]
+            ),
+        )
+
+    def slot(self, label: str) -> Slot | None:
+        return next((slot for slot in self.slots if slot.label == label), None)
+
+    def index(self, label: str) -> int | None:
+        """Where the file lists the slot: the teaching order."""
+        return next(
+            (index for index, slot in enumerate(self.slots) if slot.label == label),
+            None,
+        )
+
+    def path(self, path_id: str) -> MethodPath:
+        return next(path for path in self.paths if path.id == path_id)
+
+    def in_course(self, course: Course) -> tuple[Slot, ...]:
+        return tuple(slot for slot in self.slots if slot.course == course.id)
+
+    def in_path(self, path: MethodPath) -> tuple[Slot, ...]:
+        return tuple(slot for slot in self.slots if slot.path == path.id)
+
+
+def _is_text(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+METHOD_PATHS = (
+    ("reasoning", "Physics reasoning and scientific agents"),
+    ("law-discovery", "Scientific law discovery"),
+    ("benchmarking", "Physics agent benchmarking"),
+    ("autonomous-research", "Autonomous scientific research"),
+)
+
+
+def curriculum_problems(data: object) -> list[str]:
+    """Return every way the contents of the curriculum file are outside its
+    schema: an unknown course or path, a duplicate label, a slot without a
+    home or with two, and any field that belongs to a lesson's front matter."""
+    if not isinstance(data, dict) or set(data) != {"courses", "paths", "slots"}:
+        return [
+            "the file holds the lists 'courses', 'paths', and 'slots', and nothing else"
+        ]
+    found: list[str] = []
+
+    courses = data["courses"]
+    expected = [{"id": course.id, "title": course.title} for course in COURSES]
+    if courses != expected:
+        found.append(
+            "'courses' must list the eight courses of the site, with their"
+            " identifiers and titles, in the order of COURSES"
+        )
+
+    path_ids: list[str] = []
+    paths = data["paths"]
+    if not isinstance(paths, list):
+        found.append("'paths' must be a list")
+        paths = []
+    for item in paths:
+        if (
+            isinstance(item, dict)
+            and set(item) == {"id", "title"}
+            and isinstance(item["id"], str)
+            and _PATH_ID.fullmatch(item["id"])
+            and _is_text(item["title"])
+        ):
+            if item["id"] in path_ids:
+                found.append(f"path {item['id']!r} is listed twice")
+            path_ids.append(item["id"])
+        else:
+            found.append(f"path entry {item!r} must hold an 'id' and a 'title'")
+
+    expected_paths = [{"id": id, "title": title} for id, title in METHOD_PATHS]
+    if paths != expected_paths:
+        found.append(
+            "'paths' must list the four method paths, with their identifiers"
+            " and titles, in the order of METHOD_PATHS"
+        )
+
+    slots = data["slots"]
+    if not isinstance(slots, list):
+        return [*found, "'slots' must be a list"]
+    labels: set[str] = set()
+    positions: dict[str, int] = {}
+    for item in slots:
+        if not isinstance(item, dict):
+            found.append(f"slot entry {item!r} must be a mapping")
+            continue
+        name = repr(item.get("label"))
+        for key in item:
+            if key in _FRONT_MATTER_FIELDS:
+                found.append(
+                    f"slot {name}: {key!r} belongs to the front matter of a"
+                    " lesson, not to the curriculum file"
+                )
+            elif key not in _SLOT_KEYS:
+                found.append(f"slot {name}: {key!r} is not a field of a slot")
+        label = item.get("label")
+        if not (isinstance(label, str) and _LABEL.fullmatch(label)):
+            found.append(f"slot {name}: 'label' must be a label such as M1 or AI0")
+        elif label in labels:
+            found.append(f"slot {name}: the label is used twice")
+        else:
+            labels.add(label)
+        if not _is_text(item.get("title")):
+            found.append(f"slot {name}: 'title' must be a text")
+        if item.get("kind") not in KINDS:
+            found.append(f"slot {name}: 'kind' must be one of {', '.join(KINDS)}")
+        homes = [key for key in ("course", "path", "strand") if key in item]
+        if not homes:
+            found.append(f"slot {name} has no home: name a course, a path, or a strand")
+        elif len(homes) > 1:
+            found.append(f"slot {name} has more than one home: {' and '.join(homes)}")
+        elif homes == ["course"]:
+            if item["course"] not in _COURSE:
+                found.append(
+                    f"slot {name}: {item['course']!r} is not a course of the site"
+                )
+        elif homes == ["path"]:
+            path_id = item["path"]
+            if path_id not in path_ids:
+                found.append(
+                    f"slot {name}: {path_id!r} is not a path of the curriculum"
+                )
+            else:
+                positions[path_id] = positions.get(path_id, 0) + 1
+                if item.get("position") != positions[path_id]:
+                    found.append(
+                        f"slot {name}: 'position' must be {positions[path_id]},"
+                        f" the number of the slot in the path"
+                    )
+        elif item["strand"] not in HOME_STRANDS:
+            found.append(
+                f"slot {name}: {item['strand']!r} is not a strand that homes a slot"
+            )
+        if homes != ["path"] and "position" in item:
+            found.append(f"slot {name}: only a slot of a path has a 'position'")
+    return found
 
 
 @dataclass(frozen=True)
@@ -216,12 +500,18 @@ def _key(lesson: Lesson) -> tuple[int, int, str]:
     return (_STRAND_INDEX.get(lesson.strand, len(STRANDS)), lesson.order, lesson.page)
 
 
-def problems(lessons: Sequence[Lesson]) -> list[Problem]:
+def problems(
+    lessons: Sequence[Lesson], curriculum: Curriculum | None = None
+) -> list[Problem]:
     """Return every violation of the rules that make the lessons a path:
     ids are unique, orders within a strand run from 1 without gaps or
-    duplicates, prerequisites exist, come earlier in the path, and form no
-    cycle, and the course, methods, outcomes, and related lessons follow
-    the rules of the front matter."""
+    duplicates, prerequisites exist, a prerequisite in the same strand comes
+    earlier in it (one in another strand may come later in the linear order,
+    ADR 013 decision 8), the prerequisites form no cycle, and the course,
+    slot, methods, outcomes, and related lessons follow the rules of the
+    front matter. ``curriculum`` is the reference curriculum the slots name;
+    without one, no slot exists."""
+    curriculum = curriculum or Curriculum()
     ordered = sorted(lessons, key=_key)
     found: list[Problem] = []
 
@@ -275,12 +565,15 @@ def problems(lessons: Sequence[Lesson]) -> list[Problem]:
                         f"prerequisite '{prerequisite}' is not the id of any lesson",
                     )
                 )
-            elif position[prerequisite] >= index:
+            elif (
+                first_with_id[prerequisite].strand == lesson.strand
+                and position[prerequisite] >= index
+            ):
                 found.append(
                     Problem(
                         lesson.page,
                         f"prerequisite '{prerequisite}' does not come earlier in"
-                        " the learning path",
+                        f" its strand '{lesson.strand}'",
                     )
                 )
 
@@ -288,6 +581,7 @@ def problems(lessons: Sequence[Lesson]) -> list[Problem]:
         found += [
             Problem(lesson.page, message) for message in _facets(lesson, position)
         ]
+    found += _slot_problems(ordered, curriculum)
 
     graph = {
         lesson.id: tuple(p for p in lesson.prerequisites if p in position)
@@ -300,6 +594,46 @@ def problems(lessons: Sequence[Lesson]) -> list[Problem]:
                 "prerequisites form a cycle: " + " -> ".join(cycle),
             )
         )
+    return found
+
+
+def _slot_problems(ordered: Sequence[Lesson], curriculum: Curriculum) -> list[Problem]:
+    """What is wrong with the slots the lessons claim: the label is not in
+    the curriculum, two lessons claim one slot, or a slot homed in a course
+    is claimed by a lesson of another course (a slot of a method path or of
+    the Lean strand may be filled by a lesson of any course)."""
+    found: list[Problem] = []
+    claimed: dict[str, Lesson] = {}
+    for lesson in ordered:
+        if not lesson.slot:
+            continue
+        slot = curriculum.slot(lesson.slot)
+        if slot is None:
+            found.append(
+                Problem(
+                    lesson.page,
+                    f"'lesson.slot' {lesson.slot!r} is not a slot of the curriculum",
+                )
+            )
+            continue
+        if lesson.slot in claimed:
+            found.append(
+                Problem(
+                    lesson.page,
+                    f"slot '{lesson.slot}' is already filled by"
+                    f" {claimed[lesson.slot].page}",
+                )
+            )
+        else:
+            claimed[lesson.slot] = lesson
+        if slot.course and slot.course != lesson.course:
+            found.append(
+                Problem(
+                    lesson.page,
+                    f"slot '{slot.label}' is a slot of the course '{slot.course}',"
+                    f" but 'lesson.course' is {lesson.course!r}",
+                )
+            )
     return found
 
 
@@ -340,26 +674,26 @@ def _facets(lesson: Lesson, position: dict[str, int]) -> list[str]:
 
 
 def _cycles(graph: dict[str, tuple[str, ...]], order: list[str]) -> list[list[str]]:
-    """Return one cycle per set of lessons that depend on each other, each
-    starting at its first member in ``order``."""
+    """Return one cycle per back edge of a depth-first search over the graph,
+    each as the trail from the lesson reached again back to itself. A lesson is
+    on the trail while it is being visited and done once all it needs is."""
     cycles: list[list[str]] = []
-    reported: set[str] = set()
+    done: set[str] = set()
+    trail: list[str] = []
+
+    def visit(node: str) -> None:
+        trail.append(node)
+        for following in graph.get(node, ()):
+            if following in trail:
+                cycles.append([*trail[trail.index(following) :], following])
+            elif following not in done:
+                visit(following)
+        trail.pop()
+        done.add(node)
+
     for start in order:
-        if start in reported:
-            continue
-        stack = [(start, [start])]
-        seen = {start}
-        while stack:
-            node, trail = stack.pop()
-            for following in graph.get(node, ()):
-                if following == start:
-                    cycles.append([*trail, start])
-                    reported.update(trail)
-                    stack.clear()
-                    break
-                if following not in seen:
-                    seen.add(following)
-                    stack.append((following, [*trail, following]))
+        if start not in done:
+            visit(start)
     return cycles
 
 
@@ -368,6 +702,7 @@ class LearningPath:
     """The lessons of a site in path order, validated."""
 
     lessons: tuple[Lesson, ...]
+    curriculum: Curriculum = Curriculum()
 
     @classmethod
     def read(cls, site: Path) -> LearningPath:
@@ -377,13 +712,14 @@ class LearningPath:
         every problem. The lesson source checks report the same problems.
         """
         lessons = read_lessons(site)
-        found = problems(lessons)
+        curriculum = Curriculum.read(site)
+        found = problems(lessons, curriculum)
         if found:
             raise ValueError(
                 "the lessons do not form a learning path:\n"
                 + "\n".join(f"  {problem.page}: {problem.message}" for problem in found)
             )
-        return cls(tuple(sorted(lessons, key=_key)))
+        return cls(tuple(sorted(lessons, key=_key)), curriculum)
 
     def lesson(self, lesson_id: str) -> Lesson:
         for lesson in self.lessons:
@@ -411,7 +747,63 @@ class LearningPath:
         return tuple(course for course in COURSES if self.in_course(course))
 
     def in_course(self, course: Course) -> tuple[Lesson, ...]:
-        return tuple(lesson for lesson in self.lessons if lesson.course == course.id)
+        """The lessons of the course in teaching order: by the order in which
+        the curriculum file lists their slots, then the lessons without a
+        slot in linear order (ADR 013 decision 8)."""
+        return self.taught(
+            tuple(lesson for lesson in self.lessons if lesson.course == course.id)
+        )
+
+    def taught(self, lessons: Sequence[Lesson]) -> tuple[Lesson, ...]:
+        """``lessons`` in teaching order; ``sorted`` is stable, so lessons
+        without a slot keep the linear order."""
+
+        def key(lesson: Lesson) -> tuple[int, int]:
+            index = self.curriculum.index(lesson.slot) if lesson.slot else None
+            return (0, index) if index is not None else (1, 0)
+
+        return tuple(sorted(lessons, key=key))
+
+    def filled(self) -> frozenset[str]:
+        """The labels of the slots a published lesson fills."""
+        return frozenset(lesson.slot for lesson in self.lessons if lesson.slot)
+
+    def planned_in_course(self, course: Course) -> tuple[Slot, ...]:
+        """The slots of the course that no published lesson fills."""
+        filled = self.filled()
+        return tuple(
+            slot
+            for slot in self.curriculum.in_course(course)
+            if slot.label not in filled
+        )
+
+    @property
+    def planned_courses(self) -> tuple[Course, ...]:
+        """The courses that have no lesson yet: named, never shown as a
+        course, and with no slot shown."""
+        return tuple(course for course in COURSES if not self.in_course(course))
+
+    @property
+    def paths(self) -> tuple[MethodPath, ...]:
+        """Every method path of the curriculum, with or without a lesson."""
+        return self.curriculum.paths
+
+    def in_path(self, path: MethodPath) -> tuple[Lesson, ...]:
+        """The published lessons that fill a slot of the path, in the order
+        of the slots."""
+        homes = {slot.label for slot in self.curriculum.in_path(path)}
+        return self.taught(
+            tuple(lesson for lesson in self.lessons if lesson.slot in homes)
+        )
+
+    def planned_in_path(self, path: MethodPath) -> tuple[Slot, ...]:
+        filled = self.filled()
+        return tuple(
+            slot for slot in self.curriculum.in_path(path) if slot.label not in filled
+        )
+
+    def slot_of(self, lesson: Lesson) -> Slot | None:
+        return self.curriculum.slot(lesson.slot) if lesson.slot else None
 
     @property
     def methods(self) -> tuple[Method, ...]:
@@ -470,6 +862,7 @@ def _read(site: Path, page: Path) -> Lesson:
             methods=_texts(meta["methods"]),
             outcomes=_texts(meta["outcomes"]),
             related=_texts(meta["related"]),
+            slot=str(meta.get("slot") or ""),
         )
     except yaml.YAMLError, KeyError, TypeError, ValueError:
         raise ValueError(
@@ -515,6 +908,27 @@ def _method_id(method: Method) -> str:
     return f"method-{method.id}"
 
 
+def _path_id(path: MethodPath) -> str:
+    return f"path-{path.id}"
+
+
+def _slot_fact(path: LearningPath, from_page: str, lesson: Lesson) -> str | None:
+    """The slot a lesson fills and, for a slot of a method path, the position
+    in the path, as Markdown; ``None`` for a lesson without a slot."""
+    slot = path.slot_of(lesson)
+    if slot is None:
+        return None
+    if slot.path:
+        method_path = path.curriculum.path(slot.path)
+        length = len(path.curriculum.in_path(method_path))
+        return (
+            f"{slot.label}, number {slot.position} of the {length} slots of the"
+            f" path [{method_path.title}]"
+            f"({_href(from_page, PATH_PAGE, _path_id(method_path))})"
+        )
+    return f"{slot.label}, {slot.title}"
+
+
 @dataclass(frozen=True)
 class LessonHeader:
     """The header of a lesson page: course and position, methods,
@@ -551,8 +965,10 @@ class LessonHeader:
         )
         previous = path.previous(lesson)
         following = path.next(lesson)
+        slot = _slot_fact(path, page, lesson)
         rows = [
             ("Course", f"{course_link}, {position}"),
+            *([("Slot", slot)] if slot else []),
             ("Methods", methods),
             ("Difficulty", level),
             ("What you'll learn", "\n" + outcomes),
@@ -631,10 +1047,13 @@ class PathOverview:
                 "## Courses {#courses}",
                 "",
                 "A lesson belongs to one course. The core lessons of a course"
-                " are the lessons of its own strand, in order; its extensions"
-                " are lessons of other strands that repeat its results with"
-                " another method.",
+                " are the lessons of its own strand; its extensions are"
+                " lessons of other strands that repeat its results with"
+                " another method. Both are listed in the teaching order of"
+                " the reference curriculum. A planned lesson is not published:"
+                " it has no page, and it is not counted.",
                 "",
+                *self._planned_courses(),
             ]
         for course in self.path.courses:
             lines += [
@@ -654,6 +1073,8 @@ class PathOverview:
                         "",
                     ]
                     lines += self._items(group, 5)
+            lines += self._planned(self.path.planned_in_course(course), 4)
+        lines += self._paths()
         if self.path.methods:
             lines += [
                 "## Methods {#methods}",
@@ -767,22 +1188,93 @@ class PathOverview:
             "Three orders are in use, and they are not the same.",
             "",
             "Previous and next on a lesson page follow the one linear order of the"
-            " site: the strands one after the other"
+            " site: the courses and then the method strands one after the"
+            " other"
             + (f" ({strands})" if strands else "")
             + ", and within a strand the lessons by their number. Following"
             " next from the last lesson of one strand leads to the first lesson"
             " of the following strand, which may belong to another course.",
             "",
-            "The course order is the order of the lessons of one course in this"
-            " linear order, as listed below. Its extensions come after its core"
-            " lessons because their strands come after.",
+            "The course order and the path order are the teaching order of the"
+            " reference curriculum: the lessons of a course or a path in the"
+            " order of their slots in the curriculum file, which may differ"
+            " from the order of the labels, and the lessons without a slot"
+            " after them in the linear order.",
             "",
             "The prerequisites of a lesson are the lessons it builds on, and"
-            " are the only statement of what you need first. A lesson may"
-            " precede others in the linear order without being a prerequisite"
-            " of them.",
+            " are the only statement of what you need first. A prerequisite may"
+            " live in a later strand, so previous and next may lead to a lesson"
+            " before one it builds on: the header of every lesson links its"
+            " prerequisites, and the dependency map below gives the order of"
+            " ideas.",
             "",
         ]
+
+    def _planned_courses(self) -> list[str]:
+        """One sentence that names the courses that have no lesson yet."""
+        courses = self.path.planned_courses
+        if not courses:
+            return []
+        names = [course.title for course in courses]
+        listed = (
+            names[0]
+            if len(names) == 1
+            else ", ".join(names[:-1]) + f", and {names[-1]}"
+        )
+        count = f"{len(names)} further course"
+        count += " has" if len(names) == 1 else "s have"
+        return [
+            f"{count} no lesson yet and {'is' if len(names) == 1 else 'are'}"
+            f" planned, so {'it is' if len(names) == 1 else 'they are'} not"
+            f" shown as {'a course' if len(names) == 1 else 'courses'} here: {listed}.",
+            "",
+        ]
+
+    def _planned(self, slots: Sequence[Slot], heading: int) -> list[str]:
+        """The slots no lesson fills, as a list that is visibly not a list of
+        lessons: no link, no card, a label and a working title and the word
+        planned."""
+        if not slots:
+            return []
+        items = []
+        for slot in slots:
+            kind = "" if slot.kind == "lesson" else f", {escape(slot.kind)}"
+            items.append(
+                f'<li><span class="slot-label">{escape(slot.label)}</span>'
+                f" {escape(slot.title)}{kind}"
+                ' <span class="slot-status">(planned, not published)</span></li>'
+            )
+        return [
+            f"{'#' * heading} Planned lessons",
+            "",
+            "```{=html}",
+            '<ul class="planned-slots">',
+            *items,
+            "</ul>",
+            "```",
+            "",
+        ]
+
+    def _paths(self) -> list[str]:
+        """The four method paths as a view over the lessons of the courses."""
+        if not self.path.paths:
+            return []
+        lines = [
+            "## Method paths {#paths}",
+            "",
+            "A method path is a second way through the same lessons: the"
+            " lessons that fill the slots of one path of the reference"
+            " curriculum, in the order of the path. It is not a course and"
+            " has no pages of its own; a lesson belongs to at most one path.",
+            "",
+        ]
+        for method_path in self.path.paths:
+            lessons = self.path.in_path(method_path)
+            lines += [f"### {method_path.title} {{#{_path_id(method_path)}}}", ""]
+            if lessons:
+                lines += self._items(lessons, 4)
+            lines += self._planned(self.path.planned_in_path(method_path), 4)
+        return lines
 
     def _items(self, lessons: Sequence[Lesson], heading: int) -> list[str]:
         """The lessons as cards (``ul.path-cards`` of ``li.path-card``, the
@@ -825,8 +1317,10 @@ class PathOverview:
             if lesson.related
             else "none"
         )
+        slot = path.slot_of(lesson)
         rows = [
             ("Course", link(PATH_PAGE, course.title, _course_id(course))),
+            *([("Slot", escape(f"{slot.label}, {slot.title}"))] if slot else []),
             ("Methods", methods),
             ("Level", level),
             ("What you\u2019ll learn", f"<ul>{outcomes}</ul>"),

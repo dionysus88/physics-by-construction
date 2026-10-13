@@ -203,10 +203,60 @@ def test_path_page_lists_every_lesson_under_its_course_and_its_methods(
             ".map(s => s.id)",
             server.url + built(lesson),
         )
+        slot = LESSON_PATH.slot_of(lesson)
         assert sorted(sections) == sorted(
             [f"course-{lesson.course}"]
             + [f"method-{method}" for method in lesson.methods]
+            + ([f"path-{slot.path}"] if slot and slot.path else [])
         ), lesson.id
+
+
+def test_path_page_lists_each_method_path_with_its_planned_slots(
+    without_scripts: BrowserContext, server: SiteServer
+):
+    # The curriculum file and the front matter, compared with the page: the
+    # published lessons of a path in the order of its slots as cards, and
+    # every slot no lesson fills as a planned entry without a link.
+    page = without_scripts.new_page()
+    page.goto(server.url + PATH, wait_until="load")
+
+    assert page.locator("main section#paths > section.level3").count() == len(
+        LESSON_PATH.paths
+    )
+    for method_path in LESSON_PATH.paths:
+        section = page.locator(f"main section#path-{method_path.id}")
+        assert section.locator("h3").first.inner_text() == method_path.title
+        _check_items(
+            section.locator("li.path-card"), LESSON_PATH.in_path(method_path), server
+        )
+        planned = section.locator("ul.planned-slots li")
+        assert planned.locator(".slot-label").all_inner_texts() == [
+            slot.label for slot in LESSON_PATH.planned_in_path(method_path)
+        ]
+        assert planned.locator("a").count() == 0
+
+
+def test_path_page_shows_planned_slots_of_a_course_with_a_lesson_and_names_the_others(
+    without_scripts: BrowserContext, server: SiteServer
+):
+    page = without_scripts.new_page()
+    page.goto(server.url + PATH, wait_until="load")
+
+    for course in LESSON_PATH.courses:
+        section = page.locator(f"main section#course-{course.id}")
+        planned = section.locator("ul.planned-slots li")
+        assert planned.locator(".slot-label").all_inner_texts() == [
+            slot.label for slot in LESSON_PATH.planned_in_course(course)
+        ]
+        assert planned.locator("a").count() == 0
+        assert "planned" in planned.first.inner_text()
+    # A course without a lesson is named in one sentence, with no section and
+    # no slot (T0 belongs to a course that has no lesson until F70).
+    courses = page.locator("main section#courses").inner_text()
+    for course in LESSON_PATH.planned_courses:
+        assert _plain(course.title) in _plain(courses)
+        assert page.locator(f"main section#course-{course.id}").count() == 0
+    assert page.locator("main .slot-label:text-is('T0')").count() == 0
 
 
 def test_path_page_explains_previous_and_next(
@@ -282,6 +332,7 @@ def test_lesson_header_shows_the_facts_of_the_path_with_links(
     )
     assert list(rows) == [
         "Course",
+        *(["Slot"] if lesson.slot else []),
         "Methods",
         "Difficulty",
         "What you'll learn",

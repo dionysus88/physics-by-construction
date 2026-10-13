@@ -11,6 +11,7 @@ lesson:
   order: 11
   difficulty: 3
   course: mechanics
+  slot: M16
   methods: [measured-data, simulation]
   outcomes:
     - Derive the frequency and the rate of change of frequency of a shrinking circular orbit from Kepler's third law and an energy loss

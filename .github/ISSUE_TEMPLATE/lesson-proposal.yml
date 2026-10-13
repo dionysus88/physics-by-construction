@@ -27,6 +27,13 @@ body:
         results it uses.
       options:
         - mechanics
+        - thermodynamics
+        - waves
+        - electromagnetism
+        - fluids
+        - quantum
+        - astrophysics
+        - materials
         - Not sure
     validations:
       required: true
@@ -39,6 +46,13 @@ body:
         about the method.
       options:
         - mechanics
+        - thermodynamics
+        - waves
+        - electromagnetism
+        - fluids
+        - quantum
+        - astrophysics
+        - materials
         - agents-llm
         - agents-abm
         - lean

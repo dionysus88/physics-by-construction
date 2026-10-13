@@ -10,6 +10,7 @@ lesson:
   order: 4
   difficulty: 2
   course: mechanics
+  slot: M4
   methods: [simulation]
   outcomes:
     - Solve the mass on a spring exactly and draw its orbit in phase space
