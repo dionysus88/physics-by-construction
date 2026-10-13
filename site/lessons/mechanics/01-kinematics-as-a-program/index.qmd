@@ -9,6 +9,7 @@ lesson:
   order: 1
   difficulty: 1
   course: mechanics
+  slot: M1
   methods: [simulation]
   outcomes:
     - Write motion along a line as a state and an update rule

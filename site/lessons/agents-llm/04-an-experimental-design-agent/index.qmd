@@ -11,6 +11,7 @@ lesson:
   order: 4
   difficulty: 3
   course: mechanics
+  slot: D9
   methods: [simulation, llm-agents]
   outcomes:
     - Say what makes a measurement useful for telling two models apart, and score a design before any reading exists

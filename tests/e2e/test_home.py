@@ -8,7 +8,7 @@ from support.paths import SITE_SOURCE
 from support.site_checks import DESKTOP
 from support.site_server import SiteServer
 
-from pbc.authoring import PLANNED, LearningPath
+from pbc.authoring import COURSES, LearningPath
 from pbc.authoring.home import CONSTRUCT_EXAMPLE, INVESTIGATE_EXAMPLE, VERIFY_EXAMPLE
 
 LESSONS = LearningPath.read(SITE_SOURCE)
@@ -69,15 +69,21 @@ def test_published_section_names_every_lesson_and_the_counts(home, server: SiteS
         assert plain(lesson.title) in plain(text)
     assert server.url + "path/index.html#courses" in links
     assert server.url + "path/index.html#methods" in links
+    assert server.url + "path/index.html#paths" in links
 
 
-def test_every_planned_item_names_a_roadmap_id_and_is_not_linked(home):
+def test_every_planned_item_is_a_course_or_path_of_the_curriculum_and_is_not_linked(
+    home,
+):
     section = home.locator("main section#planned")
     items = section.locator("li")
-    assert items.count() == len(PLANNED)
-    for item, planned in zip(items.all(), PLANNED, strict=True):
-        text = item.inner_text()
-        assert text.startswith(f"Planned, {planned.roadmap_id}: ")
+    titles = [course.title for course in COURSES] + [
+        path.title for path in LESSONS.paths
+    ]
+    assert items.count() == len(titles)
+    for item, title in zip(items.all(), titles, strict=True):
+        assert plain(item.inner_text()).startswith(plain(title) + ", ")
+        assert "published" in item.inner_text() and "planned" in item.inner_text()
         assert item.locator("a").count() == 0
     assert section.locator("a").count() == 0
 

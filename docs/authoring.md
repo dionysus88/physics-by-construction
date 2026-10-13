@@ -13,13 +13,22 @@ verified".
 
 ## Create a lesson
 
-1. Pick the course, the strand, and the position of the lesson. The strands
-   are `mechanics`, `agents-llm`, `agents-abm`, and `lean`, in learning path
-   order. A lesson about the physics of a course lives in the strand of that
-   course (a measured-data lab of the mechanics course is a mechanics
-   lesson); a lesson about a method itself lives in the strand of the method.
-   Either way it names its course. `docs/roadmap.md` lists the planned
-   lessons.
+1. Pick the course, the strand, the slot, and the position of the lesson.
+   The eight courses are `mechanics`, `thermodynamics`, `waves`,
+   `electromagnetism`, `fluids`, `quantum`, `astrophysics`, and `materials`;
+   every course is a strand with the same identifier, and the strands are
+   those eight, then `agents-llm`, `agents-abm`, and `lean`, in learning path
+   order (ADR 013). A lesson about the physics of a course lives in the
+   strand of that course (a measured-data lab of the mechanics course is a
+   mechanics lesson); a lesson about a method itself lives in the strand of
+   the method. Either way it names its course. The strand directory of a
+   course that has no lesson yet is created by the first lesson of that
+   course, never by a placeholder. The slot is the lesson's place in the
+   reference curriculum, `site/curriculum.yaml`: take the slot the lesson
+   fills from that file and name it in `lesson.slot`. A slot homed in a
+   course is filled only by a lesson of that course; a slot of a method path
+   may be filled by a lesson of any course. `docs/roadmap.md` lists the
+   planned lessons and their features.
 
 2. Create the lesson directory and copy the template into it. The directory
    name is the two-digit position in the strand, a hyphen, and a short name
@@ -86,14 +95,15 @@ lesson:
 | `title` | yes | The lesson title. |
 | `description` | no | One sentence; shown under the title and used as the page description. |
 | `lesson.id` | yes | Stable identifier: lowercase words joined by hyphens, starting with a letter. Unique across the site. Other lessons name it as a prerequisite, so it never changes and is never reused. Do not put the position in it. |
-| `lesson.strand` | yes | One of `mechanics`, `agents-llm`, `agents-abm`, `lean`, in learning path order. Must be the strand directory the lesson is in. |
+| `lesson.strand` | yes | One of the eight course identifiers (`mechanics`, `thermodynamics`, `waves`, `electromagnetism`, `fluids`, `quantum`, `astrophysics`, `materials`), then `agents-llm`, `agents-abm`, `lean`, in learning path order. Must be the strand directory the lesson is in. |
 | `lesson.order` | yes | Position in the strand, 1 to 99. Must equal the number the directory name starts with. The orders of a strand run from 1 without a gap or a duplicate. |
 | `lesson.difficulty` | yes | 1, 2, or 3 on the one difficulty scale of the site: introductory, intermediate, advanced. The scale is defined in `pbc.authoring.path` and explained on the learning path page. |
-| `lesson.course` | yes | The one primary course of the lesson, from the `COURSES` vocabulary in `pbc.authoring.path` (`mechanics`). A course appears on the learning path page once it has a lesson. Every lesson names a course, also an agent, agent-based, or proof lesson: it is the course whose results the lesson uses. |
+| `lesson.course` | yes | The one primary course of the lesson, from the `COURSES` vocabulary in `pbc.authoring.path` (the eight courses of ADR 013). A course appears on the learning path page once it has a lesson. Every lesson names a course, also an agent, agent-based, or proof lesson: it is the course whose results the lesson uses. |
+| `lesson.slot` | no | The label of the slot of the reference curriculum (`site/curriculum.yaml`) that the lesson fills, such as `M1` or `AI0`. The label must exist, no two lessons claim one slot, and a slot homed in a course is filled only by a lesson whose `course` is that course. A lesson without a slot is allowed and appears in its course and method views. The slot decides the lesson's position in its method path, if the slot belongs to one; it never changes the address. |
 | `lesson.methods` | yes | List of the ways of working the lesson uses, from the `METHODS` vocabulary: `simulation`, `llm-agents`, `abm`, `lean`, `measured-data`, `coding-agents`. At least one, none twice. The path page has one path per method. |
 | `lesson.outcomes` | yes | List of two to five sentences: what the reader can do after the lesson. Shown in the header as "What you'll learn". Write what the reader does, not what the lesson contains. |
 | `lesson.related` | yes | List of the `id`s of lessons the header links as extensions, such as the agent, measured-data, or Lean counterpart of a lab. May be empty. Each must exist, must not be the lesson itself, and must not already be among its prerequisites. Write the link on the lesson that is built on, towards the extension; the extension keeps that lesson as a prerequisite and does not list it back. |
-| `lesson.prerequisites.lessons` | yes | List of the `id`s of lessons a reader needs first. Each must exist and come earlier in the learning path. May be empty. |
+| `lesson.prerequisites.lessons` | yes | List of the `id`s of lessons a reader needs first. Each must exist; a prerequisite in the same strand must come earlier in it, and one in another strand may come later in the linear order (ADR 013 decision 8). The prerequisites form no cycle. May be empty. |
 | `lesson.prerequisites.outside` | yes | List of texts `Term: what exactly`: what a reader must know that no lesson on the site teaches. The text before the first colon must be the `term` of an entry of `site/glossary.yaml` (see "Glossary"). May be empty. |
 | `lesson.lean-modules` | no | List of the Lean modules the lesson displays, such as `PhysicsByConstruction.Mechanics.Kinematics`. A lesson that shows Lean lists exactly the modules it names: each must exist in `lean/`, and the page names no other. |
 | `lesson.format` | no | `1` (the default: the MVP template) or `2` (the progressive-depth template, see "Lesson format 2"). The checks of format 2 apply to the lessons that declare it. |
@@ -133,18 +143,26 @@ real depth; the glossary itself contains no external link.
 
 The learning path is the lessons in order: the strands in the order above,
 and within a strand the lessons by `order`. Previous and next follow this one
-linear order. The course view is the same order restricted to one course, and
-the prerequisites say what a lesson needs. It is all derived from the front
+linear order, the courses and then the method strands; it is a reading
+route, not the dependency order. The course view and the path view order the
+lessons by the order of their slots in `site/curriculum.yaml` (the teaching
+order), the lessons without a slot after them, and the prerequisites say what a
+lesson needs. It is all derived from the front
 matter when the site is built, so there is no list to maintain:
 
 - The page `site/path/index.qmd` lists each course that has a lesson, with
   its core lessons (the lessons of the strand named like the course) and its
   extensions (its lessons in other strands), then one path per method that
   has a lesson. For each lesson it gives the difficulty, description, and
-  prerequisites. It also explains the difficulty scale and what previous and
-  next mean.
+  prerequisites. It shows the slots of a course that has a lesson and of every
+  method path that no lesson fills as planned entries (a label and a working
+  title, no link, never counted as published), shows the four method paths of
+  the curriculum as a view over the same lessons, names the courses that have
+  no lesson yet in one sentence, and explains the difficulty scale and what
+  previous and next mean.
 - The first cell of every lesson writes the header of the lesson: its course
-  and position in the course, its methods, its difficulty, what you will
+  and position in the course, its slot and, for a method-path lesson, its
+  position in the path, its methods, its difficulty, what you will
   learn, its prerequisites and related lessons with links, and links to the
   previous and next lesson of the path. The template has the cell; keep it
   before the introduction:
@@ -164,9 +182,12 @@ on narrow screens, and a sidebar per course would need a list of lessons in
 the path page give the course navigation without JavaScript.
 
 A check validates the path as a whole: ids are unique, the orders of a strand
-run from 1 without gaps or duplicates, every prerequisite exists, comes
-earlier in the path, and forms no cycle, and every course, method, and related
-lesson follows the rules of the table above. A violation fails verification, and
+run from 1 without gaps or duplicates, every prerequisite exists, a
+prerequisite in the same strand comes earlier in it, the prerequisites form no
+cycle, and every course, slot, method, and related lesson follows the rules
+of the table above. The same check validates `site/curriculum.yaml`: an
+unknown course or path, a duplicate label, a slot without a home or with two,
+and any field that belongs to a lesson's front matter fail it. A violation fails verification, and
 the build of a page fails on it too.
 
 ## Sections
@@ -857,7 +878,7 @@ current version, is discarded and removed: the reader loses their progress, the
 page keeps working. The built-site tests seed older, newer, and malformed data.
 
 **The learning path in data.** The build writes `path.json` at the root of the
-site: lesson ids with title, page, strand, order, course, methods, difficulty,
+site: lesson ids with title, page, strand, order, course, slot, path and position (null without a slot or outside a method path), methods, difficulty,
 prerequisites, and related lessons (`pbc.authoring.progress.path_export`).
 It holds nothing about a learner. The learner-state script does not fetch it;
 later client-side features can.
@@ -1437,7 +1458,7 @@ check. It lives outside `site/` and `src/`.
 
 | Check | Reports |
 |---|---|
-| `lesson-checks` (`tests/lessons`) | Front matter outside the schema; a Lean module that the page shows and `lean-modules` does not list, or that it lists without showing or without a file; a missing or empty required section; a lesson without the `lesson_header()` cell before its first heading; an exercise without a solution; a "Reproduce this" section without `reproduce_this()`; an outside prerequisite that names no glossary entry, an entry that no lesson assumes or whose definition is not one to three sentences, a missing or unknown course, a lesson without a method, a number of outcomes outside two to five, a related lesson that does not exist or is a prerequisite, a duplicate id, a gap or duplicate in the orders of a strand, a prerequisite that does not exist, comes later in the path, or forms a cycle; code that is neither an executed `{python}` cell nor marked "not verified"; a figure cell without `fig-alt`; an image file in a page; for a format 2 lesson, a missing or empty `limits` section, a number of self-checks other than one (or one without a solution), choices that break the rules of "Self-checks and progress", a claim of an unknown type, a claim without `evidence` or whose evidence names no executed cell, register or card key, Lean theorem, or recorded run, a figure without a valid `fig-status`, a `go-deeper` key that the register lacks, a URL typed in the source, and a hand-typed number in prose or alt text; a register entry with a missing or malformed field, a duplicate key, or no lesson using it that is not reserved; a generated artifact or a stray file under `site/` or `src/`. |
+| `lesson-checks` (`tests/lessons`) | Front matter outside the schema; a Lean module that the page shows and `lean-modules` does not list, or that it lists without showing or without a file; a missing or empty required section; a lesson without the `lesson_header()` cell before its first heading; an exercise without a solution; a "Reproduce this" section without `reproduce_this()`; an outside prerequisite that names no glossary entry, an entry that no lesson assumes or whose definition is not one to three sentences, a missing or unknown course, a lesson without a method, a number of outcomes outside two to five, a related lesson that does not exist or is a prerequisite, a duplicate id, a gap or duplicate in the orders of a strand, a slot that does not exist, is claimed twice, or is homed in another course, a prerequisite that does not exist, comes later in its own strand, or forms a cycle, a curriculum file outside its schema; code that is neither an executed `{python}` cell nor marked "not verified"; a figure cell without `fig-alt`; an image file in a page; for a format 2 lesson, a missing or empty `limits` section, a number of self-checks other than one (or one without a solution), choices that break the rules of "Self-checks and progress", a claim of an unknown type, a claim without `evidence` or whose evidence names no executed cell, register or card key, Lean theorem, or recorded run, a figure without a valid `fig-status`, a `go-deeper` key that the register lacks, a URL typed in the source, and a hand-typed number in prose or alt text; a register entry with a missing or malformed field, a duplicate key, or no lesson using it that is not reserved; a generated artifact or a stray file under `site/` or `src/`. |
 | `site-build` | A cell that raises, including the header cell of a lesson whose path is inconsistent; an equation that cannot become MathML. |
 | `site-checks` (`tests/e2e`) | A learner-state script with a request, another origin, or storage other than local storage; a request, cookie, or write that carries or keeps learner state outside local storage; a self-check that is not usable with scripts disabled; stored data of another version that is not discarded; progress controls without keyboard operation or that fail the accessibility scan (`tests/e2e/test_learner_state.py`); A lesson without a built page or a required section; a lesson the home page does not lead to without JavaScript; a format 2 page whose cell printed a block of numbers; a header whose course, methods, outcomes, prerequisites, "Before you begin" list, related lessons, or previous and next links differ from the front matter; a glossary page that lacks an entry or does not link the lessons that assume it; an evidence map that lacks a claim, lists it more than once, or links an element the lesson page does not have once; a path page that does not list every lesson under its course and each of its methods; a lesson address that existed before the courses and no longer resolves; an excerpt that differs from its source, a Python object or a region of a Lean file; a cell or inline expression that was not executed; "not verified" material without a visible label; "Reproduce this" commands that fail, take longer than 30 seconds, or do not regenerate the published page; a widget script that makes a request, names another origin, or uses browser storage, or a widget that writes to cookies or storage when operated; a widget that does not respond to its controls, cannot be operated by keyboard, shows values that differ from `pbc`, or moves the page when it loads; and the checks every page gets (images, links, JavaScript, widths, accessibility). |
 | `determinism` | A page that differs between two builds. |

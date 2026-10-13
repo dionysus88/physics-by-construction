@@ -1,0 +1,155 @@
+# The reference curriculum: the planned structure of the site (ADR 013).
+#
+# One line per slot, in teaching order within its home. A slot's home is a
+# course (`course`), a method path (`path`, with its `position`), or, for the
+# one Lean slot, the strand `lean`. This file holds nothing that a lesson's
+# front matter holds; a lesson says which slot it fills with `lesson.slot`.
+# Changing this file changes the curriculum and is a reviewed change; the
+# counts are pinned by tests/unit/test_curriculum.py and docs/roadmap.md
+# ("Slot mapping").
+
+courses:
+  - {id: mechanics, title: "Classical mechanics"}
+  - {id: thermodynamics, title: "Thermodynamics and statistical physics"}
+  - {id: waves, title: "Waves and optics"}
+  - {id: electromagnetism, title: "Electromagnetism"}
+  - {id: fluids, title: "Fluid dynamics"}
+  - {id: quantum, title: "Quantum physics"}
+  - {id: astrophysics, title: "Astrophysics, cosmology, and relativity"}
+  - {id: materials, title: "Condensed matter and materials physics"}
+
+paths:
+  - {id: reasoning, title: "Physics reasoning and scientific agents"}
+  - {id: law-discovery, title: "Scientific law discovery"}
+  - {id: benchmarking, title: "Physics agent benchmarking"}
+  - {id: autonomous-research, title: "Autonomous scientific research"}
+
+slots:
+  # mechanics
+  - {label: M1, title: "Kinematics as a program", course: mechanics, kind: lesson}
+  - {label: M2, title: "Newton's laws", course: mechanics, kind: lesson}
+  - {label: M3, title: "Projectile motion with drag", course: mechanics, kind: lesson}
+  - {label: M4, title: "Harmonic oscillator", course: mechanics, kind: lesson}
+  - {label: M5, title: "Numerical integrators", course: mechanics, kind: lesson}
+  - {label: M6, title: "Energy conservation", course: mechanics, kind: lesson}
+  - {label: M7, title: "Momentum and collisions", course: mechanics, kind: lesson}
+  - {label: M8, title: "Kepler orbits", course: mechanics, kind: lesson}
+  - {label: M9, title: "Double pendulum and chaos", course: mechanics, kind: lesson}
+  - {label: M10, title: "Lagrangian mechanics", course: mechanics, kind: lesson}
+  - {label: M11, title: "Hamiltonian mechanics", course: mechanics, kind: lesson}
+  - {label: M12, title: "Resonance and driven oscillators", course: mechanics, kind: lesson}
+  - {label: M13, title: "Many-body gravitation", course: mechanics, kind: lesson}
+  - {label: M14, title: "Nonlinear dynamics and bifurcations", course: mechanics, kind: lesson}
+  - {label: M17, title: "Rotational motion, torque, and angular momentum", course: mechanics, kind: lesson}
+  - {label: M15, title: "Experimental: real pendulum or accelerometer data", course: mechanics, kind: measured-data lab}
+  - {label: M16, title: "Experimental: GW150914 gravitational-wave strain", course: mechanics, kind: measured-data lab}
+  # thermodynamics
+  - {label: T0, title: "Gas from simple agents", course: thermodynamics, kind: lesson}
+  - {label: T1, title: "Random walks and diffusion", course: thermodynamics, kind: lesson}
+  - {label: T2, title: "Kinetic theory of gases", course: thermodynamics, kind: lesson}
+  - {label: T3, title: "Entropy and thermodynamic equilibrium", course: thermodynamics, kind: lesson}
+  - {label: T4, title: "Ising model and phase transitions", course: thermodynamics, kind: lesson}
+  - {label: T5, title: "Molecular dynamics", course: thermodynamics, kind: lesson}
+  - {label: T6, title: "Heat conduction and diffusion", course: thermodynamics, kind: lesson}
+  - {label: T9, title: "Heat engines and thermodynamic cycles", course: thermodynamics, kind: lesson}
+  - {label: T10, title: "From finite differences to finite elements and meshes", course: thermodynamics, kind: lesson}
+  - {label: T11, title: "Applied capstone: thermal engineering of an AI accelerator", course: thermodynamics, kind: applied capstone}
+  - {label: T7, title: "Experimental: heat transfer measurements", course: thermodynamics, kind: measured-data lab}
+  - {label: T8, title: "Experimental: Brownian motion tracking", course: thermodynamics, kind: measured-data lab}
+  # waves
+  - {label: W1, title: "The wave equation", course: waves, kind: lesson}
+  - {label: W2, title: "Interference and resonance", course: waves, kind: lesson}
+  - {label: W3, title: "Refraction and Snell's law", course: waves, kind: lesson}
+  - {label: W4, title: "Polarisation and Malus's law", course: waves, kind: lesson}
+  - {label: W5, title: "Diffraction and imaging", course: waves, kind: lesson}
+  - {label: W6, title: "Inverse optics", course: waves, kind: lesson}
+  - {label: W9, title: "Sound waves, resonance, and the Doppler effect", course: waves, kind: lesson}
+  - {label: W7, title: "Experimental: real optical diffraction images", course: waves, kind: measured-data lab}
+  - {label: W8, title: "Experimental: wave flume measurements", course: waves, kind: measured-data lab}
+  # electromagnetism
+  - {label: EM1, title: "Coulomb's law and electric fields", course: electromagnetism, kind: lesson}
+  - {label: EM2, title: "Lorentz force and charged particles", course: electromagnetism, kind: lesson}
+  - {label: EM3, title: "Faraday's law and induction", course: electromagnetism, kind: lesson}
+  - {label: EM4, title: "Maxwell's equations and FDTD", course: electromagnetism, kind: lesson}
+  - {label: EM5, title: "RLC circuits and resonance", course: electromagnetism, kind: lesson}
+  - {label: EM6, title: "Waveguides and electromagnetic resonances", course: electromagnetism, kind: lesson}
+  - {label: EM7, title: "Experimental: microwave S-parameters", course: electromagnetism, kind: measured-data lab}
+  - {label: EM8, title: "Experimental: real RLC circuit measurements", course: electromagnetism, kind: measured-data lab}
+  - {label: EM9, title: "Applied capstone: adaptive phased-array beam steering", course: electromagnetism, kind: applied capstone}
+  # fluids
+  - {label: FL1, title: "Advection and diffusion", course: fluids, kind: lesson}
+  - {label: FL2, title: "Navier-Stokes fundamentals", course: fluids, kind: lesson}
+  - {label: FL3, title: "Vortex formation and flow around obstacles", course: fluids, kind: lesson}
+  - {label: FL4, title: "Shock waves and Burgers' equation", course: fluids, kind: lesson}
+  - {label: FL5, title: "Shallow-water equations", course: fluids, kind: lesson}
+  - {label: FL6, title: "Particle-based fluid simulation", course: fluids, kind: lesson}
+  - {label: FL9, title: "Finite-volume methods and conservation laws", course: fluids, kind: lesson}
+  - {label: FL7, title: "Experimental: particle image velocimetry", course: fluids, kind: measured-data lab}
+  - {label: FL8, title: "Experimental: real turbulence or flow measurements", course: fluids, kind: measured-data lab}
+  - {label: FL10, title: "Applied capstone: reconstructing the 2025 Kamchatka tsunami", course: fluids, kind: applied capstone}
+  # quantum
+  - {label: Q1, title: "Schrödinger equation", course: quantum, kind: lesson}
+  - {label: Q2, title: "Quantum tunnelling", course: quantum, kind: lesson}
+  - {label: Q3, title: "Quantum harmonic oscillator", course: quantum, kind: lesson}
+  - {label: Q4, title: "Spin and Stern-Gerlach measurements", course: quantum, kind: lesson}
+  - {label: Q5, title: "Quantum entanglement, Bell and CHSH", course: quantum, kind: lesson}
+  - {label: Q6, title: "Open quantum systems and decoherence", course: quantum, kind: lesson}
+  - {label: Q7, title: "Experimental: atomic spectroscopy", course: quantum, kind: measured-data lab}
+  - {label: Q8, title: "Experimental: quantum measurement statistics", course: quantum, kind: measured-data lab}
+  # astrophysics
+  - {label: AST1, title: "Three-body problem", course: astrophysics, kind: lesson}
+  - {label: AST2, title: "Modified gravity", course: astrophysics, kind: lesson}
+  - {label: AST3, title: "Gravitational lensing", course: astrophysics, kind: lesson}
+  - {label: AST10, title: "Special relativity and spacetime", course: astrophysics, kind: lesson}
+  - {label: AST4, title: "Relativistic orbits", course: astrophysics, kind: lesson}
+  - {label: AST5, title: "Cosmic expansion and redshift", course: astrophysics, kind: lesson}
+  - {label: AST6, title: "Gravitational-wave chirp simulation", course: astrophysics, kind: lesson}
+  - {label: AST7, title: "Exoplanet transit simulation", course: astrophysics, kind: lesson}
+  - {label: AST8, title: "Experimental: real exoplanet light curves", course: astrophysics, kind: measured-data lab}
+  - {label: AST9, title: "Experimental: galaxy rotation curves", course: astrophysics, kind: measured-data lab}
+  # materials
+  - {label: MAT1, title: "Crystal lattices and phonons", course: materials, kind: lesson}
+  - {label: MAT2, title: "Electronic band structure", course: materials, kind: lesson}
+  - {label: MAT3, title: "Elasticity and deformation", course: materials, kind: lesson}
+  - {label: MAT4, title: "Defects and material properties", course: materials, kind: lesson}
+  - {label: MAT5, title: "Experimental: X-ray diffraction data", course: materials, kind: measured-data lab}
+  - {label: MAT6, title: "Experimental: stress-strain measurements", course: materials, kind: measured-data lab}
+  # reasoning
+  - {label: AI0, title: "LLM agent designs a projectile experiment", path: reasoning, position: 1, kind: lesson}
+  - {label: AI1, title: "Agent-assisted physics simulation development", path: reasoning, position: 2, kind: lesson}
+  - {label: AI2, title: "Scientific code verification and debugging", path: reasoning, position: 3, kind: lesson}
+  - {label: AI3, title: "Counterexample hunting", path: reasoning, position: 4, kind: lesson}
+  - {label: AI4, title: "Multi-agent scientific review", path: reasoning, position: 5, kind: lesson}
+  - {label: AI5, title: "Agent-assisted real experimental physics", path: reasoning, position: 6, kind: lesson}
+  - {label: AI6, title: "Multimodal physics reasoning", path: reasoning, position: 7, kind: lesson}
+  - {label: AI7, title: "Interpretable physics explanations and constraints", path: reasoning, position: 8, kind: lesson}
+  - {label: AI8, title: "Physical reasoning from video", path: reasoning, position: 9, kind: lesson}
+  # law-discovery
+  - {label: D1, title: "Black-box physics: discovering force laws", path: law-discovery, position: 1, kind: lesson}
+  - {label: D2, title: "Physics without prior knowledge", path: law-discovery, position: 2, kind: lesson}
+  - {label: D3, title: "Discovering modified physical laws", path: law-discovery, position: 3, kind: lesson}
+  - {label: D4, title: "Discovering gravity from experiments", path: law-discovery, position: 4, kind: lesson}
+  - {label: D5, title: "Unknown physical worlds", path: law-discovery, position: 5, kind: lesson}
+  - {label: D6, title: "Inverse physics: parameter discovery and uncertainty", path: law-discovery, position: 6, kind: lesson}
+  - {label: D7, title: "Symbolic regression for physical laws", path: law-discovery, position: 7, kind: lesson}
+  - {label: D8, title: "Discovering differential equations", path: law-discovery, position: 8, kind: lesson}
+  - {label: D9, title: "Active experimental design", path: law-discovery, position: 9, kind: lesson}
+  - {label: D10, title: "Scientific discovery under measurement noise", path: law-discovery, position: 10, kind: lesson}
+  - {label: D11, title: "Hidden forces and unobserved variables", path: law-discovery, position: 11, kind: lesson}
+  - {label: D12, title: "Generalisation to unseen physical systems", path: law-discovery, position: 12, kind: lesson}
+  - {label: D13, title: "Discovering conservation laws and physical invariants", path: law-discovery, position: 13, kind: lesson}
+  # benchmarking
+  - {label: EV1, title: "Physics reasoning benchmarks", path: benchmarking, position: 1, kind: lesson}
+  - {label: EV2, title: "Interactive discovery benchmarks", path: benchmarking, position: 2, kind: lesson}
+  - {label: EV3, title: "Agent versus non-agent baselines", path: benchmarking, position: 3, kind: lesson}
+  - {label: EV4, title: "Robustness, cost, and sample efficiency", path: benchmarking, position: 4, kind: lesson}
+  - {label: EV5, title: "Scientific failure analysis", path: benchmarking, position: 5, kind: lesson}
+  # autonomous-research
+  - {label: R1, title: "Automated physics analysis pipelines", path: autonomous-research, position: 1, kind: lesson}
+  - {label: R2, title: "Scientific evidence maps", path: autonomous-research, position: 2, kind: lesson}
+  - {label: R3, title: "Scientific literature and reproducible evidence", path: autonomous-research, position: 3, kind: lesson}
+  - {label: R4, title: "Reproducing a physics paper with multiple agents", path: autonomous-research, position: 4, kind: lesson}
+  - {label: R5, title: "Agent-driven materials discovery", path: autonomous-research, position: 5, kind: lesson}
+  - {label: R6, title: "Autonomous physics research challenge", path: autonomous-research, position: 6, kind: lesson}
+  # the Lean slot
+  - {label: L1, title: "Proving what the simulation showed", strand: lean, kind: lesson}

@@ -11,6 +11,7 @@ lesson:
   order: 5
   difficulty: 2
   course: mechanics
+  slot: M5
   methods: [simulation]
   outcomes:
     - Step a system with explicit Euler, symplectic Euler, velocity Verlet, and Runge-Kutta 4 behind one interface

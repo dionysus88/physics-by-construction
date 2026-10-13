@@ -8,6 +8,7 @@ lesson:
   order: 0
   difficulty: 1
   course: mechanics
+  # slot: M9  # the slot of site/curriculum.yaml that this lesson fills, if any
   methods: [simulation]
   outcomes:
     - "Replace: what the reader can do after the lesson"

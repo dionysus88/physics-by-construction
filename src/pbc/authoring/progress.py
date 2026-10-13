@@ -96,7 +96,11 @@ def raw_html(markup: str) -> str:
 
 def path_export(path: LearningPath) -> dict[str, object]:
     """The learning path as data: one entry per lesson in path order, with the
-    page of the built site relative to its root."""
+    page of the built site relative to its root. A lesson that fills a slot
+    of a method path also names the path and its position there."""
+    homed = [slot for slot in path.curriculum.slots if slot.path]
+    path_of = {slot.label: slot.path for slot in homed}
+    position_of = {slot.label: slot.position for slot in homed}
     return {
         "version": EXPORT_VERSION,
         "lessons": [
@@ -111,6 +115,9 @@ def path_export(path: LearningPath) -> dict[str, object]:
                 "difficulty": lesson.difficulty,
                 "prerequisites": list(lesson.prerequisites),
                 "related": list(lesson.related),
+                "slot": lesson.slot or None,
+                "path": path_of.get(lesson.slot),
+                "position": position_of.get(lesson.slot),
             }
             for lesson in path.lessons
         ],

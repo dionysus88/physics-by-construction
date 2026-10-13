@@ -11,6 +11,7 @@ lesson:
   order: 2
   difficulty: 3
   course: mechanics
+  slot: AI3
   methods: [simulation, llm-agents]
   outcomes:
     - State a falsifiable claim with a predicate and a budget of experiments

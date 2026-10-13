@@ -10,6 +10,7 @@ lesson:
   order: 2
   difficulty: 2
   course: mechanics
+  slot: M2
   methods: [simulation]
   outcomes:
     - Express a force as a function of the state and step Newton's second law

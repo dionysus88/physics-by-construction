@@ -12,6 +12,7 @@ lesson:
   order: 1
   difficulty: 2
   course: mechanics
+  slot: L1
   methods: [lean]
   outcomes:
     - State a result of the mechanics course as a theorem in Lean 4

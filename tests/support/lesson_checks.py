@@ -79,7 +79,7 @@ _LESSON_KEYS = {
     "outcomes",
     "related",
 }
-_OPTIONAL_LESSON_KEYS = {"lean-modules", "format"}
+_OPTIONAL_LESSON_KEYS = {"lean-modules", "format", "slot"}
 # The lesson formats; a lesson without a declaration is in format 1.
 FORMATS = (1, 2)
 _PREREQUISITE_KEYS = {"lessons", "outside"}
@@ -366,6 +366,11 @@ def _metadata_problems(front_matter: Any, strand: str, directory: str) -> list[s
                 for entry in lesson[key]
                 if not _ID.fullmatch(entry)
             ]
+    if "slot" in lesson and not (
+        isinstance(lesson["slot"], str)
+        and re.fullmatch(r"[A-Z]+[0-9]+", lesson["slot"])
+    ):
+        problems.append("'lesson.slot' must be a slot label such as M1 or AI0")
     if "format" in lesson and not (
         _is_integer(lesson["format"]) and lesson["format"] in FORMATS
     ):
@@ -616,11 +621,18 @@ def check_path(repository: Path) -> list[Violation]:
                 methods=tuple(meta["methods"]),
                 outcomes=tuple(meta["outcomes"]),
                 related=tuple(meta["related"]),
+                slot=meta.get("slot", ""),
             )
         )
+    try:
+        curriculum = learning_path.Curriculum.read(repository / SITE)
+    except ValueError as error:
+        return [
+            Violation("path", f"{SITE}/{learning_path.CURRICULUM_FILE}", str(error))
+        ]
     return [
         Violation("path", f"{SITE}/{problem.page}", problem.message)
-        for problem in learning_path.problems(lessons)
+        for problem in learning_path.problems(lessons, curriculum)
     ]
 
 

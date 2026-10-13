@@ -890,6 +890,31 @@ main button {
   font-size: var(--pbc-text-small);
 }
 
+/* Planned slots of the reference curriculum (ADR 013): visibly not a lesson
+   card, a dashed rule and the word "planned"; never a link. */
+.planned-slots {
+  margin: var(--pbc-space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planned-slots li {
+  margin: 0 0 var(--pbc-space-2);
+  padding: var(--pbc-space-2) var(--pbc-space-3);
+  border: 1px dashed var(--pbc-rule);
+  border-radius: var(--pbc-radius);
+  color: var(--pbc-muted);
+}
+
+.planned-slots .slot-label {
+  color: var(--pbc-text);
+  font-weight: 600;
+}
+
+.planned-slots .slot-status {
+  font-style: italic;
+}
+
 /* The facts inside a path card (pbc.authoring.learning_path). */
 .path-card .lesson-card-title {
   margin: 0 0 var(--pbc-space-2);
