@@ -419,7 +419,7 @@ def test_the_controls_have_visible_labels_and_focus_rings(
 def test_the_built_site_carries_the_learning_path_as_data(site_dir: Path):
     built = json.loads((site_dir / "path.json").read_text(encoding="utf-8"))
 
-    assert built == path_export(LearningPath.read(SITE_SOURCE))
+    assert built == path_export(LearningPath.read(SITE_SOURCE), SITE_SOURCE)
     assert built["lessons"]
     for lesson in built["lessons"]:
         assert (site_dir / lesson["page"]).is_file(), lesson["id"]

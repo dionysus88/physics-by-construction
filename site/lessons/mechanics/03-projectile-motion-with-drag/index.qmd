@@ -19,6 +19,7 @@ lesson:
     - Find the launch angle of greatest range with and without drag
   related: [agent-experiment]
   format: 2
+  preview: fig-throw-with-and-without-drag
   prerequisites:
     lessons: [newtons-laws]
     outside:

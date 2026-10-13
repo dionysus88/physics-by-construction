@@ -18,6 +18,7 @@ lesson:
     - Use the drift of the energy as a diagnostic, and say what it does not catch
   related: []
   format: 2
+  preview: fig-pendulum-swings
   prerequisites:
     lessons: [numerical-integrators]
     outside:

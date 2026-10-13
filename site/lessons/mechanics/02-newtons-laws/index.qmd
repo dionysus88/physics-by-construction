@@ -18,6 +18,7 @@ lesson:
     - Check a fall with linear drag against its exact solution
   related: []
   format: 2
+  preview: fig-throw-with-linear-drag
   prerequisites:
     lessons: [kinematics]
     outside:

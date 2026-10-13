@@ -21,7 +21,7 @@ from support.site_server import (
     configured_site_url,
 )
 
-from pbc.authoring import design
+from pbc.authoring import LearningPath, design
 
 
 def test_navigation_entries_stay_on_a_phone_screen(
@@ -315,3 +315,17 @@ def test_the_measured_data_pattern_shows_the_card_the_labels_and_the_no_llm_path
     model = page.locator("figcaption .figure-status[data-model-of]").first
     assert model.get_attribute("data-status") == "simulated"
     assert model.get_attribute("data-dataset") is None
+
+
+def test_every_lesson_has_one_verified_preview_within_the_budget(
+    browser: Browser, server: SiteServer, site_dir: Path
+):
+    violations = site_checks.check_previews(
+        site_dir,
+        LearningPath.read(SITE_SOURCE),
+        SITE_SOURCE,
+        configured_site_url(SITE_SOURCE),
+    )
+    sizes = site_checks.measure_payloads(browser, server, site_dir)
+    violations += site_checks.check_path_payload_with_previews(sizes, site_dir)
+    assert not violations, describe(violations)

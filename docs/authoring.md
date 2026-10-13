@@ -644,6 +644,33 @@ Every figure cell has `#| fig-status:` with one of `measured`, `calibrated`,
 coloured word, at the start of the caption. The alt text describes the shape of the figure; leave
 computed values to the table and the prose.
 
+### Lesson preview
+
+Every lesson has one small preview, which the learning path shows beside the
+lesson. It is never an image file: the build makes it.
+
+- Name the figure cell that represents the lesson in the front matter,
+  `lesson.preview: fig-oscillator-phase-space`. Choose the figure a reader
+  would recognise the lesson by (a trajectory, a phase curve, a
+  measured-versus-model panel, a transcript figure, a proof diagram), not
+  necessarily the first one: the first is often a conceptual setup sketch.
+  The cell needs a `fig-status` and a `fig-alt`, as every figure does.
+- After the render, `site/lesson-previews.py` scales the figure that this
+  cell drew to 320 by 200 pixels, on a white canvas, and writes it to
+  `previews/<lesson id>.png` of the built site. Nothing is cropped by hand,
+  and two builds give the same bytes. The alt text in `path.json` is the alt
+  text of the figure, started by `Preview, <status>:`, so the status travels
+  with the picture.
+- A lesson without `lesson.preview` gets a conceptual card in
+  `previews/<lesson id>.svg`, drawn by code from its course and its methods,
+  with the status `conceptual`. It shows no result. Declaring `preview` is
+  optional, but every published lesson declares one.
+- A `preview` that names no figure cell of the page, or a cell without a
+  status or alt text, fails the lesson checks; a named cell that drew no
+  figure fails the build. The built-site check requires one preview per
+  lesson, traced to its cell or to the fallback, and the previews together
+  fit in the payload budget of the learning path page.
+
 ### Numbers in prose
 
 In a format 2 lesson a number that the program computed reaches the prose

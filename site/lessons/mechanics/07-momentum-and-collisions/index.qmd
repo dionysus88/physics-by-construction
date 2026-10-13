@@ -19,6 +19,7 @@ lesson:
     - Model a collision as a brief strong force and compare it with the hard-sphere outcome
   related: [particles-in-a-box, collision-momentum-proved]
   format: 2
+  preview: fig-head-on-collision
   prerequisites:
     lessons: [energy-conservation]
     outside:

@@ -19,6 +19,7 @@ lesson:
     - Choose an integrator for what a simulation has to be trusted for
   related: [symplectic-euler-conserved-energy]
   format: 2
+  preview: fig-integrators-phase-space
   prerequisites:
     lessons: [harmonic-oscillator]
     outside:

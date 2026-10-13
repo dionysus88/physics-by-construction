@@ -19,6 +19,7 @@ lesson:
     - Fit the Newtonian chirp to the whitened strain, report the chirp mass with its uncertainty, and say what the model leaves out
   related: [chirp-law-proved]
   format: 2
+  preview: fig-measured-vs-model
   prerequisites:
     lessons: [kepler-orbit]
     outside:

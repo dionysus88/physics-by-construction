@@ -12,6 +12,7 @@ use (F14); it holds lessons and their relations, never learner state.
 
 import json
 from html import escape
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -94,10 +95,19 @@ def raw_html(markup: str) -> str:
     return f"```{{=html}}\n{markup}\n```\n"
 
 
-def path_export(path: LearningPath) -> dict[str, object]:
+def path_export(path: LearningPath, site: Path | None = None) -> dict[str, object]:
     """The learning path as data: one entry per lesson in path order, with the
     page of the built site relative to its root. A lesson that fills a slot
-    of a method path also names the path and its position there."""
+    of a method path also names the path and its position there. With the
+    website project ``site``, each lesson also names its preview file and the
+    alt text of it (F63)."""
+    from pbc.authoring.previews import preview_of
+
+    previews = (
+        {lesson.id: preview_of(lesson, site) for lesson in path.lessons}
+        if site is not None
+        else {}
+    )
     homed = [slot for slot in path.curriculum.slots if slot.path]
     path_of = {slot.label: slot.path for slot in homed}
     position_of = {slot.label: slot.position for slot in homed}
@@ -118,13 +128,23 @@ def path_export(path: LearningPath) -> dict[str, object]:
                 "slot": lesson.slot or None,
                 "path": path_of.get(lesson.slot),
                 "position": position_of.get(lesson.slot),
+                **(
+                    {
+                        "preview": {
+                            "alt": previews[lesson.id].alt,
+                            "src": previews[lesson.id].file,
+                        }
+                    }
+                    if site is not None
+                    else {}
+                ),
             }
             for lesson in path.lessons
         ],
     }
 
 
-def export_json(path: LearningPath) -> str:
+def export_json(path: LearningPath, site: Path | None = None) -> str:
     """The export as the text of ``path.json``: sorted keys, one trailing
     newline, so that two builds write the same bytes."""
-    return json.dumps(path_export(path), indent=1, sort_keys=True) + "\n"
+    return json.dumps(path_export(path, site), indent=1, sort_keys=True) + "\n"

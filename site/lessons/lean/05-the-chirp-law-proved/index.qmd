@@ -18,6 +18,7 @@ lesson:
     - Say that the theorems are about the model of the lab, and that they prove nothing about the measured strain or the masses of the black holes
   related: []
   format: 2
+  preview: fig-countdown
   prerequisites:
     lessons: [gravitational-wave-strain, proving-what-the-simulation-showed]
     outside:

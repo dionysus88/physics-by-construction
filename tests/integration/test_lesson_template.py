@@ -2,6 +2,7 @@
 passes the lesson source checks and builds next to the lessons of the site.
 """
 
+import re
 import shutil
 from pathlib import Path
 
@@ -51,6 +52,9 @@ def repository(tmp_path_factory: pytest.TempPathFactory) -> Path:
     for page in lesson_checks.lesson_pages(repository):
         front_matter, separator, _ = page.read_text().partition("\n---\n")
         assert separator, f"{page} has no front matter"
+        # The bodies are gone, so a 'preview' would name a cell that is not
+        # there; those lessons get the conceptual fallback.
+        front_matter = re.sub(r"^  preview: .*\n", "", front_matter, flags=re.M)
         page.write_text(front_matter + separator)
     text = TEMPLATE.read_text()
     for placeholder, value in PLACEHOLDERS.items():

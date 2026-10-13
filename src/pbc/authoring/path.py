@@ -242,6 +242,7 @@ class Lesson:
     outcomes: tuple[str, ...]
     related: tuple[str, ...]  # lesson ids the lesson links as extensions
     slot: str = ""  # the label of the curriculum slot the lesson fills, or ""
+    preview: str = ""  # the label of the figure cell that is the preview, or ""
 
 
 # --- The reference curriculum -------------------------------------------------
@@ -272,6 +273,7 @@ _FRONT_MATTER_FIELDS = {
     "lean-modules",
     "lessons",
     "outside",
+    "preview",
 }
 
 
@@ -863,6 +865,7 @@ def _read(site: Path, page: Path) -> Lesson:
             outcomes=_texts(meta["outcomes"]),
             related=_texts(meta["related"]),
             slot=str(meta.get("slot") or ""),
+            preview=str(meta.get("preview") or ""),
         )
     except yaml.YAMLError, KeyError, TypeError, ValueError:
         raise ValueError(

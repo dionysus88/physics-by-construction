@@ -17,6 +17,7 @@ lesson:
     - Measure how the error of Euler stepping shrinks with the time step
   related: [proving-what-the-simulation-showed]
   format: 2
+  preview: fig-ball-thrown-up
   prerequisites:
     lessons: []
     outside:

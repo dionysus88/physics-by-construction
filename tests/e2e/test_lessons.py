@@ -477,3 +477,36 @@ def test_the_first_lesson_shows_the_constructs_of_format_2_as_text(
         "Exercise 2.",
         "Exercise 3.",
     ]
+
+
+# Compares bytes with the built site: it runs on the machine that built it
+# (ADR 012).
+@pytest.mark.same_machine
+def test_a_second_build_gives_byte_identical_previews(site_dir: Path, tmp_path: Path):
+    """Two builds of the lessons, each executing every figure, write the same
+    bytes for every preview (F63)."""
+    source = tmp_path / "site"
+    shutil.copytree(
+        SITE_SOURCE,
+        source,
+        ignore=shutil.ignore_patterns("_site", ".quarto"),
+    )
+    second = tmp_path / "second"
+    build = subprocess.run(
+        [str(REPO_ROOT / "scripts/build-site.sh"), str(source), str(second)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert build.returncode == 0, build.stdout[-2000:] + build.stderr[-2000:]
+    first_files = sorted((site_dir / "previews").glob("*"))
+    assert first_files, "the first build wrote no previews"
+    assert sorted(f.name for f in (second / "previews").glob("*")) == [
+        f.name for f in first_files
+    ]
+    differing = [
+        f.name
+        for f in first_files
+        if f.read_bytes() != (second / "previews" / f.name).read_bytes()
+    ]
+    assert not differing, f"previews differ between two builds: {differing}"

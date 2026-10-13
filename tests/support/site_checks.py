@@ -10,6 +10,7 @@ local test server is recorded as a violation and aborted.
 
 import ast
 import itertools
+import json
 import re
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
@@ -22,8 +23,10 @@ from urllib.parse import unquote, urljoin, urlsplit
 from axe_playwright_python.sync_playwright import Axe
 from playwright.sync_api import Browser, BrowserContext, Page, Response, Route
 
+from pbc.authoring import previews
 from pbc.authoring.design import CONTROL_CONTRAST, contrast_ratio
-from pbc.authoring.progress import STORAGE_KEY
+from pbc.authoring.path import LearningPath
+from pbc.authoring.progress import EXPORT_FILE, STORAGE_KEY
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
 from pbc.data.status import allowed_statuses, artifact_types, needs_artifact
@@ -972,6 +975,105 @@ def check_payload(
         for name, size in sizes.items()
         if size > budget
     ]
+
+
+# --- Lesson previews ---------------------------------------------------------
+
+_IMG_SOURCE = re.compile(r"<img\b[^>]*?\bsrc\s*=\s*[\"']([^\"']*)", re.IGNORECASE)
+
+
+def check_previews(
+    site_dir: Path, path: LearningPath, site_source: Path, site_url: str
+) -> list[Violation]:
+    """Every lesson has exactly one preview in the built site (F63): the file
+    is the figure of the cell the lesson names, scaled by the one function that
+    scales, or the conceptual fallback drawn for the lesson; ``path.json``
+    names the file with alt text that starts with the status; the previews
+    hold nothing else; no image of the path page comes from another origin;
+    and the previews together fit in what is left of the payload budget of the
+    path page."""
+    violations = []
+    exported = json.loads((site_dir / EXPORT_FILE).read_text(encoding="utf-8"))
+    entries = {entry["id"]: entry for entry in exported["lessons"]}
+    expected = set()
+    total = 0
+    for lesson in path.lessons:
+        preview = previews.preview_of(lesson, site_source)
+        expected.add(preview.file)
+        entry = entries.get(lesson.id, {}).get("preview")
+        if entry != {"alt": preview.alt, "src": preview.file}:
+            violations.append(
+                Violation("preview", lesson.id, f"{EXPORT_FILE} names {entry!r}")
+            )
+        if not preview.alt.startswith(f"Preview, {preview.status}: "):
+            violations.append(
+                Violation(
+                    "preview", lesson.id, "the alt text does not carry the status"
+                )
+            )
+        file = site_dir / preview.file
+        if not file.is_file():
+            violations.append(
+                Violation("preview", lesson.id, f"{preview.file} is not in the site")
+            )
+            continue
+        total += file.stat().st_size
+        if preview.fallback:
+            wanted = previews.fallback(lesson).encode("utf-8")
+        else:
+            wanted = previews.scale(
+                previews.figure_file(site_dir, lesson, preview.source).read_bytes()
+            )
+        if file.read_bytes() != wanted:
+            violations.append(
+                Violation(
+                    "preview",
+                    lesson.id,
+                    f"{preview.file} is not the figure of"
+                    f" {preview.source or 'the fallback'}",
+                )
+            )
+    found = {
+        file.relative_to(site_dir).as_posix()
+        for file in (site_dir / previews.PREVIEW_DIRECTORY).glob("*")
+    }
+    for extra in sorted(found - expected):
+        violations.append(Violation("preview", extra, "belongs to no lesson"))
+    page = site_dir / "path" / "index.html"
+    for source in _IMG_SOURCE.findall(page.read_text(encoding="utf-8")):
+        if _is_other_origin(source, site_url):
+            violations.append(
+                Violation(
+                    "preview", "path/index.html", f"image from another origin: {source}"
+                )
+            )
+    if total > PAYLOAD_BUDGET:
+        violations.append(
+            Violation(
+                "preview", "previews", f"{total:,} bytes, over {PAYLOAD_BUDGET:,}"
+            )
+        )
+    return violations
+
+
+def check_path_payload_with_previews(
+    sizes: dict[str, int], site_dir: Path, budget: int = PAYLOAD_BUDGET
+) -> list[Violation]:
+    """The learning path page with every preview it will show stays within
+    the initial payload budget."""
+    previews_size = sum(
+        file.stat().st_size
+        for file in (site_dir / previews.PREVIEW_DIRECTORY).glob("*")
+    )
+    name = "path/index.html"
+    total = sizes.get(name, 0) + previews_size
+    if total > budget:
+        return [
+            Violation(
+                "payload", name, f"with the previews {total:,} bytes, over {budget:,}"
+            )
+        ]
+    return []
 
 
 # --- Search ------------------------------------------------------------------

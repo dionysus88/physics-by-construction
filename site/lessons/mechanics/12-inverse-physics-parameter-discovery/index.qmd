@@ -20,6 +20,7 @@ lesson:
     - State the uncertainty of a parameter fitted to measured data, with the scatter that an injection of a known signal shows
   related: []
   format: 2
+  preview: fig-profiles
   prerequisites:
     lessons: [harmonic-oscillator, gravitational-wave-strain]
     outside:

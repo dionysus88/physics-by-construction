@@ -19,6 +19,7 @@ lesson:
     - Turn the numbers of an analysis into a report that a build compares with a committed expectation
   related: []
   format: 2
+  preview: fig-range-sweep
   prerequisites:
     lessons: [projectile-with-drag]
     outside:

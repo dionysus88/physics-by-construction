@@ -18,6 +18,7 @@ lesson:
     - Say what the theorem explains about the bounded energy seen in the simulation, and what it does not prove
   related: []
   format: 2
+  preview: fig-modified-energy
   prerequisites:
     lessons: [numerical-integrators, proving-what-the-simulation-showed]
     outside:

@@ -17,6 +17,7 @@ lesson:
     - Check them against kinetic theory within a stated statistical tolerance
   related: []
   format: 2
+  preview: fig-speeds
   prerequisites:
     lessons: [momentum-and-collisions]
     outside:

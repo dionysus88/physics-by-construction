@@ -20,6 +20,7 @@ lesson:
     - Read the proof of the factor by which one Euler step multiplies the energy of the oscillator
   related: []
   format: 2
+  preview: fig-theorem-pipeline
   prerequisites:
     lessons: [kinematics, harmonic-oscillator]
     outside:
