@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed with the planning of the change cycle `physics-next-phase`;
-accepted when that planning is approved. Extends ADR 002 (a second kind of
+Accepted with the approval of the planning of the change cycle
+`physics-next-phase` (2026-10-09). Extends ADR 002 (a second kind of
 committed input a build cannot regenerate).
 
 Date: 2026-10-09

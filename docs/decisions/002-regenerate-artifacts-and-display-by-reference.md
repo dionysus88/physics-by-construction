@@ -5,7 +5,11 @@
 Accepted with the approval of the project bootstrap planning. Extended by
 [ADR 007](007-real-datasets-as-declared-inputs.md) (2026-10-09), which adds
 dataset samples as a second kind of committed input a build cannot
-regenerate; the decisions below are unchanged.
+regenerate; the decisions below are unchanged. Amended by
+[ADR 014](014-verification-proportional-to-the-change.md) (2026-10-12): an
+execution cache is still never committed, and may be restored from the
+verified artifact of a run on `main` so that a pull request executes only
+the lessons whose inputs changed.
 
 Date: 2026-10-06
 

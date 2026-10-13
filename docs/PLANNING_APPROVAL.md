@@ -1,14 +1,16 @@
 # Planning Approval
 
 Status: Approved
-Approved at: 2026-10-09T13:08:17Z
-Planning branch: planning/physics-next-phase
-Change request: docs/changes/physics-next-phase.md
-Final review: round 6, PASS WITH MINOR FINDINGS, by claude (fable)
-Planning fingerprint: 47b9761c367d8ac05e7b436bee9dfae857ddbd13
+Approved at: 2026-10-13T04:47:03Z
+Planning branch: planning/final-curriculum
+Change request: docs/changes/final-curriculum.md
+Final review: round 9, PASS, by claude (sonnet)
+Planning fingerprint: 0b00c7bbf1ff0bf55156c2549c2932a074be647a
 
 Recorded by `scripts/finish-planning.sh`. The approval covers these planning
-documents; any change to them invalidates it (`./scripts/finish-planning.sh --check`):
+documents. A change to the description, the requirements, a change request, or the
+roadmap makes it stale; the architecture and the ADRs may be updated by features
+(`./scripts/finish-planning.sh --check`):
 
 - `docs/PROJECT_DESCRIPTION.md`
 - `docs/changes`
@@ -17,36 +19,53 @@ documents; any change to them invalidates it (`./scripts/finish-planning.sh --ch
 - `docs/roadmap.md`
 - `docs/decisions`
 
+## Updates by merged work
+
+These commits changed the architecture or the ADRs between approvals, each
+under its own review. This approval covers the documents including them.
+
+- 09a1050 F28 — Lesson format 2, the reference register, and the M1 pilot (Issue #52; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #52)
+- 89647be F50 — Experimental dataset registry and feasibility gate (Issue #51; review: round 1, PASS WITH MINOR FINDINGS, by codex (gpt-6-luna); triage published on #51)
+- 192ab2b F25 — Homepage narrative: Construct, Investigate, Verify (Issue #56; review: round 1, PASS, by codex (gpt-6-luna))
+- 575441f F26 — Generated prerequisite graph (Issue #53; review: round 1, PASS WITH MINOR FINDINGS, by codex (gpt-6-luna); triage published on #53)
+- 9dda90c F41 — Self-hosted search (Issue #55; review: round 1, PASS, by codex (gpt-6-luna))
+- 51f4af7 F42 — Before you begin, and the glossary (Issue #58; review: round 1, PASS, by codex (gpt-6-luna))
+- 49b227b F46 — Scientific code verification and debugging (Issue #62; review: round 3 (changes since round 2 only), PASS, by codex (gpt-6-luna); triage published on #62)
+- 7ec0cd0 Leave code and printed output out of the search index
+- e357f11 Measure the page payload reliably and raise its limit to 3 MB
+- 7c97567 F13 — Self-check quizzes and browser-local progress (Issue #89; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #89)
+- bcca871 F18 — Multi-agent scientific review (Issue #88; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #88)
+- 704b905 F14 — Adaptive recommendations (Issue #94; review: round 1, PASS, by codex (gpt-6-luna))
+- c8b7cbc F21 — Interactive Lean exercises (Issue #90; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #90)
+- b0eb183 Raise the budget of the search index to 1 MB
+- 3e41817 F51 — Experimental methods and visualization foundations (Issue #102; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #102)
+- 787f1ad F51 follow-up — the dataset check of a figure cannot be bypassed (Issue #115; review: round 3 (changes since round 2 only), PASS, by codex (gpt-6-luna); triage published on #115)
+- add23db F19 — Scientific evidence map (Issue #111; review: round 3 (changes since round 2 only), PASS, by codex (gpt-6-luna); triage published on #111)
+- 2be53d4 Record the raised limit in the test and the architecture
+- 48e95dc F43 — Science-first visualization components (Issue #121; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #121)
+- 893320f F20 — Autonomous experimental design (Issue #128; review: round 1, PASS, by codex (gpt-6-luna))
+- 42397f5 Run verification in parallel CI jobs behind one required check (F58, step 3) (Issue #130; review: round 4 (changes since round 3 only), PASS, by codex (gpt-6-astra); triage published on #130)
+- d77d976 Record the measured run times of the parallel jobs (F58, step 4) (Issue #130)
+- 8968711 Make the timeout and the measured state consistent across the records
+
 ## Review rounds
 
-- Round 1: CHANGES REQUIRED, 12 finding(s), by claude (fable)
-- Round 2: PASS WITH MINOR FINDINGS, 5 finding(s), by claude (fable)
-- Round 3: PASS WITH MINOR FINDINGS, 11 finding(s), by claude (fable)
-- Round 4: PASS WITH MINOR FINDINGS, 6 finding(s), by claude (fable)
-- Round 5: PASS WITH MINOR FINDINGS, 4 finding(s), by claude (fable)
-- Round 6: PASS WITH MINOR FINDINGS, 5 finding(s), by claude (fable)
+- Round 1: CHANGES REQUIRED, 5 finding(s), by codex (gpt-6-astra)
+- Round 2: CHANGES REQUIRED, 3 finding(s), by codex (gpt-6-astra)
+- Round 3: CHANGES REQUIRED, 8 finding(s), by claude (fable)
+- Round 4: CHANGES REQUIRED, 10 finding(s), by claude (fable)
+- Round 5: PASS WITH MINOR FINDINGS, 5 finding(s), by claude (fable)
+- Round 6: PASS WITH MINOR FINDINGS, 4 finding(s), by claude (fable)
+- Round 7: PASS WITH MINOR FINDINGS, 1 finding(s), by claude (sonnet)
+- Round 8: PASS WITH MINOR FINDINGS, 1 finding(s), by claude (sonnet)
+- Round 9: PASS, 0 finding(s), by claude (sonnet)
 
 ## Escalations confirmed as resolved
 
-- Round 1: MIN7 Approved requirements still list unresolved questions 1 to 4 as open although they are settled, and the architecture now contradicts them
-- Round 3: MIN9 Approved requirements still list unresolved questions 1 to 4 as open although each is settled (carried from rounds 1 and 2; concerns the approved requirements)
-- Round 3: S1 The approved requirements group counterexample hunting with exercises that let a coding agent write and run code, while the change request and F16 define it as an allowlisted harness agent replayed in CI (concerns the approved requirements)
-- Round 4: MIN4 Approved requirements still list unresolved questions 1 to 4 as open although each is settled (carried from rounds 1 to 3, escalated; concerns the approved requirements)
-- Round 4: S1 The approved requirements group counterexample hunting with coding-agent exercises, while F16 is an allowlisted harness agent replayed in CI (carried from round 3, escalated; concerns the approved requirements)
-- Round 5: MIN2 Approved requirements still list unresolved questions 1 to 4 as open although each is settled (carried from rounds 1 to 4, escalated; concerns the approved requirements)
-- Round 5: S1 The approved requirements group counterexample hunting with coding-agent exercises, while F16 is an allowlisted harness agent replayed in CI (carried from rounds 3 and 4, escalated; concerns the approved requirements)
+- Round 4: MIN4 Concerns the approved requirements: 'no feature equals one slot' contradicts decision 31 and the roadmap's many one-slot features
+- Round 5: S1 Concerns the approved requirements: the 'no feature equals one slot' sentence remains in the approved text; the owner's ruling is recorded only in the roadmap
 
 ## Findings that were not adopted
 
-- Round 1, ESCALATE: MIN7 [minor] Approved requirements still list unresolved questions 1 to 4 as open although they are settled, and the architecture now contradicts them. Valid, but the stale entries are in docs/PROJECT_REQUIREMENTS.md, which the planner may not modify. The architecture already records where questions 1 to 4 were settled (F09, ADR 006, F10, F11), so the planning documents are not in conflict with each other; only the requirements need the housekeeping, which is a Grill pass for the human.
-- Round 3, ESCALATE: MIN9 [minor] Approved requirements still list unresolved questions 1 to 4 as open although each is settled (carried from rounds 1 and 2; concerns the approved requirements). Verified: docs/PROJECT_REQUIREMENTS.md still lists unresolved questions 1 to 4 as open while the architecture's "Requirements coverage of open choices" records each as settled (default provider in src/pbc/agents/providers.py, ADR 006, F10, F11) and its stay-open table holds only questions 5 to 7. The planning documents are consistent; the only remaining change is to the approved requirements, which the planner may not edit. It stays escalated to the human for the next Grill pass, as in rounds 1 and 2, with no planner action.
-- Round 3, ESCALATE: S1 [suggestion] The approved requirements group counterexample hunting with exercises that let a coding agent write and run code, while the change request and F16 define it as an allowlisted harness agent replayed in CI (concerns the approved requirements). Verified: the requirements' Security and privacy bullet groups counterexample hunting in the parenthetical about exercises where a coding agent writes and runs code, while the change request, F16, and ADR 010 decision 1 define F16 as an allowlisted harness agent replayed in CI. The finding agrees there is no behavioural conflict and that F16 is stricter than the requirement, so no architecture, roadmap, or ADR change is needed. The only improvement is a wording change to the approved requirements, which the planner may not make, so it goes to the human's next Grill pass as a note.
-- Round 4, ESCALATE: MIN4 [minor] Approved requirements still list unresolved questions 1 to 4 as open although each is settled (carried from rounds 1 to 3, escalated; concerns the approved requirements). Verified: docs/PROJECT_REQUIREMENTS.md lines 572 to 587 still list questions 1 to 4 as unresolved and line 337 refers the CI-key question there, while docs/architecture.md lines 675 to 679 record each as settled and its stay-open table (lines 691 to 695) holds only questions 5 to 7. The planning documents are consistent with each other and with the repository; the only stale text is in the approved requirements, which the planner may not modify. The human marks questions 1 to 4 as settled in the next Grill pass. No planner action.
-- Round 4, ESCALATE: S1 [suggestion] The approved requirements group counterexample hunting with coding-agent exercises, while F16 is an allowlisted harness agent replayed in CI (carried from round 3, escalated; concerns the approved requirements). Verified: requirements lines 420 to 421 group counterexample hunting with coding-agent exercises, while F16 (roadmap lines 2377 to 2390) is a harness agent in the ADR 004 harness with code-writing agents out of scope, matching ADR 010 decision 1 and the change request. F16 is stricter than the requirement, so there is no behavioural conflict and nothing for the planning to change; moving the parenthetical belongs to the approved requirements, which only the human may edit in the next Grill pass.
-- Round 5, ESCALATE: MIN2 [minor] Approved requirements still list unresolved questions 1 to 4 as open although each is settled (carried from rounds 1 to 4, escalated; concerns the approved requirements). Verified: docs/PROJECT_REQUIREMENTS.md lines 572-587 still list questions 1 to 4 as open and line 337 still points the CI-key question to Unresolved questions, while docs/architecture.md lines 686-690 record each as settled (F09 with the OpenAI default, ADR 006, F10, F11) and the stay-open table at lines 702-706 holds only questions 5 to 7. The planning documents are consistent; the fix is to the approved requirements, which the planner may not change. The human should mark questions 1 to 4 as settled in the next Grill pass. Same decision as rounds 1 to 4.
-- Round 5, ESCALATE: S1 [suggestion] The approved requirements group counterexample hunting with coding-agent exercises, while F16 is an allowlisted harness agent replayed in CI (carried from rounds 3 and 4, escalated; concerns the approved requirements). Verified: docs/PROJECT_REQUIREMENTS.md line 420-421 groups counterexample hunting with agent-assisted simulation development and Lean proof generation as coding-agent exercises, while the roadmap's F16 and ADR 010 decision 1 treat it as an allowlisted ADR 004 harness agent replayed in CI, which is stricter and matches the change request. No behavioural conflict exists and the planning is correct as written; only the parenthetical in the approved requirements can mislead, and the planner may not edit it. The human should move counterexample hunting out of that parenthetical in the next Grill pass. Same decision as rounds 3 and 4.
-- Round 6, REJECT: MIN1 [minor] The approved requirements changed after their recorded approval without a new approval record (resolves the escalated MIN2 and S1 of rounds 1 to 5; concerns the approved requirements and the process). Decided by the project owner. The owner asked for these two edits to the requirements to resolve the findings escalated in rounds 1 to 5, and the reviewer confirms they are correct. The owner approves the requirements as they are with the approval of this planning, which covers docs/PROJECT_REQUIREMENTS.md and is recorded in docs/PLANNING_APPROVAL.md; no separate approval record is added.
-- Round 6, DEFER: MIN2 [minor] F45 and F46 add lessons that use F37's method tags and are expected in format 2, but depend only on F10, so they can land before the fields and the format exist. Decided by the project owner. The gap is real: F45 and F46 need the method tags of F37 and lesson format 2 of F28. It is handled when their Issues are created: F45 and F46 are not started before F37 and F28 are delivered. Changing the roadmap now would need another review round.
-- Round 6, DEFER: S1 [suggestion] F57 says F25 places the canonical sentence on the home page, while F57's own check and criterion 1 require it there at F57's acceptance. Decided by the project owner. F57 adds the sentence and the link to the current home page and F25 keeps them when it rewrites the page; the wording in F57 is corrected when its Issue is created.
-- Round 6, DEFER: S2 [suggestion] Labs whose datasets are survey-only after F50 need a later feasibility gate, and the roadmap places that gate "under F50" although F50 will be closed by then. Decided by the project owner. The gate procedure is clear; which Issue runs a later feasibility spike is decided when F52 or F53 is planned, as its own Issue and not by reopening F50.
-- Round 6, REJECT: S3 [suggestion] The approved requirements' "Offline builds" line is still broader than the install-time carve-out the architecture and ADR 003 rely on (carried from round 3 MIN6; concerns the approved requirements). Decided by the project owner. There is no behavioural conflict: the Mathlib cache is an install-time fetch that ADR 003 records, and the planning documents read the offline-builds line consistently.
+- Round 4, ESCALATE: MIN4 [minor] Concerns the approved requirements: 'no feature equals one slot' contradicts decision 31 and the roadmap's many one-slot features. Confirmed: docs/PROJECT_REQUIREMENTS.md line 193 ('no feature equals one slot') and decision 31 at line 806 ('no rule that a slot is a feature') disagree, and the change request (section 2, point 10: 'No rule that each curriculum slot must equal one feature') shows decision 31 is the intended meaning. The roadmap already follows decision 31 and the change request: F74, F80, F82 to F88, F97, F100, F102 to F108, F110, and F111 each deliver one slot, and the roadmap's definition-of-done block cites decision 31. Resolving the disagreement requires correcting the later-phases sentence of the approved requirements, which the planner may not edit, so the human must decide: either amend line 193 to 'no rule that a feature equals one slot' through the requirements process, or confirm that decision 31 governs and the roadmap's one-slot features stand. A note in the roadmap alone would not remove the contradiction inside the approved requirements, which is why this is escalated rather than adopted; once the human rules, the planner adds the roadmap note citing decision 31 if asked.
+- Round 5, ESCALATE: S1 [suggestion] Concerns the approved requirements: the 'no feature equals one slot' sentence remains in the approved text; the owner's ruling is recorded only in the roadmap. The finding is correct that the approved requirements still read 'no feature equals one slot' at line 193 against decision 31 at line 806, and that the owner's ruling of 2026-10-13 is recorded only in the roadmap's Phase 4 preamble (lines 3181 to 3188). The reviewer asks for no planning change, and none is needed: the planning follows decision 31 with a traceable note. The only remaining action is to replace the line-193 sentence with the wording of decision 31, which is a change to the approved requirements that the planner may not make. This is the same item the owner already settled as MIN4 of round 4; no new decision is requested, only the requirements edit at the next Project Grill cycle, which the roadmap note already schedules.

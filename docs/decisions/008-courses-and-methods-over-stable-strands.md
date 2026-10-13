@@ -2,8 +2,13 @@
 
 ## Status
 
-Proposed with the planning of the change cycle `physics-next-phase`;
-accepted when that planning is approved.
+Accepted with the approval of the planning of the change cycle
+`physics-next-phase` (2026-10-09). Decision 4 is superseded, and decisions
+1, 3, and 5 are amended, by
+[ADR 013](013-eight-courses-and-the-reference-curriculum.md): every course
+of the reference curriculum is a strand with the same identifier, created
+by the first feature that publishes a lesson of it, and the reference
+curriculum is declared data. Decision 2 stands.
 
 Date: 2026-10-09
 

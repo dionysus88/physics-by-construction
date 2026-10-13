@@ -14,6 +14,13 @@ checks run in parallel jobs behind one aggregate required check that keeps
 the name `verify`. The job timeout of decision 5 is 45 minutes per job, by
 decision 9 of the same ADR.
 
+[ADR 014](014-verification-proportional-to-the-change.md) is the new
+decision record that decision 6 requires before a check runs less often:
+on a pull request the lesson checks run for the lessons whose inputs
+changed, by content and failing safe; a run on `main` runs everything, in
+same-machine shards that keep every job within the timeout at 110 lessons
+(ADR 014 decisions 7 and 11).
+
 Date: 2026-10-06
 
 ## Context

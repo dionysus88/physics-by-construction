@@ -1,14 +1,16 @@
 # Project Requirements
 
 Status: Approved
-Approved at: 2026-10-09T07:28:06Z
+Approved at: 2026-10-12T20:32:35Z
 
 Project Grill owns the Draft content. `scripts/start-planning.sh` records human
 approval before project architecture and roadmap planning begins.
 
 Source: `docs/PROJECT_DESCRIPTION.md` (human-supplied, authoritative), the
-change request `docs/changes/physics-next-phase.md` (human-supplied,
-2026-10-09), plus the decisions recorded in "Major product decisions" below.
+change requests `docs/changes/physics-next-phase.md` (human-supplied,
+2026-10-09) and `docs/changes/final-curriculum.md` (human-supplied,
+2026-10-10, revision 3), plus the decisions recorded in "Major product
+decisions" below.
 
 ## Project goal
 
@@ -46,6 +48,14 @@ Beyond that first release, success means lessons that are self-contained and
 research-backed, and at least one lesson built on real measured data that has
 passed the dataset feasibility gate described under "Data and persistence".
 
+The long-term target is the reference curriculum of decision 23: eight
+physics courses with genuine published lessons, two authentic measured-data
+labs per course as a target that the dataset gate decides, four
+physics-and-AI method paths with valid lessons, and the formal-verification
+strand, navigable from a course-first learning path, with every published
+address intact. A curriculum is complete when the actual lesson inventory
+reconciles to that set with substantive lessons, not placeholder cards.
+
 ## Target users
 
 Primary user: **advanced self-directed learners**, including undergraduate and
@@ -77,14 +87,22 @@ There are no administrator or signed-in learner roles.
 ## Primary use cases and journeys
 
 1. **Follow the learning path.** A learner opens the site, sees the ordered
-   path: physics courses organised by subject (mechanics first, later courses
-   such as waves and optics), with AI-assisted research and formal
-   verification exposed as cross-cutting methods through tags, related
-   lessons, and cross-links rather than as physics subjects. The learner picks
-   the next lesson, reads it, runs or inspects the code, works the exercises
-   or plays with the interactive visualization, and moves on. The existing
-   strand identifiers (`mechanics`, `agents-llm`, `agents-abm`, `lean`) and
-   published URLs stay until an approved migration plan exists.
+   path: physics courses organised by subject (classical mechanics first;
+   then thermodynamics and statistical physics, waves and optics,
+   electromagnetism, fluid dynamics, quantum physics, astrophysics with
+   cosmology and relativity, and condensed matter and materials physics, as
+   each gains a lesson), with AI-assisted research and formal verification
+   exposed as cross-cutting methods through tags, related lessons, and
+   cross-links rather than as physics subjects. A secondary view shows the
+   four physics-and-AI method paths (physics reasoning and scientific
+   agents, scientific law discovery, physics agent benchmarking, autonomous
+   scientific research) over the same lessons, never as duplicate pages.
+   The learner picks a course, expands it, picks the next lesson, reads it,
+   runs or inspects the code, works the exercises or plays with the
+   interactive visualization, and moves on. The existing strand identifiers
+   (`mechanics`, `agents-llm`, `agents-abm`, `lean`) and published URLs stay
+   until an approved migration plan exists; new courses receive stable
+   identifiers and route rules through an approved architecture decision.
 2. **Reproduce a lesson locally.** A learner clones the repository, installs
    the pinned toolchain, and re-runs any lesson's code (and Lean proof) with
    identical results to those shown on the site.
@@ -162,7 +180,25 @@ Later phases (in scope for the project, out of scope for the MVP):
 - Adaptive learning (browser-local, no accounts).
 - GitHub Issue workflow for proposing, assessing, and drafting new content
   through reviewed pull requests, including agent-assisted drafting.
-- Further courses beyond mechanics along the same three-pillar path.
+- The reference curriculum of decision 23: the remaining seven physics
+  courses and the growth of mechanics to the slots the change request
+  `docs/changes/final-curriculum.md` enumerates, including the
+  fundamental and numerical additions of its revision 2 (rotational motion,
+  thermodynamic cycles, acoustics, finite-volume methods, special
+  relativity), the finite-element bridge from the finite-difference heat
+  solver, and the three applied capstones of its revision 3 (thermal
+  engineering of a hypothetical AI accelerator; adaptive phased-array beam
+  steering; propagation of the 2025 Kamchatka tsunami), each the culminating
+  application of its own course. Lessons are delivered in dependency order
+  through independently verifiable features; there is no rule that a slot
+  is a feature (decision 31).
+- The four physics-and-AI method paths of decision 25, reusing the models
+  and measured datasets of the physics courses, including the video
+  reasoning and conservation-law discovery lessons of revision 2.
+- The Learning Path page redesign of decision 29, as its own feature before
+  the bulk of the new lessons.
+- Verification that scales with the curriculum (decision 30), after the
+  parallel verification jobs and before the first block of new lessons.
 - Clarity and usability of the published site: honest homepage narrative,
   a generated prerequisite graph, learning-path cards with a difficulty
   scale, a reusable lesson template, course navigation from one source of
@@ -217,6 +253,31 @@ Later phases (in scope for the project, out of scope for the MVP):
   about the physics models, not the programs.
 - No certification, grading, or assessment that leaves the learner's browser.
 - No mobile app.
+- No lessons that build sensor experiments, record audio, collect classroom
+  or smartphone data, control laboratory instruments remotely, or operate an
+  autonomous physical laboratory. Measured-data labs analyse authentic,
+  properly licensed, already-collected data; the acoustics lesson is
+  numerical, and the video-reasoning lesson uses approved existing clips or
+  reproducible generated clips, with no webcam, upload service, or
+  device-control backend.
+- No standalone mathematics curriculum, no physics-informed machine-learning
+  track, and no generic AI-engineering or machine-learning curriculum. The
+  nuclear and particle, plasma, and geophysics and climate expansions are
+  outside the core curriculum until a separate decision adds them.
+- No applied capstone presented as a calibrated digital twin of real
+  hardware, as a fabricated or validated device, or as an operational
+  forecast: the accelerator model is a digital-twin-style teaching prototype
+  with hypothetical loads, the phased-array model is an array-factor model
+  and not a full-wave or metasurface design, and the tsunami model is
+  teaching-scale and not for warning, inundation, or hazard forecasting.
+  Capstones are limited to the three the change request selects; no other
+  course adopts a capstone requirement.
+- No heavyweight solver (CAD, meshing, finite-element, full-wave,
+  geophysical, or high-performance computing packages) as a mandatory build
+  or CI dependency; such tools are optional local comparators.
+- No decorative, stock, hand-copied, or externally hosted images on the
+  learning path or in lessons; every preview derives from a verified
+  generated figure or a repository-generated conceptual fallback.
 
 ## UX expectations
 
@@ -232,6 +293,29 @@ Later phases (in scope for the project, out of scope for the MVP):
   equations are rendered with accessible markup; figures have alt text.
 - A visible learning path with ordering, difficulty, and prerequisites per
   lesson, so learners always know where they are and what comes next.
+- Learning Path page: a calm, scientific, course-first overview of the
+  physics courses, each with concise text, a verified miniature, and its
+  real published-lesson count and entry point; a course's lessons behind
+  native, accessible progressive disclosure (`<details>`/`<summary>` or a
+  demonstrably equivalent semantic construct), closed by default except
+  possibly the current course, reachable without JavaScript; compact lesson
+  cards (title, one-sentence physical question, difficulty, a small verified
+  thumbnail, unobtrusive chips for simulation, experimental data, and AI
+  extensions) with outcomes, prerequisites, what the learner builds, related
+  extensions, the capstone classification, and reproduce links on
+  expansion; the method paths, agent-based modelling, and Lean as a
+  secondary view or filter over the same canonical pages; the prerequisite
+  graph with its textual alternative under an optional dependency-map
+  disclosure, with course-scoped subsets allowed; optional filters by
+  course, method, difficulty, and publication state that coordinate with
+  the self-hosted search; a planned lesson is visibly distinguished or
+  omitted and never shown as published. Thumbnails derive deterministically
+  from the lesson's own verified figures or a repository-generated
+  conceptual fallback, with alt text and no external image dependency. The
+  page meets the responsive, accessibility, payload, and determinism rules
+  of this section, uses no frontend framework, and keeps every existing
+  link, bookmark, and graph node address valid. All of it is generated from
+  the validated lesson front matter; no second hand-maintained catalogue.
 - Consistent lesson structure: explanation, assumptions, worked examples, code,
   exercises/visualizations, and a "reproduce this" section pointing at the
   exact files and commands.
@@ -320,6 +404,16 @@ Later phases (in scope for the project, out of scope for the MVP):
   original data when redistribution is not allowed.
 - The curated external-reference register (selection evidence per link) lives
   in the repository as a small maintainable file or lesson-level notes.
+- Measured-data target: every mature physics course aims at two designated
+  authentic-data labs, sixteen in all, as a curricular target that the
+  feasibility gate decides case by case; a course may launch with
+  simulations first, and no dataset is accepted because the curriculum names
+  it. An applied capstone's comparison with historical observations (for
+  the tsunami capstone, DART station records and bathymetry) passes the
+  same gate before publication and is a validation component of the
+  capstone, not a seventeenth designated lab; the capstone's simulation and
+  benchmark core does not depend on that approval and is published as
+  clearly simulated until it is granted.
 
 ## Authentication and authorization
 
@@ -361,6 +455,14 @@ Later phases (in scope for the project, out of scope for the MVP):
 - **Coding agents** (for example Claude Code, Codex): optional tools learners
   run locally with their own accounts in agent-assisted exercises. Not a site
   or CI dependency; the site verifies only the code and tests they produce.
+- **Reference solvers and discovery tools** (candidates: REBOUND, QuTiP,
+  FEniCSx, Gmsh, PhiFlow, Clawpack, GeoClaw, Dedalus, PySR, PySINDy):
+  optional local comparators or producers of reference artifacts with
+  recorded provenance, adopted only where they improve teaching and
+  verification. The required, deterministic path of every lesson runs on
+  the pinned scientific Python stack; none of these tools is a mandatory
+  build or CI dependency. External benchmark assets are not embedded before
+  their licences and scientific assumptions are checked.
 - **Curated external references**: outbound links only. Link validity is a
   separate, resilient maintenance check run periodically or on demand, never
   a build or merge requirement; builds and reading never depend on an
@@ -381,6 +483,25 @@ Later phases (in scope for the project, out of scope for the MVP):
   lesson Python code with tests, `lake build` for all Lean sources, and the
   site build. Deployment runs only from `main` after these pass. The existing
   `./scripts/verify.sh` must run the same checks locally.
+- Verification that scales with the curriculum (decision 30), refining the
+  rule above for lessons: the time a pull request waits depends on what it
+  changes, not on the size of the curriculum. A pull request that changes
+  one lesson executes and checks that lesson and every lesson that depends
+  on what it changed; a pull request that changes shared code, the locked
+  environment, the site configuration, or a toolchain executes and checks
+  every lesson; every push to `main` executes and checks every lesson, so
+  nothing is published that was not fully verified. A lesson counts as
+  unchanged only when none of its inputs changed (its source, the modules
+  of `src/pbc` it imports, its dataset samples, the lock file, the Lean
+  toolchain and manifest, the site configuration, and shared templates), and
+  the rule fails safe: when the inputs cannot be determined with certainty,
+  everything runs. No check is dropped; a check runs less often only where
+  a decision record says so and always on `main`. The selection is made by
+  `./scripts/verify.sh`, so a local run and CI select the same lessons; a
+  local run without options still verifies everything; the published site
+  is still the site that was verified. The Lean build keeps running in full
+  on every pull request (unresolved question 8). The budget of 12 minutes
+  for a typical pull request holds at 110 lessons.
 - CI cost and time: Mathlib builds are heavy; the pipeline must use the
   Mathlib cache (or equivalent) and dependency caching so a typical pull
   request verifies in minutes, not hours. The planner must set a concrete
@@ -459,6 +580,12 @@ Later phases (in scope for the project, out of scope for the MVP):
   independent code or data before it is presented; measurements stay distinct
   from modelled references, fitted curves, reconstructed signals, and agent
   conclusions, with filtering, interpolation, and selection disclosed.
+  A capstone's figures are generated by verified physics code, compare with
+  an analytical, manufactured, independent, or trusted numerical reference,
+  show refinement and genuine failure modes, and state which aspects are
+  physically validated and which are only numerically checked; solver
+  convergence, a colourful plot, or a digital-twin label is never physical
+  validation, and model fit alone never proves a physical law.
 
 ## Major product decisions
 
@@ -571,10 +698,138 @@ budget for heavy visuals; link checking is a non-blocking maintenance check;
 citation metadata (`CITATION.cff`) names the actual authors and the project
 URL, without a DOI until a release policy supports one.
 
+Decided during the change cycle `final-curriculum` (2026-10-12), from
+`docs/changes/final-curriculum.md` (revision 3, 2026-10-10):
+
+23. **Two complementary parts and a reference curriculum of 115 slots.**
+    Part A, computational and experimental physics: eight subject courses
+    with 81 lesson slots (classical mechanics 17, thermodynamics and
+    statistical physics 12, waves and optics 9, electromagnetism 9, fluid
+    dynamics 10, quantum physics 8, astrophysics with cosmology and
+    relativity 10, condensed matter and materials physics 6), of which 16
+    are designated measured-data labs. Part B, physics with LLMs and AI
+    agents: four method paths with 33 slots. Plus the one existing Lean
+    lesson. The slot labels of the change request are curriculum labels,
+    not lesson identifiers or feature IDs. The planner reconciles the
+    actual inventory against this structure and reports delivered and new
+    totals; at this cycle 22 lessons are published, including five Lean
+    lessons where the baseline counts one and agent, pipeline, and
+    inverse-physics lessons that map to slots. Published lessons beyond the
+    baseline are mapped to the structure, never deleted, hidden, or
+    rebuilt; 115 stays the reference structure unless a real conflict
+    requires a documented human decision. The 11 optional expansion slots
+    (nuclear and particle, plasma, geophysics and climate) are outside the
+    core curriculum.
+24. **Eight physics courses, with stable identifiers.** Decision 15 is
+    extended from "later candidates such as waves and optics" to the eight
+    courses of decision 23. Every published URL, lesson identifier, strand
+    identifier, and internal link keeps working; the course, methods, and
+    strand facets of ADR 008 stay; new courses need approved stable
+    identifiers and placement rules through a superseding or new ADR that
+    the planner proposes, with a transparent transition from ADR 008's
+    single-additional-course rule and from F15, which is reconciled through
+    planning rather than rewritten or worked around. Legacy lessons map by
+    metadata and cross-links only: mechanics M1 to M8 into the mechanics
+    course, the published gas lesson as the thermodynamics course's T0 under
+    its `agents-abm` address, the LLM projectile experiment as AI0 under its
+    `agents-llm` address, and the first Lean lesson as L1 under its `lean`
+    address; already delivered agent, pipeline, lab, and Lean content is
+    mapped rather than rebuilt.
+25. **Part B is a method view, not a set of courses.** The four paths
+    (physics reasoning and scientific agents, 9 slots; scientific law
+    discovery, 13; physics agent benchmarking, 5; autonomous scientific
+    research, 6) are learning paths over lessons that each keep one primary
+    physics course, reuse the simulation environments and measured datasets
+    of Part A, and keep the legacy `agents-llm` addresses. The paths
+    progressively distinguish solving a known problem, running a
+    tool-assisted experiment, identifying parameters in a known model,
+    discovering an unknown functional form, active experiment selection,
+    inference with hidden variables, explanation and falsification, robust
+    generalisation, agent benchmarking, and independent report
+    verification. Agents stay bounded, independently checked, and optional;
+    the agent's hypotheses are separated from the simulator truth, withheld
+    answers, and measured evidence; benchmarks have non-agent baselines,
+    hold-outs, budgets, frozen replay traces, and no build-time or runtime
+    dependence on hosted models; heavy benchmark runs stay outside the
+    pull-request critical path. External benchmark projects are
+    inspiration for original contained tasks, not embedded assets.
+26. **Revision-2 and revision-3 additions.** Seven new slots from
+    revision 2 (rotational motion M17, heat engines T9, acoustics W9,
+    finite-volume methods FL9, special relativity AST10, physical reasoning
+    from video AI8, conservation-law discovery D13) and seven enhancements
+    of existing slots without new slots (D6 identifiability, D9
+    hypothesis-discriminating information gain, AI6 still-image affordances
+    and counterfactuals, EV1 physical-tool understanding, EV2 controlled
+    prior-knowledge comparisons, R5 physical multi-objective constraints,
+    the linked Q5/Q8 Bell-inequality and eligible-data enhancement).
+    Revision 3 adds exactly four Part A slots: T10, a finite-element and
+    meshing bridge from the finite-difference heat solver (a shared
+    computational method, not a capstone and not a mathematics course), and
+    the three applied capstones T11 (thermal engineering of a hypothetical
+    AI accelerator), EM9 (adaptive phased-array beam steering), and FL10
+    (reconstructing the 2025 Kamchatka tsunami). Each capstone teaches a
+    bounded professional workflow from physical requirements to a
+    qualified decision, with the deliverables and credibility boundaries of
+    the change request's section 4.1, and is displayed as the culminating
+    application of its own course. The learning sequences T6 to T10 to
+    T11, EM4 and EM6 with W2 to EM9, and FL1 to FL4 to FL9 to FL5 to FL10
+    are preserved. Battery thermal runaway, Formula 1 aerodynamics, and
+    JWST atmospheric retrieval are deferred inspiration, not features.
+27. **Measured-data labs stay sixteen and gated.** Two per course as a
+    target; the feasibility gate (decision 18, F50) decides every dataset,
+    the shared experimental-methods foundations (F51) are reused, the
+    already planned labs (optical diffraction, PIV, microwave S-parameters,
+    gravitational-wave strain, agent-assisted measured data) are mapped and
+    not cloned, and no dataset approval is claimed that was not granted.
+    A capstone's historical-observation comparison is gated the same way
+    and is not a designated lab.
+28. **No hardware expansion.** No sensor, recording, instrument-control, or
+    physical-laboratory lessons; the labs use already-collected licensed
+    data (non-goals).
+29. **Learning Path redesign as an independent feature.** The course-first,
+    accessible, no-JavaScript page of "UX expectations" is one explicit
+    follow-on feature with a new ID, delivered before the bulk of the new
+    lessons, built on the delivered path, graph, cards, metadata, and visual
+    system features rather than reopening them, generated from the
+    validated front matter, with verified deterministic thumbnails and a
+    planned schema for an optional thumbnail reference only if required.
+30. **Verification scales with the curriculum.** The rule under "Runtime and
+    deployment constraints": a pull request verifies what it changes and
+    what depends on it, `main` always verifies everything, no check is
+    dropped, the selection lives in `./scripts/verify.sh`, and the
+    12-minute budget holds at 110 lessons. This changes what ADR 002 and
+    ADR 003 decided and needs a new decision record that settles what
+    "unchanged" means, where the earlier result comes from, what stays
+    unconditional, and how the three executions per lesson reduce; it
+    follows F58 and precedes the first block of new lessons.
+31. **Delivery and quality.** The planner produces a dependency-ordered
+    backlog with Issues created just in time, each independently
+    demonstrable; no rule that a slot is a feature, shared environments,
+    readers, harnesses, and figures are reused, retired IDs (including F24
+    and F48) are never reassigned, delivered feature blocks stay history,
+    and a scope change to a delivered feature is a new dependent feature.
+    Every new lesson meets the definition of done in the change request's
+    section 11: substantive physics at its stated level, runnable pinned
+    code, interpreted figures with provenance labels, honest limitations,
+    front-matter integration, exercises and a tested reproduce path,
+    focused tests, independent scientific review, and, for data and agent
+    work, the gate and boundary rules of this document. The site stays
+    static, English, open, free of accounts, analytics, uploads, and
+    runtime LLM backends; creator and JIDAI attribution and legal notices do
+    not change with this cycle.
+
+Recommended defaults adopted in this change cycle (reversible during
+planning): the planner allocates the next free feature IDs after a live
+reconciliation of lessons, features, Issues, and ADRs against `main`;
+planned lessons are shown on the path, if at all, through metadata rather
+than placeholder lesson pages; capstone and FEM lessons use small meshes and
+bounded tests in ordinary CI, with heavier reruns outside pull-request
+checks.
+
 ## Unresolved questions
 
-Questions 1 to 4 are settled. They keep their numbers, because other
-documents refer to them; questions 5 to 7 are open.
+Questions 1 to 4 and 6 are settled. They keep their numbers, because other
+documents refer to them; questions 5, 7, and 8 are open.
 
 1. **Default LLM provider for agent lessons.** Settled in F09: OpenAI is the
    default live provider, as an optional dependency behind the thin provider
@@ -591,10 +846,17 @@ documents refer to them; questions 5 to 7 are open.
    20 keeps the copyright line as it is. Revisit only with a legal review of
    company formation, contributor rights, and consent, recorded as its own
    decision.
-6. **Second course topic.** The change request names waves and optics as a
-   possible second course and a bridge from the wave-flume and optics
-   candidates; F15 still requires the human's explicit choice of topic and
-   lesson list before drafting.
+6. **Second course topic.** Settled by the change cycle `final-curriculum`
+   (decisions 23 and 24): the eight courses and their reference lesson
+   slots are named by the human; the planner reconciles F15 and ADR 008
+   with them through a superseding ADR, and the human still approves each
+   course's concrete lesson list in its Issues before drafting.
 7. **Release citation and DOI.** Whether releases get a Zenodo DOI depends
    on a release policy that does not exist yet; `CITATION.cff` carries no DOI
    until then.
+8. **Lean build under selective verification.** The change request's
+   verification rule names the lessons, their inputs, and the Lean toolchain
+   and manifest as inputs, but not the Lean build itself. Until the decision
+   record of decision 30 says otherwise, every pull request keeps building
+   all Lean sources, as ADR 003 decided; whether the Lean build may follow
+   the same selection is for the human to decide with that record.
