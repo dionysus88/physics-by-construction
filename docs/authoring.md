@@ -1179,6 +1179,29 @@ To use another provider, write one client module that reads its own key
 variable and change `PROVIDER` in `src/pbc/agents/providers.py`; the lesson
 page explains it. Only that provider's key is needed then.
 
+## Discovery lessons
+
+A lesson of the law-discovery or agent-benchmark paths uses `pbc.discovery`; it
+does not build its own environment, baselines, or scoring. The rules are in
+`docs/discovery-protocol.md`, the Discovery evaluation protocol.
+
+- **Environment and tools.** Use an environment of `pbc.discovery` (or add one
+  there, with its tests) and its `environment_allowlist`. Show the allowlist
+  with `AllowlistDisplay`, and say that the law, its parameters, and the
+  held-out settings are hidden from the agent. Never print them on the page.
+- **Condition and prompt.** State the condition of prior knowledge (`full`,
+  `partial`, `none`) and take the prompt from `pbc.discovery.prompts`.
+- **Frozen trace.** Commit the trace of `save_trace` (`replay.json` and
+  `trace.json`) next to `index.qmd`, and replay it with `replay()` as in "Agent
+  lessons". Label the model's messages as recorded, with the model and the date.
+- **Recomputed score and baselines.** Show the held-out error from
+  `score_transcript` and the table of `comparison` with `run_baselines`, failures
+  included. State a claim about a law only as far as that evidence supports it.
+- **Cost.** Quote the cost record of the trace as recorded by the run that
+  produced it, never as measured by the build.
+- **Not verified.** A full benchmark run stays outside `scripts/verify.conf` and
+  is marked "not verified" where shown; the page replays one small trace.
+
 ## Measured data
 
 Real measurements are inputs that no build can regenerate (ADR 007). A lesson
