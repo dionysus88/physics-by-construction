@@ -1,0 +1,634 @@
+---
+title: "Resonance and driven oscillators"
+description: >-
+  A damped oscillator pushed at a steady rhythm: the amplitude and phase that
+  it settles into, the resonance curve with its peak and width, and a
+  simulation of the whole curve validated against the analytic amplitude.
+lesson:
+  id: resonance
+  strand: mechanics
+  order: 16
+  difficulty: 2
+  course: mechanics
+  slot: M12
+  methods: [simulation]
+  outcomes:
+    - Write the damped, driven oscillator and its steady-state amplitude and phase
+    - Read the peak, the width, and the quality factor off a resonance curve
+    - Simulate the curve and validate it against the analytic amplitude, with the transient separated from the steady state
+    - Say how long a driven system takes to settle and why a larger quality factor takes longer
+  related: []
+  format: 2
+  preview: fig-resonance-curve
+  prerequisites:
+    lessons: [harmonic-oscillator, projectile-with-drag, numerical-integrators]
+    outside:
+      - "Calculus: derivatives, and the maximum of a function found where its derivative is zero"
+      - "Complex numbers: the exponential of an imaginary number, and the modulus and argument of a complex ratio"
+      - "Trigonometry: the amplitude and phase of a sum of a sine and a cosine of the same frequency"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+A child on a swing is pushed once per swing and the swing rises; pushed at the
+wrong rhythm it hardly moves. A wine glass sings when a voice reaches its pitch.
+A radio picks one station out of thousands by tuning a circuit until it answers
+to that frequency alone, and a bridge, a building, and the atoms of a gas
+in a field all answer most strongly to a rhythm of their own. The same equation
+describes them: an oscillator with some friction, driven by a force that varies
+sinusoidally in time. The question of the lesson is what such a system does in
+the long run, how much it moves, at what delay behind the push, and how sharply
+it prefers one rhythm over the others.
+
+The lesson solves the problem in closed form, since the equation is linear,
+then simulates the response over a whole range of driving frequencies with the
+classical Runge-Kutta method and validates the simulated curve against the closed
+form: the resonance curve is a check of the program as much as a result of the
+physics. The code lives in `pbc.mechanics.resonance`, the reference solution of
+the damped driven oscillator that the coding-agent exercise on simulation
+development, built on the same equation, reuses.
+
+## Assumptions
+
+The model and the program rest on these assumptions. Each one names what
+goes wrong when it does not hold.
+
+1. **Hooke's law.** The spring force is proportional to the displacement, so
+   the equation is linear and the response to a sinusoid is a sinusoid at the
+   same frequency. A spring that stiffens or softens with the stretch bends the
+   resonance curve and can make it jump between two amplitudes; that belongs to
+   the lesson on nonlinear dynamics.
+2. **Linear drag.** The damping force is proportional to the velocity, as in the
+   drag lesson at low speed. Friction of another kind, such as dry friction or
+   quadratic drag, changes the shape of the peak and the closed form no longer
+   holds.
+3. **A sinusoidal force of fixed amplitude.** The driving force is
+   $F_0\cos\Omega t$ with a constant amplitude and frequency. A drive whose
+   amplitude depends on the response, as a motor that slows when loaded does,
+   is a different problem.
+4. **One degree of freedom.** One mass, one spring. A structure with several
+   masses has several resonances, one per normal mode, as the coupled springs of
+   the Lagrangian lesson have.
+5. **Underdamped for the closed form of the transient.** The exact motion from
+   rest is given for damping below the critical value. The steady-state results
+   hold for any damping.
+6. **The step resolves the driving period, and the run outlasts the transient.**
+   The simulation takes many steps per driving period and runs for several decay
+   times before the amplitude is read, so that what is measured is the steady
+   state and not the start.
+
+## The driven oscillator {#explanation}
+
+### The equation and its scales
+
+A mass $m$ on a spring $k$, with the drag $-b v$ and the force
+$F_0\cos\Omega t$, obeys Newton's second law,
+
+$$
+m\ddot x = -k x - b\,\dot x + F_0 \cos\Omega t .
+$$
+
+Divide by the mass and define the natural angular frequency
+$\omega_0 = \sqrt{k/m}$ and the damping rate $\gamma = b/(2m)$:
+
+$$
+\ddot x + 2\gamma\,\dot x + \omega_0^2\,x = \frac{F_0}{m}\cos\Omega t .
+$$
+
+Without the force the motion is a decaying oscillation,
+$e^{-\gamma t}\cos\omega_d t$ with $\omega_d = \sqrt{\omega_0^2 - \gamma^2}$,
+as the amplitude falls by a factor of $e$ every $1/\gamma$ seconds. The
+**quality factor**
+
+$$
+Q = \frac{\omega_0}{2\gamma} = \frac{\sqrt{k m}}{b}
+$$
+
+is the number of radians the free motion covers while its energy falls by a
+factor of $e$: a large $Q$ is a system that rings for many swings.
+
+### The steady state
+
+The equation is linear, so its solution is a particular solution that follows
+the force plus a free motion that decays. After the free part has gone, the mass
+moves at the driving frequency. Write the force as the real part of
+$(F_0/m)\,e^{i\Omega t}$ and look for the motion as the real part of
+$\tilde A\,e^{i\Omega t}$ with a complex amplitude $\tilde A$. Each derivative
+brings a factor of $i\Omega$, so
+
+$$
+\bigl(\omega_0^2 - \Omega^2 + 2 i\gamma\Omega\bigr)\,\tilde A = \frac{F_0}{m},
+\qquad
+\tilde A = \frac{F_0/m}{\omega_0^2 - \Omega^2 + 2 i\gamma\Omega}.
+$$
+
+The modulus of $\tilde A$ is the amplitude $A$ of the motion, and the argument
+is minus the delay of the motion behind the force, $x = A\cos(\Omega t - \delta)$:
+
+$$
+A(\Omega) = \frac{F_0/m}{\sqrt{(\omega_0^2 - \Omega^2)^2 + 4\gamma^2\Omega^2}},
+\qquad
+\delta(\Omega) = \operatorname{atan2}\bigl(2\gamma\Omega,\ \omega_0^2 - \Omega^2\bigr).
+$$
+
+For a slow drive, $\Omega \ll \omega_0$, the amplitude is the static
+displacement $F_0/k$ and the delay is zero: the mass follows the force. For a
+fast drive the amplitude falls as $1/\Omega^2$ and the delay approaches half a
+turn: the mass is pushed the wrong way for the whole swing. At
+$\Omega = \omega_0$ the delay is a quarter of a turn whatever the damping, and
+the amplitude is $F_0/(2\gamma m\omega_0) = Q F_0/k$: the static displacement
+times $Q$.
+
+### The peak and the width
+
+The amplitude is largest where the denominator under the root is smallest. Setting
+the derivative of $(\omega_0^2 - \Omega^2)^2 + 4\gamma^2\Omega^2$ with respect to
+$\Omega^2$ to zero gives the peak frequency
+
+$$
+\Omega_r = \sqrt{\omega_0^2 - 2\gamma^2},
+$$
+
+a little below the natural frequency, and it exists only for
+$2\gamma^2 < \omega_0^2$; for more damping the response only falls. For a small
+$\gamma$ the peak is at $\omega_0$ to a good approximation, with the height
+$Q F_0/k$.
+
+Power is what the system absorbs: on the average the drag takes
+$\tfrac12 b\,\Omega^2 A^2$, which is proportional to $A^2\Omega^2$. For weak
+damping the power falls to half its peak value at $\Omega \approx \omega_0 \pm
+\gamma$, so the full width at half power is
+
+$$
+\Delta\omega \approx 2\gamma = \frac{b}{m},
+\qquad
+Q = \frac{\omega_0}{\Delta\omega}.
+$$
+
+The quality factor is thus also the sharpness of the resonance: the peak
+frequency divided by its width. A tuner with a large $Q$ separates stations that
+are close in frequency and takes a long time to settle on one.
+
+### The transient
+
+The complete motion from the start $(x_0, v_0)$ is the steady state plus a free
+motion that fits the start, so that the position and the velocity are right at
+the first instant:
+
+$$
+x(t) = A\cos(\Omega t - \delta)
++ e^{-\gamma t}\bigl(C_1\cos\omega_d t + C_2\sin\omega_d t\bigr).
+$$
+
+The two constants follow from $x_0$ and $v_0$ (the program does it). The free
+part decays by a factor of $e$ in $1/\gamma = 2Q/\omega_0$, so the time to settle
+is proportional to $Q$. When the drive is near the natural frequency the free
+part and the steady state have close frequencies, and their sum beats while the
+free part dies away.
+
+## The program {#code}
+
+The reusable code is `pbc.mechanics.resonance`. The driving force is an extra
+force for the Newton model of the earlier lessons, next to the spring and the
+linear drag; the rest is the reference solution.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.mechanics import resonance
+
+excerpt(resonance.driving_force)
+```
+
+The closed forms of the steady state:
+
+```{python}
+#| echo: false
+excerpt(
+    resonance.steady_state_amplitude,
+    notes={
+        "return (force / mass) / np.sqrt((w0sq - omega**2) ** 2 + 4.0 * gamma**2 * omega**2)": (
+            "The modulus of the complex amplitude of the explanation, in"
+            " metres, for any array of driving frequencies."
+        ),
+    },
+)
+```
+
+```{python}
+#| echo: false
+excerpt(resonance.steady_state_phase)
+```
+
+```{python}
+#| echo: false
+excerpt(resonance.peak_frequency)
+```
+
+The exact motion from an initial state, with its transient, and the fit that
+reads an amplitude and a phase off a simulated motion:
+
+```{python}
+#| echo: false
+excerpt(
+    resonance.driven_motion,
+    notes={
+        "c1 = x0 - amp * np.cos(phase0)": (
+            "The first constant: the free part must make up the difference"
+            " between the starting position and the steady state at the start."
+        ),
+        "x = amp * np.cos(omega * times - delta) + decay * free": (
+            "The steady state at the driving frequency plus the free motion"
+            " that decays with the damping rate."
+        ),
+    },
+)
+```
+
+```{python}
+#| echo: false
+excerpt(
+    resonance.fit_amplitude,
+    notes={
+        "late = trajectory.t >= after": (
+            "Only the instants after the transient: the fit reads the steady"
+            " state, not the start."
+        ),
+        "return float(np.hypot(a, c)), float(np.arctan2(c, a))": (
+            "The amplitude and the phase lag of the fitted sum of a cosine and"
+            " a sine at the driving frequency."
+        ),
+    },
+)
+```
+
+The measured curve and its width:
+
+```{python}
+#| echo: false
+excerpt(resonance.measured_resonance_curve)
+```
+
+```{python}
+#| echo: false
+excerpt(resonance.half_power_width)
+```
+
+## Worked examples
+
+### A simulation against the exact motion
+
+The oscillator of the examples has [one kilogram]{.given} on a spring of
+[four newtons per metre]{.given}, with the drag constant [four tenths of a
+kilogram per second]{.given}, so that $\omega_0 = 2\,\mathrm{rad/s}$ and $Q = 5$. The force has
+the amplitude [two newtons]{.given}. The cell drives it at [1.7 rad/s]{.given},
+below the natural frequency, from rest, simulates [forty
+seconds]{.given} at [two hundred steps per second]{.given}, and compares with the
+exact motion, transient included.
+
+```{python}
+#| label: closed-form-check
+import numpy as np
+
+from pbc.authoring import table
+from pbc.mechanics.drag import linear_drag
+from pbc.mechanics.dynamics import State, newton, simulate
+from pbc.mechanics.integrators import rk4_step
+from pbc.mechanics.oscillator import spring
+from pbc.mechanics.resonance import (
+    damping_rate,
+    driven_motion,
+    driving_force,
+    fit_amplitude,
+    half_power_width,
+    measured_resonance_curve,
+    natural_frequency,
+    peak_frequency,
+    quality_factor,
+    steady_state_amplitude,
+    steady_state_phase,
+)
+
+mass, k, b, force = 1.0, 4.0, 0.4, 2.0
+w0 = natural_frequency(mass, k)
+q = quality_factor(mass, k, b)
+gamma = damping_rate(mass, b)
+
+omega = 1.7  # rad/s
+start = State(t=0.0, x=[0.0], v=[0.0])
+oscillator = newton(mass, spring(k), linear_drag(b), driving_force(force, omega))
+run = simulate(start, oscillator, 0.005, 8000, step=rk4_step)
+exact = driven_motion(start, mass, k, b, force, omega, run.t)
+largest = np.max(np.abs(run.x - exact.x))
+steady = float(steady_state_amplitude(mass, k, b, force, omega))
+
+table(
+    [(np.max(np.abs(run.x)), steady, largest)],
+    columns=[("largest displacement of the run", "m", ".4f"), ("steady-state amplitude", "m", ".4f"), ("largest difference from the exact motion", "m", ".1e")],
+    caption="The simulated motion of the driven oscillator from rest for forty seconds against its exact solution, with the transient.",
+)
+```
+
+[The simulated motion of the driven oscillator agrees with the exact solution at
+every instant, the transient included]{.claim type="numerically-verified"
+scope="one driving frequency, forty seconds, classical Runge-Kutta method at the
+stated step" evidence="closed-form-check"}: the largest difference is
+`{python} f"{largest:.0e}"` m against displacements of about
+`{python} f"{steady:.2f}"` m. The largest displacement of the run is
+`{python} f"{np.max(np.abs(run.x)):.2f}"` m against the steady-state amplitude
+`{python} f"{steady:.2f}"` m: the free motion, which starts so as to cancel the
+steady state at the first instant, adds to it for a while as it decays.
+
+```{python}
+#| label: fig-transient
+#| fig-cap: "The displacement of the driven oscillator from rest, simulated and exact. The motion starts at zero, swells while the free motion and the steady state add up, and settles into a steady oscillation at the driving frequency with the amplitude of the closed form."
+#| fig-alt: "Plot of displacement against time over forty seconds. A solid curve, the simulation, and a dashed curve, the exact motion, lie on top of each other. The oscillation starts at zero, grows to a larger swing within the first ten seconds with an irregular envelope, and then settles into a steady sinusoid of constant amplitude."
+#| fig-status: simulated
+import matplotlib.pyplot as plt
+
+from pbc.authoring import FIGURE_COLOURS
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(run.t, run.x[:, 0], color=FIGURE_COLOURS[0], linestyle="-", label="simulation")
+ax.plot(run.t, exact.x[:, 0], color=FIGURE_COLOURS[1], linestyle="--", label="exact")
+ax.set_xlabel("time (s)")
+ax.set_ylabel("displacement (m)")
+ax.legend(loc="upper right")
+plt.show()
+```
+
+The simulation and the exact curve are indistinguishable at this scale, as the
+table says. The figure shows what the rest of the lesson must avoid: reading an
+amplitude off the first swings, where the transient dominates.
+
+### The resonance curve
+
+The cell measures the amplitude and the phase at each of [forty-three driving
+frequencies]{.given} between [four tenths and four radians per second]{.given},
+denser around the natural frequency, each time starting from rest, running for
+[eight decay times]{.given} to let the transient die, and fitting the next [ten
+driving periods]{.given}. A third of the frequencies are printed.
+
+```{python}
+#| label: resonance-curve
+omegas = np.concatenate([np.arange(0.4, 1.2, 0.2), np.arange(1.2, 2.85, 0.05), np.arange(3.0, 4.01, 0.2)])
+measured, phase = measured_resonance_curve(mass, k, b, force, omegas, decay_times=8.0)
+analytic = steady_state_amplitude(mass, k, b, force, omegas)
+analytic_phase = steady_state_phase(mass, k, b, omegas)
+
+pick = np.arange(0, len(omegas), 3)
+table(
+    [(omegas[i], analytic[i], measured[i], analytic_phase[i], phase[i]) for i in pick],
+    columns=[
+        ("driving frequency", "rad/s", ".2f"),
+        ("amplitude, closed form", "m", ".4f"),
+        ("amplitude, simulation", "m", ".4f"),
+        ("phase lag, closed form", "rad", ".3f"),
+        ("phase lag, simulation", "rad", ".3f"),
+    ],
+    caption="Amplitude and phase lag of the driven oscillator at a third of the frequencies of the curve: the closed form and the simulation, to four and three decimals.",
+)
+```
+
+[The simulated resonance curve agrees with the analytic amplitude at every
+frequency]{.claim type="numerically-verified" scope="forty-three frequencies,
+classical Runge-Kutta method, amplitude read after eight decay times"
+evidence="resonance-curve"}: the largest relative difference of the amplitude is
+`{python} f"{np.max(np.abs(measured / analytic - 1.0)):.0e}"` over all of them, and the
+largest difference of the phase is
+`{python} f"{np.max(np.abs(phase - analytic_phase)):.0e}"` rad. The delay passes through
+a quarter of a turn, `{python} f"{np.pi / 2:.3f}"` rad, at the natural frequency, as
+derived.
+
+```{python}
+#| label: fig-resonance-curve
+#| fig-cap: "The resonance curve of the driven oscillator: the amplitude of the steady state against the driving frequency. The markers are the simulation, the line is the closed form; they agree. The curve rises from the static displacement, peaks a little below the natural frequency, and falls away."
+#| fig-alt: "Plot of amplitude in metres against driving frequency in radians per second. A solid smooth line rises from a low value on the left to a sharp peak near the middle, then falls to small values on the right. Round markers from the simulation lie on the line at every frequency. A vertical dotted line marks the natural frequency, just to the right of the peak."
+#| fig-status: simulated
+dense = np.linspace(0.4, 4.0, 600)
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(dense, steady_state_amplitude(mass, k, b, force, dense), color=FIGURE_COLOURS[0], linestyle="-", label="closed form")
+ax.plot(omegas, measured, color=FIGURE_COLOURS[1], marker="o", linestyle="", markersize=4, label="simulation")
+ax.axvline(w0, color="#57606a", linestyle=":", label="natural frequency")
+ax.set_xlabel("driving frequency (rad/s)")
+ax.set_ylabel("amplitude (m)")
+ax.legend(loc="upper right")
+plt.show()
+```
+
+The figure is the table in full: the markers are the simulation at all
+frequencies, the line the closed form. The peak is within a few per cent of the
+natural frequency and its height is far above the static displacement.
+
+### Peak, width, and quality factor
+
+The peak height, position, and width are read from the measured curve and
+compared with the formulas of the explanation: the exact peak of the closed
+form, and the approximations for weak damping. The position and the height of
+the maximum are those of the sample with the largest amplitude, so they are
+accurate to the spacing of the samples.
+
+```{python}
+#| label: peak-and-width
+width = half_power_width(omegas, measured)
+w_peak = peak_frequency(mass, k, b)
+exact_peak = float(steady_state_amplitude(mass, k, b, force, w_peak))
+rows = [
+    ("peak frequency", "rad/s", w_peak, omegas[np.argmax(measured)]),
+    ("peak height", "m", exact_peak, np.max(measured)),
+    ("full width at half power", "rad/s", b / mass, width),
+    ("quality factor", "", q, w0 / width),
+]
+table(
+    rows,
+    columns=[("quantity", "", ""), ("unit", "", ""), ("closed form", "", ".3f"), ("from the simulated curve", "", ".3f")],
+    caption="The peak frequency, height, width at half power, and quality factor of the resonance: the closed forms and the values read from the simulated curve, to three decimals.",
+)
+```
+
+The peak lies at `{python} f"{w_peak:.3f}"` rad/s, below the natural frequency
+`{python} f"{w0:.3f}"` rad/s, and the samples have the maximum at
+`{python} f"{omegas[np.argmax(measured)]:.2f}"` rad/s. The weak-damping height
+$Q F_0/k$, `{python} f"{q * force / k:.3f}"` m, is within
+`{python} f"{abs(q * force / k / exact_peak - 1.0):.1%}"` of the exact peak. The width at half
+power is `{python} f"{width:.3f}"` rad/s against $b/m =$
+`{python} f"{b / mass:.3f}"` rad/s, and the quality factor read from it,
+`{python} f"{w0 / width:.2f}"`, against `{python} f"{q:.2f}"` from the parameters, a difference of
+`{python} f"{abs(w0 / width / q - 1.0):.0%}"`.
+[The quality factor read from the width of the simulated curve is the one that
+the parameters give, to the accuracy of the sampling of the curve]{.claim
+type="numerically-verified" scope="one oscillator, the samples of the curve above"
+evidence="peak-and-width"}.
+
+### How long to settle
+
+The transient is the free motion, which falls as $e^{-\gamma t}$. The cell
+takes the exact motion for the drive at the natural frequency from rest, subtracts
+the steady state, and finds the time after which what is left stays below
+[one per cent]{.given} of the steady-state amplitude, for the oscillator above and
+for one with [a quarter of the damping]{.given}.
+
+```{python}
+#| label: settling
+rows = []
+for factor in (1.0, 0.25):
+    b_case = b * factor
+    amplitude = float(steady_state_amplitude(mass, k, b_case, force, w0))
+    delta = float(steady_state_phase(mass, k, b_case, w0))
+    t = np.linspace(0.0, 400.0, 400001)
+    motion = driven_motion(start, mass, k, b_case, force, w0, t)
+    leftover = np.abs(motion.x[:, 0] - amplitude * np.cos(w0 * t - delta))
+    settled = t[np.where(leftover > 0.01 * amplitude)[0][-1]]
+    rows.append((quality_factor(mass, k, b_case), settled, 1.0 / damping_rate(mass, b_case)))
+
+table(
+    rows,
+    columns=[("quality factor", "", ".1f"), ("time to settle to one per cent", "s", ".1f"), ("decay time 1/gamma", "s", ".1f")],
+    caption="The time after which the transient stays below one per cent of the steady-state amplitude, for two quality factors, with the decay time of the free motion.",
+)
+```
+
+The settling time is a few decay times, `{python} f"{rows[0][1] / rows[0][2]:.1f}"` and
+`{python} f"{rows[1][1] / rows[1][2]:.1f}"` of them, and it grows with $Q$: the
+oscillator with `{python} f"{rows[1][0] / rows[0][0]:.0f}"` times the quality factor takes
+`{python} f"{rows[1][1] / rows[0][1]:.1f}"` times as long. The sharpness of the resonance and
+the time it takes to reach it are bought together.
+
+## Limits {#limits}
+
+- The oscillator is linear and the amplitude of the drive does not change the
+  shape of the curve; the curve of a real spring that stiffens at large stretch
+  would lean to one side. The lesson has no such system, and the validation is
+  of the linear model only.
+- The validation is of the program against the closed form of the same model,
+  not against a measurement. A measured resonance would have noise, a
+  background, and a damping that is not linear; the pendulum and accelerometer
+  lab of the measured-data strand returns to it.
+- The peak height and position are read at the sampling of the frequencies, so
+  they are accurate to the spacing of the samples, and the width by linear
+  interpolation between them.
+- The formula for the width, $b/m$, and the equality of $Q$ with the ratio of
+  the peak frequency to the width are approximations for weak damping; for
+  strong damping they differ, and a peak may not exist.
+- The closed form of the transient is for damping below the critical value. The
+  steady state, and the simulation, do not depend on that.
+- The settling time is read for two cases and for a bound of one per cent; it is
+  of the order of the decay time, not a precise multiple.
+
+::: {.exercise .self-check}
+A system is driven at exactly its natural frequency by a force of constant
+amplitude. Does the amplitude grow without limit? Say what sets the size of the
+steady state, and what would change if the damping were zero.
+
+::: {.solution}
+With damping the amplitude stops growing. The motion settles at the amplitude
+at which the energy the force puts in during a swing equals what the drag
+takes out: the steady state of the lesson, whose height is the static
+displacement times $Q$. The longer the system rings, the larger the quality
+factor, the larger the peak, and the longer it takes to reach it. Without
+damping the closed form has no finite value at the natural frequency, the
+denominator vanishing, and the amplitude of the motion from rest grows in
+proportion to the time: nothing takes the energy out. A real system never has
+zero damping, and a real spring stops being linear long before the amplitude
+is large, which limits the growth in another way.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**Ring-down.** Release the oscillator of the examples from [one metre]{.given}
+at rest with no force and let it ring. Read the quality factor from the decay of the
+successive peaks, and compare it with $\sqrt{k m}/b$.
+
+::: {.hint}
+The logarithm of the peak heights falls along a straight line whose slope is
+minus the damping rate.
+:::
+
+::: {.hint}
+Take the peaks as the local maxima of the displacement, and fit a line to the
+logarithm of their heights against their times.
+:::
+
+::: {.solution}
+```{python}
+free = simulate(State(0.0, [1.0], [0.0]), newton(mass, spring(k), linear_drag(b)), 0.005, 8000, step=rk4_step)
+x = free.x[:, 0]
+peaks = np.where((x[1:-1] > x[:-2]) & (x[1:-1] >= x[2:]) & (x[1:-1] > 0))[0] + 1
+slope, _ = np.polyfit(free.t[peaks], np.log(x[peaks]), 1)
+rate = -slope
+q_free = w0 / (2.0 * rate)
+
+table(
+    [(rate, gamma, q_free, q)],
+    columns=[("decay rate from the peaks", "1/s", ".4f"), ("b / 2m", "1/s", ".4f"), ("Q from the decay", "", ".3f"), ("Q from the parameters", "", ".3f")],
+    caption="The decay rate and the quality factor read from the peaks of the free motion and from the parameters, to the precision shown.",
+)
+```
+
+The decay rate from the peaks is the damping rate $b/2m$, and the quality
+factor follows from it; they agree to a relative
+`{python} f"{abs(rate / gamma - 1.0):.0e}"`, the difference being that the peaks are
+read at the sampled instants, a step apart, and not at the true maxima.
+:::
+:::
+
+::: {.exercise}
+**Halving the peak.** By what factor must the damping constant rise to halve the
+height of the resonance peak? Predict it from the closed form, then confirm it
+with the program.
+
+::: {.hint}
+For weak damping the peak height is the force amplitude divided by the product of the damping constant and the natural frequency.
+:::
+
+::: {.solution}
+```{python}
+heights = []
+for factor in (1.0, 2.0):
+    b_case = b * factor
+    top = steady_state_amplitude(mass, k, b_case, force, peak_frequency(mass, k, b_case))
+    heights.append(float(top))
+
+table(
+    [(1.0, heights[0], 1.0), (2.0, heights[1], heights[1] / heights[0])],
+    columns=[("damping, in units of b", "", ".1f"), ("peak height", "m", ".4f"), ("relative to the first", "", ".3f")],
+    caption="The peak height of the resonance curve for the damping constant and for twice it, to four decimals, with the ratio.",
+)
+```
+
+The peak height is inversely proportional to the damping for weak damping, so the
+damping must double to halve the peak; the table gives
+`{python} f"{heights[1] / heights[0]:.3f}"` for the exact peak, slightly above one half
+because the peak frequency also moves. Doubling the damping also doubles the
+width of the resonance and halves the time to settle: the same
+quality factor controls all three.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/mechanics/dynamics.py",
+        "src/pbc/mechanics/integrators.py",
+        "src/pbc/mechanics/oscillator.py",
+        "src/pbc/mechanics/drag.py",
+        "src/pbc/mechanics/resonance.py",
+    ],
+    tests=[
+        "tests/unit/test_integrators.py",
+        "tests/unit/test_oscillator.py",
+        "tests/unit/test_drag.py",
+        "tests/unit/test_resonance.py",
+    ],
+)
+```

@@ -280,6 +280,10 @@ def test_the_published_lessons_that_fill_a_slot_carry_it():
         "energy-conservation": "M6",
         "momentum-and-collisions": "M7",
         "kepler-orbit": "M8",
+        "double-pendulum-chaos": "M9",
+        "lagrangian-mechanics": "M10",
+        "hamiltonian-mechanics": "M11",
+        "resonance": "M12",
         "gravitational-wave-strain": "M16",
         "verifying-scientific-code": "AI2",
         "automated-analysis-pipelines": "R1",
@@ -410,7 +414,7 @@ def test_every_unfilled_slot_of_a_course_with_a_lesson_and_of_every_path_is_plan
         slot.label for method in path.paths for slot in path.planned_in_path(method)
     ]
     assert planned == expected
-    assert "M9" in planned and "AI1" in planned and "EV1" in planned
+    assert "M13" in planned and "AI1" in planned and "EV1" in planned
     # The thermodynamics course shows its eight planned slots (F70), not T0 to T3.
     thermodynamics = [slot.label for slot in path.planned_in_course(COURSES[1])]
     assert thermodynamics == ["T4", "T5", "T6", "T9", "T10", "T11", "T7", "T8"]

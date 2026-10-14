@@ -125,7 +125,11 @@ site/                    Quarto project: the website source
   widgets/               Self-hosted JavaScript widgets (ES modules)
   assets/                Styles, fonts, vendored Lean syntax definition
 src/pbc/                 Importable Python package with all reusable lesson code
-  mechanics/             Models and integrators used by the mechanics course
+  mechanics/             Models and integrators used by the mechanics course, including the
+                         double pendulum and Lyapunov estimate (`chaos`), the Euler-Lagrange
+                         operator (`lagrangian`), phase-space and modified-energy checks
+                         (`hamiltonian`), and the verified damped driven oscillator
+                         (`resonance`, F68; the reference solution F45 reuses)
   thermodynamics/        Random walks and diffusion, the Maxwell distribution of a simulated gas,
                          and the entropy of an ensemble (F70)
   waves/, electromagnetism/, fluids/, quantum/, astrophysics/, materials/
