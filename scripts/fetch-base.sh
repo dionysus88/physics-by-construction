@@ -185,7 +185,11 @@ while IFS= read -r name; do
   /* | *../* | ../* | *'\'* | *$'\n'*) without_base "the archive holds the path $name" ;;
   esac
 done <<<"$names"
-if unzip -Z "$scratch/base.zip" 2>/dev/null | grep -q '^l'; then
+# Not a pipe into 'grep -q': grep stops at the first link, unzip then gets
+# SIGPIPE, and under pipefail a listing longer than a pipe buffer made the
+# condition false although the archive holds a link.
+listing="$(unzip -Z "$scratch/base.zip" 2>/dev/null)" || without_base "the archive cannot be listed"
+if grep -q '^l' <<<"$listing"; then
   without_base "the archive holds a link"
 fi
 
