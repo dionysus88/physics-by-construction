@@ -413,7 +413,7 @@ def path(site: Path) -> LearningPath:
 def test_header_shows_course_methods_outcomes_prerequisites_and_neighbours(
     path: LearningPath,
 ):
-    shown = LessonHeader(path, NEWTON)._repr_markdown_()
+    shown = LessonHeader(path, NEWTON).markdown()
 
     assert (
         "Course\n:   [Classical mechanics](../../../path/index.html#course-mechanics),"
@@ -434,7 +434,7 @@ def test_header_shows_course_methods_outcomes_prerequisites_and_neighbours(
 
 
 def test_header_renders_the_outcomes_as_a_list_in_its_row(path: LearningPath):
-    blocks = pandoc_blocks(LessonHeader(path, NEWTON)._repr_markdown_())
+    blocks = pandoc_blocks(LessonHeader(path, NEWTON).markdown())
 
     # The header, then the raw block of the learner-state script.
     div, script = blocks
@@ -457,7 +457,7 @@ def test_header_links_related_lessons_and_methods():
     item = lesson("kinematics", methods=("simulation", "lean"), related=("proof",))
     path = LearningPath((item, PROOF))
 
-    shown = LessonHeader(path, item)._repr_markdown_()
+    shown = LessonHeader(path, item).markdown()
 
     assert (
         "[Simulation](../../../path/index.html#method-simulation), [Formal proofs]"
@@ -467,8 +467,8 @@ def test_header_links_related_lessons_and_methods():
 
 
 def test_header_states_the_ends_of_the_path(path: LearningPath):
-    first = LessonHeader(path, KINEMATICS)._repr_markdown_()
-    last = LessonHeader(path, PROOF)._repr_markdown_()
+    first = LessonHeader(path, KINEMATICS).markdown()
+    last = LessonHeader(path, PROOF).markdown()
 
     assert "Previous\n:   none; this is the first lesson" in first
     assert "Next\n:   [Newton](../02-newton/index.html)" in first
@@ -481,7 +481,7 @@ def test_header_names_the_outside_prerequisites(path: LearningPath):
     item = lesson("drag", order=4, prerequisites=("newton",), outside=("Calculus",))
     path = LearningPath((*path.lessons, item))
 
-    shown = LessonHeader(path, item)._repr_markdown_()
+    shown = LessonHeader(path, item).markdown()
 
     assert "[Newton](../02-newton/index.html). Also assumed: Calculus." in shown
 
@@ -496,7 +496,7 @@ def test_header_with_a_glossary_lists_what_to_know_before_beginning(path: Learni
     path = LearningPath((*path.lessons, item))
     glossary = Glossary((Entry("Calculus", "A definition.", ""),))
 
-    shown = LessonHeader(path, item, glossary)._repr_markdown_()
+    shown = LessonHeader(path, item, glossary).markdown()
 
     assert "Prerequisites\n:   [Newton](../02-newton/index.html).\n" in shown
     assert (

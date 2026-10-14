@@ -1,0 +1,5 @@
+# The store profile of scripts/build-site.sh: Quarto writes the executed results
+# of every page to _freeze/ and replays an entry that exists (ADR 014 decision 6).
+# A render without the profile executes the page and writes nothing.
+execute:
+  freeze: true

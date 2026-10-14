@@ -8,6 +8,8 @@ from support import shards
 from support.paths import BUILT_SITE, REPO_ROOT, SITE_SOURCE
 from support.site_server import SiteServer, configured_base_path
 
+from pbc.authoring import selection as selecting
+
 
 @pytest.fixture(scope="session")
 def site_dir(request: pytest.FixtureRequest) -> Path:
@@ -27,10 +29,41 @@ def server(site_dir: Path) -> Iterator[SiteServer]:
         yield server
 
 
+def _reproductions_of_unchanged_lessons(items: list[pytest.Item]) -> list[pytest.Item]:
+    """The reproductions of the lessons this run did not execute.
+
+    A run with a base reproduces the lessons it executed: the page it
+    regenerates is compared with a result this run computed on this machine, and
+    for a lesson restored from the base there is none. A run without a base, a
+    full run, and a base that cannot be used select every lesson (ADR 014
+    decision 3)."""
+    selection = selecting.read(REPO_ROOT)
+    if selection is None or selection.get("mode") != "selective":
+        return []
+    executed = {
+        f"{Path(lesson).relative_to('site').as_posix()}/index.html"
+        for lesson in selection["execute"]
+    }
+    return [
+        item
+        for item in items
+        if item.get_closest_marker("same_machine") is not None
+        and getattr(item, "callspec", None) is not None
+        and "lesson" in item.callspec.params
+        and item.callspec.params["lesson"] not in executed
+    ]
+
+
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    """Keep the part of each test file that --shard asks for."""
+    """Keep what this run is to check: the reproduction of the lessons it
+    executed, and the part of each test file that --shard asks for."""
+    skipped = _reproductions_of_unchanged_lessons(items)
+    if skipped:
+        gone = set(skipped)
+        config.hook.pytest_deselected(items=skipped)
+        items[:] = [item for item in items if item not in gone]
     option = config.getoption("--shard")
     if option is None:
         return

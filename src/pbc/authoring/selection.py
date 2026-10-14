@@ -66,11 +66,41 @@ def _read_base(directory: Path) -> tuple[dict | None, str]:
     }, ""
 
 
-def _stored(directory: Path, lesson: str) -> bool:
-    """Whether the base holds executed results for ``lesson`` (a path such as
-    ``site/lessons/s/01-one``; the store is laid out relative to ``site/``)."""
-    store = directory / STORE / Path(lesson).relative_to("site")
-    return store.is_dir() and any(p.is_file() for p in store.rglob("*"))
+_RESULTS = "execute-results"
+
+
+def entry_problem(directory: Path) -> str | None:
+    """Why the store entry ``directory`` of one lesson cannot be restored, or
+    None. An entry holds plain files only and at least one executed result,
+    which is a JSON object."""
+    if directory.is_symlink() or not directory.is_dir():
+        return "no store entry"
+    results = []
+    for path in sorted(directory.rglob("*")):
+        if path.is_symlink():
+            return f"{path.name} is a symbolic link"
+        if path.is_file():
+            if path.parent.name == _RESULTS:
+                results.append(path)
+        elif not path.is_dir():
+            return f"{path.name} is neither a file nor a directory"
+    if not results:
+        return "no executed result"
+    for path in results:
+        try:
+            data = json.loads(path.read_bytes())
+        except OSError, ValueError:
+            return f"{path.name} is not readable JSON"
+        if not isinstance(data, dict):
+            return f"{path.name} is not a JSON object"
+    return None
+
+
+def _stored(directory: Path, lesson: str) -> str | None:
+    """Why the base holds no usable executed results for ``lesson`` (a path
+    such as ``site/lessons/s/01-one``; the store is laid out relative to
+    ``site/``), or None."""
+    return entry_problem(directory / STORE / Path(lesson).relative_to("site"))
 
 
 def select(root: Path, base: Path | None) -> dict:
@@ -101,9 +131,12 @@ def select(root: Path, base: Path | None) -> dict:
     execute, reuse = [], []
     for path in lessons:
         unchanged = loaded["lessons"].get(path) == current[path].value
-        if unchanged and not _stored(base, path):
+        problem = _stored(base, path) if unchanged else None
+        if problem is not None:
             return _full(
-                lessons, f"the base is truncated: no results for {path}", named
+                lessons,
+                f"the base is truncated or invalid: {path}: {problem}",
+                named,
             )
         (reuse if unchanged else execute).append(path)
     return {
@@ -111,6 +144,8 @@ def select(root: Path, base: Path | None) -> dict:
         "mode": "selective",
         "reason": "",
         "base": named,
+        # Written from the option of verify.sh; never read from the base.
+        "base_directory": str(base.resolve()),
         "lessons": lessons,
         "execute": execute,
         "reuse": reuse,

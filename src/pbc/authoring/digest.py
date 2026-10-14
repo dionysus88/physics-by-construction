@@ -142,6 +142,8 @@ _LEAN_IMPORT = re.compile(r"^import\s+(\S+)", re.M)
 
 # Site files that a render writes next to the sources, and the store.
 _SITE_SKIP_DIRS = {"lessons", "_site", "_freeze", ".quarto", "site_libs", "__pycache__"}
+# What a build writes at the top of the site besides the store (store.py).
+_SITE_SKIP_FILES = {"_digests.json", "_timings.json", "_pages.json"}
 
 
 class Unfollowable(Exception):
@@ -219,7 +221,10 @@ class Digester:
             relative = path.relative_to(site)
             if not path.is_file() or _is_output(relative):
                 continue
-            if relative.parts[0] in _SITE_SKIP_DIRS:
+            if (
+                relative.parts[0] in _SITE_SKIP_DIRS
+                or relative.name in _SITE_SKIP_FILES
+            ):
                 continue
             # HTML next to the sources is render output, except widgets and
             # the directories whose names start with an underscore.

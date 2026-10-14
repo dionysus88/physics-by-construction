@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
+from pbc.authoring.context import current_page, marker
 from pbc.authoring.repository import (
     REPOSITORY_ROOT,
     BuildCommit,
@@ -118,8 +119,9 @@ def editor_link(path: str, commit: BuildCommit, repository: str) -> str | None:
 class LeanExcerpt:
     """The text of one anchored region of a Lean file, with where it was read.
 
-    As the result of a code cell it renders as a highlighted listing followed
-    by the file and lines it came from.
+    As the result of a code cell it leaves a marker; the page the reader gets
+    shows a highlighted listing followed by the file and lines it came from,
+    with the commit of the run (``pbc.authoring.context``).
     """
 
     name: str  # "<module>:<anchor>"
@@ -130,7 +132,36 @@ class LeanExcerpt:
     commit: BuildCommit
     repository: str
 
+    def payload(self) -> dict:
+        """What the region is built from, apart from the commit."""
+        return {
+            "name": self.name,
+            "source": self.source,
+            "path": self.path,
+            "first_line": self.first_line,
+            "last_line": self.last_line,
+        }
+
+    @classmethod
+    def from_payload(
+        cls, payload: dict, commit: BuildCommit, repository: str
+    ) -> LeanExcerpt:
+        """The region a marker stands for, for ``commit``."""
+        return cls(
+            name=payload["name"],
+            source=payload["source"],
+            path=payload["path"],
+            first_line=payload["first_line"],
+            last_line=payload["last_line"],
+            commit=commit,
+            repository=repository,
+        )
+
     def _repr_markdown_(self) -> str:
+        return marker("lean-excerpt", current_page(), self.payload())
+
+    def markdown(self) -> str:
+        """The content of the region, for the commit this was built with."""
         longest_run = max(
             (len(run) for run in re.findall(r"`+", self.source)), default=0
         )
@@ -181,9 +212,9 @@ def lean_excerpt(module: str, anchor: str, project: Path = LEAN_PROJECT) -> Lean
 class LeanEvidence:
     """What compiled the proofs of a lesson, and where to read them.
 
-    As the result of a code cell it renders as a short list: the commit, the
-    versions, and for each module a link to the repository and one to the Lean
-    web editor.
+    As the result of a code cell it leaves a marker; the page the reader gets
+    shows a short list: the commit, the versions, and for each module a link
+    to the repository and one to the Lean web editor.
     """
 
     modules: tuple[str, ...]
@@ -204,7 +235,34 @@ class LeanEvidence:
             return repository_link
         return f"{repository_link}, or [open it in the Lean web editor]({editor})"
 
+    def payload(self) -> dict:
+        """What the region is built from, apart from the commit."""
+        return {
+            "modules": list(self.modules),
+            "lean": self.lean,
+            "mathlib": self.mathlib,
+            "mathlib_revision": self.mathlib_revision,
+        }
+
+    @classmethod
+    def from_payload(
+        cls, payload: dict, commit: BuildCommit, repository: str
+    ) -> LeanEvidence:
+        """The region a marker stands for, for ``commit``."""
+        return cls(
+            modules=tuple(payload["modules"]),
+            lean=payload["lean"],
+            mathlib=payload["mathlib"],
+            mathlib_revision=payload["mathlib_revision"],
+            commit=commit,
+            repository=repository,
+        )
+
     def _repr_markdown_(self) -> str:
+        return marker("lean-evidence", current_page(), self.payload())
+
+    def markdown(self) -> str:
+        """The content of the region, for the commit this was built with."""
         sha = self.commit.sha
         if sha is None:
             built_from = (

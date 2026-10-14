@@ -43,8 +43,8 @@ def make_base(root: Path, base: Path) -> Path:
     (base / "digests.json").write_text(render(root), encoding="utf-8")
     for lesson in (LESSON, LESSON_TWO):
         out = base / "freeze" / Path(lesson).relative_to("site") / "index"
-        out.mkdir(parents=True, exist_ok=True)
-        (out / "execute-results.json").write_text("{}", encoding="utf-8")
+        (out / "execute-results").mkdir(parents=True, exist_ok=True)
+        (out / "execute-results" / "html.json").write_text("{}", encoding="utf-8")
     return base
 
 
@@ -200,9 +200,21 @@ def break_store(base: Path) -> None:
     shutil.rmtree(base / "freeze" / "lessons" / "s" / "02-two")
 
 
+def break_store_symlink(base: Path) -> None:
+    entry = base / "freeze" / "lessons" / "s" / "02-two" / "index"
+    (entry / "leak").symlink_to("/etc/hosts")
+
+
+def break_store_result(base: Path) -> None:
+    entry = base / "freeze" / "lessons" / "s" / "02-two" / "index"
+    (entry / "execute-results" / "html.json").write_text("[1", encoding="utf-8")
+
+
 @pytest.mark.parametrize(
     "damage",
     [
+        break_store_symlink,
+        break_store_result,
         break_missing,
         break_truncated,
         break_format,

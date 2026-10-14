@@ -11,6 +11,11 @@ set -euo pipefail
 # directory, at a later time, and without Quarto's project cache. Output that
 # depends on the build time, the location of the checkout, file timestamps,
 # or a cache therefore differs and fails the check.
+#
+# With a base (./scripts/verify.sh --base) the second build starts from the
+# same restored state as the first: the copy holds no store of the first
+# build, and the build restores the entries of the unchanged lessons from the
+# base again, so the changed lessons execute twice (ADR 014 decision 3).
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
@@ -29,7 +34,13 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/determinism.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 
 cp -R "$source_dir" "$tmp/site"
-rm -rf "$tmp/site/_site" "$tmp/site/.quarto"
+rm -rf "$tmp/site/_site" "$tmp/site/.quarto" "$tmp/site/_freeze"
+rm -f "$tmp/site/_digests.json" "$tmp/site/_timings.json"
+
+# The selection of the run applies to the sources it was made for.
+if [[ "$source_dir" == "$root/site" && -f "$root/.agents/verification/selection.json" ]]; then
+  export PBC_STORE_SELECTION="$root/.agents/verification/selection.json"
+fi
 
 "$root/scripts/build-site.sh" "$tmp/site" "$tmp/second" >"$tmp/build.log" 2>&1 || {
   cat "$tmp/build.log" >&2

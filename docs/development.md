@@ -235,6 +235,41 @@ without it removes an earlier selection and verifies everything. The record
 of a run with a base carries a `selection:` line that names the base, and
 `--reuse` never takes such a record for a verification of the content alone.
 
+What the selection controls (ADR 014 decision 3):
+
+- **The build** (`scripts/build-site.sh`) writes the executed results of every
+  page to `site/_freeze/` (the store, which Git ignores; Quarto's `freeze`,
+  switched on by the profile `site/_quarto-store.yml`). It starts by removing
+  the store. With a base it restores the entries of the lessons the selection
+  says are unchanged and leaves every other page, including every page that is
+  not a lesson, to be executed. It also writes `site/_digests.json` (the input
+  digest of every lesson), `site/_pages.json` (the checksum of every file of
+  the built site with the build commit normalised, `pbc.authoring.pages`),
+  and `site/_timings.json` (the seconds of every page, compared with the
+  30-second budget of a lesson page). The store, the digests, and the page
+  record are the files of a base; a restored entry must be plain files and
+  JSON, or the base is not used.
+- **The determinism check** copies the sources without the store and builds
+  again from the same restored state, so the lessons that were executed
+  execute twice and the comparison still covers every byte of the site.
+- **The context of a page** is never taken from the store. The header
+  (`lesson_header`), "Reproduce this" (`reproduce_this`), and the code and
+  Lean excerpts (`excerpt`, `lean_excerpt`, `lean_evidence`) leave a marker
+  in the result of their cell: the kind of region and what it is built from,
+  with no commit and no other lesson. The post-render script `site/context.py`
+  (the first of `post-render`) replaces every marker by its region, built from
+  the front matter of every lesson as it is now and the commit of the run, so
+  a page restored from the store shows the navigation and the commit of this
+  run. It fails the build for a marker that is not valid, for a lesson page
+  without a header or a "Reproduce this" section, and for a marker that stays.
+  A lesson author writes the same cells as before.
+- **The checks of one page** (reading without JavaScript, widths,
+  accessibility, payload) run for the pages whose normalised bytes differ from
+  the base's and for every page of an executed lesson
+  (`site_checks.checked_pages`); **the reproduction in a fresh clone** runs for
+  the executed lessons, and compares bytes with the page this run built. Every
+  other check runs as before.
+
 ### Recorded verification
 
 A run in which every check passed is recorded in `.agents/verification/passed`,
