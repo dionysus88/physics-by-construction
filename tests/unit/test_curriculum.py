@@ -488,7 +488,7 @@ def test_the_header_shows_the_slot_and_the_position_in_the_path():
 def test_a_course_lists_lessons_and_planned_slots_in_the_order_of_the_file(page: str):
     path = LearningPath.read(SITE_SOURCE)
     for course in path.courses:
-        section = page.split(f"{{#course-{course.id}}}")[1].split("\n## ")[0]
+        section = page.split(f"{{#course-{course.id}}}")[1].split("\n#")[0]
         rows = re.findall(
             r'<li class="(?:path-card" data-lesson-id|planned-slot" data-state)'
             r'="([^"]+)"[^>]*>(?:<span class="slot-label">([A-Z]+[0-9]+))?',

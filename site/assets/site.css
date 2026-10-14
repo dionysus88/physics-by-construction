@@ -1000,6 +1000,17 @@ main button {
   align-items: center;
 }
 
+/* A long option (a course title) must not widen the form past a narrow
+   screen: the label takes the row, the select shrinks to it. */
+.path-filter-form label {
+  max-width: 100%;
+}
+
+.path-filter-form select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 [hidden] {
   display: none !important;
 }
