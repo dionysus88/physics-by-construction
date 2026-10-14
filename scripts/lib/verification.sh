@@ -28,19 +28,23 @@ verification_recordable() {
 }
 
 # verification_field <root> <field>
-# Prints the value of 'tree', 'workflow-tests', or 'verified-at' in the
+# Prints the value of 'tree', 'workflow-tests', 'verified-at', or 'selection' in the
 # record, or nothing when there is no record.
 verification_field() {
   [[ -f "$1/$VERIFICATION_RECORD" ]] || return 0
   sed -n "s/^$2: //p" "$1/$VERIFICATION_RECORD" | head -n 1
 }
 
-# verification_write <root> <tree> <workflow-tests>
-# <workflow-tests> is 'ran', 'skipped', or 'none'.
+# verification_write <root> <tree> <workflow-tests> [<selection>]
+# <workflow-tests> is 'ran', 'skipped', or 'none'. <selection> is the summary
+# line of a run with a base (ADR 014 decision 5); it names the base and says
+# whether the run was selective or full, and why. Without it the run verified
+# everything.
 verification_write() {
   mkdir -p "$(dirname "$1/$VERIFICATION_RECORD")" &&
     printf 'tree: %s\nworkflow-tests: %s\nverified-at: %s\n' \
-      "$2" "$3" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >"$1/$VERIFICATION_RECORD"
+      "$2" "$3" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >"$1/$VERIFICATION_RECORD" &&
+    { [[ -z "${4:-}" ]] || printf 'selection: %s\n' "$4" >>"$1/$VERIFICATION_RECORD"; }
 }
 
 # verification_forget <root>
