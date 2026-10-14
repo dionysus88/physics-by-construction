@@ -8,7 +8,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "matplotlib>=3.11",
-    "numpy>=2.5",
+    "numpy>=2.5.4",
     "scipy>=1.18",
     # pbc.authoring reads lesson front matter when a page is built
     "pyyaml>=6.0",
@@ -18,7 +18,7 @@ dependencies = [
 # The live client of pbc.agents for the default provider (ADR 004). Only a
 # learner who runs an agent lesson with their own key installs it; the site
 # build and CI never do.
-openai = ["openai>=2.0"]
+openai = ["openai>=3.29.0"]
 
 [project.urls]
 Homepage = "https://taspinar.github.io/physics-by-construction/"
@@ -30,7 +30,7 @@ Repository = "https://github.com/taspinar/physics-by-construction"
 dev = [
     # Quality
     "pytest>=9.1",
-    "ruff>=0.16",
+    "ruff>=0.17.0",
     # Site generator (ADR 001) and the Jupyter kernel it executes pages with
     "quarto-cli>=1.10",
     "ipykernel>=7.4",
