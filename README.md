@@ -18,10 +18,12 @@ does not compile cannot be merged.
 ## Status
 
 The publishing and verification pipeline and the lesson format are in place,
-and the site has eleven lessons in four strands. The mechanics course has
+and the site has twenty-five lessons in five strands. The mechanics course has
 eight: kinematics, Newton's laws, projectile motion with drag, the
 harmonic oscillator, the comparison of numerical integrators, energy
-conservation, momentum and collisions, and the capstone Kepler orbit. One
+conservation, momentum and collisions, and the capstone Kepler orbit. The
+thermodynamics course has three: random walks and diffusion, the kinetic
+theory of gases, and entropy from ensembles. One
 lesson has an AI agent run an experiment, one builds a gas from many simple
 agents with a local rule, and one proves in Lean what the simulations
 showed. The plan for the rest is in
