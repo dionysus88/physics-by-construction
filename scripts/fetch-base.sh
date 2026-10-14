@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Retrieves the verified base of a pull request run (ADR 014 decision 2).
+#
+# Usage: fetch-base.sh [--run <id>] <directory>
+#
+# Looks for the base among the artifacts of earlier runs of this workflow and
+# accepts one only by the record of the run that produced it, read from the
+# runs API: the run is a `push` run of ci.yml on `refs/heads/main` of this
+# repository that completed with success, its aggregate job `verify`
+# concluded with success, and it holds exactly one unexpired artifact named
+# verification-base whose recorded digest is the digest of what was
+# downloaded. The name of an artifact, its recency, and its contents decide
+# nothing: a pull request run, a fork, or a failed main run is never
+# accepted, whatever it uploaded.
+#
+# --run <id> names the producing run; the same checks apply to it. The jobs
+# that check a built site use it to take the very base the build job took.
+#
+# The archive is data. It is unpacked only when every name in it is a plain
+# relative path and it holds no link; nothing in it is executed or read as
+# configuration here. A base that is missing, rejected, or damaged is not an
+# error: the script says why, leaves <directory> absent, and the run verifies
+# everything. With GITHUB_OUTPUT set it writes accepted=true|false and
+# run-id=<id>.
+#
+# Needs the environment variables GH_TOKEN and GITHUB_REPOSITORY, and the
+# tools gh, jq, unzip and sha256sum (or shasum).
+
+workflow_path=".github/workflows/ci.yml"
+artifact_name="verification-base"
+max_bytes=$((2 * 1024 * 1024 * 1024))
+
+fail() {
+  echo "Error: $*" >&2
+  exit 2
+}
+
+run_id=""
+if [[ "${1:-}" == "--run" ]]; then
+  [[ $# -ge 2 ]] || fail "usage: $0 [--run <id>] <directory>"
+  run_id="$2"
+  [[ "$run_id" =~ ^[0-9]+$ ]] || fail "the run id must be a number."
+  shift 2
+fi
+[[ $# -eq 1 ]] || fail "usage: $0 [--run <id>] <directory>"
+target="$1"
+
+for tool in gh jq unzip; do
+  command -v "$tool" >/dev/null 2>&1 || fail "$tool is required."
+done
+if command -v sha256sum >/dev/null 2>&1; then
+  sum=(sha256sum)
+elif command -v shasum >/dev/null 2>&1; then
+  sum=(shasum -a 256)
+else
+  fail "sha256sum or shasum is required."
+fi
+repo="${GITHUB_REPOSITORY:-}"
+[[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail "GITHUB_REPOSITORY is not set to owner/name."
+[[ -n "${GH_TOKEN:-}" ]] || fail "GH_TOKEN is not set."
+
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/fetch-base.XXXXXX")"
+trap 'rm -rf "$scratch"' EXIT
+
+output() {
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    printf '%s\n' "$@" >>"$GITHUB_OUTPUT"
+  fi
+}
+
+# Without a base the run verifies everything. Says why, and why only.
+without_base() {
+  echo "No base: $1. Every lesson is executed and checked."
+  rm -rf "$target"
+  output "accepted=false" "run-id="
+  exit 0
+}
+
+api() {
+  gh api -H "Accept: application/vnd.github+json" "$1"
+}
+
+# Whether the record of one run, in $scratch/run.json, is a run whose
+# artifacts may be a base. Sets $why when it is not.
+why=""
+acceptable_run() {
+  local file="$1"
+  why="$(jq -r --arg repo "$repo" --arg path "$workflow_path" '
+    if type != "object" then "the run record is not an object"
+    elif .event != "push" then "the run is a \(.event // "unknown") run, not a push run"
+    elif .head_branch != "main" then "the run is on the branch \(.head_branch // "unknown"), not main"
+    elif (.head_repository.full_name // "") != $repo then "the run is from another repository"
+    elif (.repository.full_name // "") != $repo then "the run is of another repository"
+    elif .path != $path then "the run is of the workflow \(.path // "unknown"), not ci.yml"
+    elif .status != "completed" then "the run has not completed"
+    elif .conclusion != "success" then "the run concluded with \(.conclusion // "no result")"
+    else "" end' "$file" 2>/dev/null)" || why="the run record cannot be read"
+  [[ -z "$why" ]]
+}
+
+# Whether the aggregate job of run $1 concluded with success.
+verify_succeeded() {
+  api "repos/$repo/actions/runs/$1/jobs?filter=latest&per_page=100" >"$scratch/jobs.json" 2>/dev/null || return 1
+  jq -e '[.jobs[]? | select(.name == "verify")]
+         | length == 1 and .[0].status == "completed" and .[0].conclusion == "success"' \
+    "$scratch/jobs.json" >/dev/null 2>&1
+}
+
+# Writes the one usable artifact of run $1 to $scratch/artifact.json.
+artifact_of() {
+  api "repos/$repo/actions/runs/$1/artifacts?name=$artifact_name&per_page=100" >"$scratch/artifacts.json" 2>/dev/null || return 1
+  jq -e --arg name "$artifact_name" --argjson run "$1" --argjson max "$max_bytes" '
+    [.artifacts[]? | select(.name == $name)] as $found
+    | ($found | length) == 1
+      and ($found[0].expired == false)
+      and ($found[0].workflow_run.id == $run)
+      and ($found[0].workflow_run.head_branch == "main")
+      and (($found[0].size_in_bytes // 0) > 0 and $found[0].size_in_bytes <= $max)
+      and (($found[0].digest // "") | test("^sha256:[0-9a-f]{64}$"))' \
+    "$scratch/artifacts.json" >/dev/null 2>&1 || return 1
+  jq -c --arg name "$artifact_name" '[.artifacts[] | select(.name == $name)][0]' \
+    "$scratch/artifacts.json" >"$scratch/artifact.json"
+}
+
+candidates=()
+if [[ -n "$run_id" ]]; then
+  candidates=("$run_id")
+else
+  api "repos/$repo/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=20" >"$scratch/runs.json" 2>/dev/null ||
+    without_base "the runs of earlier pushes to main cannot be listed"
+  while IFS= read -r id; do
+    [[ "$id" =~ ^[0-9]+$ ]] && candidates+=("$id")
+  done < <(jq -r '.workflow_runs[]?.id' "$scratch/runs.json" 2>/dev/null || true)
+fi
+[[ ${#candidates[@]} -gt 0 ]] || without_base "no earlier push to main has a successful run"
+
+chosen=""
+reasons=()
+for id in "${candidates[@]}"; do
+  api "repos/$repo/actions/runs/$id" >"$scratch/run.json" 2>/dev/null || {
+    reasons+=("run $id: the record cannot be read")
+    continue
+  }
+  if ! acceptable_run "$scratch/run.json"; then
+    reasons+=("run $id: $why")
+    continue
+  fi
+  if ! verify_succeeded "$id"; then
+    reasons+=("run $id: the job verify did not conclude with success")
+    continue
+  fi
+  if ! artifact_of "$id"; then
+    reasons+=("run $id: it has no single unexpired $artifact_name with a digest")
+    continue
+  fi
+  chosen="$id"
+  break
+done
+if [[ ${#reasons[@]} -gt 0 ]]; then
+  printf 'Rejected: %s\n' "${reasons[@]}" >&2
+fi
+if [[ -z "$chosen" ]]; then
+  without_base "no run offers a base that passes the provenance checks"
+fi
+
+artifact_id="$(jq -r '.id' "$scratch/artifact.json")"
+[[ "$artifact_id" =~ ^[0-9]+$ ]] || without_base "the artifact record has no id"
+expected="$(jq -r '.digest' "$scratch/artifact.json")"
+expected="${expected#sha256:}"
+
+api "repos/$repo/actions/artifacts/$artifact_id/zip" >"$scratch/base.zip" 2>/dev/null ||
+  without_base "the artifact of run $chosen cannot be downloaded"
+found="$("${sum[@]}" "$scratch/base.zip" | cut -d' ' -f1)"
+[[ "$found" == "$expected" ]] ||
+  without_base "the download of run $chosen is not the archive that was recorded (digest differs)"
+
+# Names first: a plain relative path, no link, nothing outside the archive.
+names="$(unzip -Z1 "$scratch/base.zip" 2>/dev/null)" || without_base "the archive is empty or not readable"
+[[ -n "$names" ]] || without_base "the archive is empty or not readable"
+while IFS= read -r name; do
+  case "$name" in
+  /* | *../* | ../* | *'\'* | *$'\n'*) without_base "the archive holds the path $name" ;;
+  esac
+done <<<"$names"
+if unzip -Z "$scratch/base.zip" 2>/dev/null | grep -q '^l'; then
+  without_base "the archive holds a link"
+fi
+
+stage="$scratch/stage"
+mkdir "$stage"
+unzip -q "$scratch/base.zip" -d "$stage" 2>/dev/null || without_base "the archive cannot be unpacked"
+if [[ -n "$(find "$stage" ! -type f ! -type d -print -quit)" ]]; then
+  without_base "the archive holds something other than files"
+fi
+
+# Complete: the three parts of a base, the two records as JSON objects. Their
+# format is checked by the selection, which runs every lesson on a format it
+# does not know.
+[[ -d "$stage/freeze" && -n "$(find "$stage/freeze" -type f -print -quit)" ]] ||
+  without_base "the base holds no stored results"
+for record in digests.json pages.json; do
+  [[ -f "$stage/$record" ]] || without_base "the base holds no $record"
+  jq -e 'type == "object"' "$stage/$record" >/dev/null 2>&1 ||
+    without_base "$record is not a JSON object"
+done
+
+rm -rf "$target"
+mkdir -p "$(dirname "$target")"
+mv "$stage" "$target"
+echo "Base accepted: the artifact of the push run $chosen on main, whose job verify succeeded."
+output "accepted=true" "run-id=$chosen"

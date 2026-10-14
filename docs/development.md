@@ -221,6 +221,13 @@ rule with `--only`: they run when a workflow file changed, or with `--all`.
 
 ### Selection against a base
 
+CI takes the base from the artifact of an earlier run of `main` with
+`scripts/fetch-base.sh` and publishes it with `scripts/collect-base.sh`
+(see [deployment](deployment.md)). Locally you give a directory with
+the same three parts (`digests.json`, `pages.json`, `freeze/`; the build
+leaves them beside the site as `site/_digests.json`, `site/_pages.json`, and
+`site/_freeze/`).
+
 `./scripts/verify.sh --base <directory>` (ADR 014) names the directory of a
 verified base: `digests.json` (the input digest of every lesson and the
 identity of the checks, written by `python -m pbc.authoring.digest`) and

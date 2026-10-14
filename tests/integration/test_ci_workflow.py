@@ -27,11 +27,31 @@ FETCH = './scripts/fetch-built-site.sh "$RUNNER_TEMP/built-site"'
 RECORD = './scripts/fetch-built-site.sh --record "$RUNNER_TEMP/built-site-record"'
 # The jobs that run checks; 'verify' decides from them and 'deploy' publishes.
 AGGREGATE, DEPLOY = "verify", "deploy"
+# The job that publishes the base of a run on main (ADR 014 decision 2).
+BASE_JOB = "base"
+FETCH_BASE = './scripts/fetch-base.sh "$RUNNER_TEMP/base"'
+FETCH_BASE_OF_BUILD = './scripts/fetch-base.sh --run "$BASE_RUN" "$RUNNER_TEMP/base"'
+COLLECT_BASE = './scripts/collect-base.sh "$RUNNER_TEMP/verification-base"'
+BASE_OPTION = ' --base "$RUNNER_TEMP/base"'
+ON_PULL_REQUEST = "${{ github.event_name == 'pull_request' }}"
+ON_MAIN = "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
 
 
 def check_jobs() -> dict[str, dict]:
     jobs = load(CI)["jobs"]
-    return {name: job for name, job in jobs.items() if name not in (AGGREGATE, DEPLOY)}
+    others = (AGGREGATE, DEPLOY, BASE_JOB)
+    return {name: job for name, job in jobs.items() if name not in others}
+
+
+def verify_commands(job: dict) -> list[str]:
+    return [c for c in commands(job) if VERIFY in c]
+
+
+def plain_verify(job: dict) -> str:
+    """The run of verify.sh without a base; the other one adds --base to it."""
+    plain = [c for c in verify_commands(job) if BASE_OPTION not in c]
+    assert len(plain) == 1
+    return plain[0]
 
 
 def commands(job: dict) -> list[str]:
@@ -40,7 +60,7 @@ def commands(job: dict) -> list[str]:
 
 def groups_of(job: dict) -> list[str]:
     """The groups a job runs, with the parts of a matrix written out."""
-    [command] = [c for c in commands(job) if VERIFY in c]
+    command = plain_verify(job)
     match = re.fullmatch(
         rf'{re.escape(VERIFY)} --all --only "?([a-z0-9,$A-Z-]+)"?', command
     )
@@ -82,11 +102,30 @@ def test_default_permissions_are_read_only(workflow: dict):
     assert workflow["permissions"] == {"contents": "read"}
 
 
-def test_only_the_deploy_job_has_more_permissions(workflow: dict):
+def test_only_the_deploy_job_has_write_permissions(workflow: dict):
     for name, job in workflow["jobs"].items():
         if name == "deploy":
             assert job["permissions"] == {"pages": "write", "id-token": "write"}
-        else:
+        elif "permissions" in job:
+            assert all(v == "read" for v in job["permissions"].values()), name
+    # No job writes anything but the deployment.
+    writes = [
+        name
+        for name, job in workflow["jobs"].items()
+        if "write" in job.get("permissions", {}).values()
+    ]
+    assert writes == ["deploy"]
+
+
+def test_the_one_added_scope_is_reading_actions_in_the_jobs_that_take_the_base():
+    # ADR 014 decision 2: contents stays read, and the jobs that look for the
+    # base of a pull request read the runs and artifacts of earlier runs. No
+    # other job has it.
+    jobs = load(CI)["jobs"]
+    for name, job in jobs.items():
+        if name in ("build", "e2e"):
+            assert job["permissions"] == {"contents": "read", "actions": "read"}, name
+        elif name != "deploy":
             assert "permissions" not in job, name
 
 
@@ -118,12 +157,24 @@ def test_the_jobs_run_checks_only_through_verify_sh():
         # One run of verify.sh, always with --all, so that CI never skips the
         # workflow self-tests (ADR 005), and always with --only: a run
         # without it would run every check a second time.
-        assert sum(VERIFY in command for command in runs) == 1, name
         assert groups_of(job), name
+        # One run of verify.sh, or the same run with the base of a pull
+        # request, chosen by a condition; never both and never another.
+        with_base = [c for c in verify_commands(job) if BASE_OPTION in c]
+        assert len(verify_commands(job)) == 1 + len(with_base), name
+        assert len(with_base) == (1 if name in ("build", "e2e") else 0), name
+        for command in with_base:
+            assert command.replace(BASE_OPTION, "") == plain_verify(job), name
         # The only other commands hand the built site from one job to the
         # next. No job runs a check tool itself, so no check exists only in CI.
         others = [command for command in runs if VERIFY not in command]
-        assert set(others) <= {FETCH, RECORD}, name
+        assert set(others) <= {
+            FETCH,
+            RECORD,
+            FETCH_BASE,
+            FETCH_BASE_OF_BUILD,
+            COLLECT_BASE,
+        }, name
 
 
 def test_the_runner_preparation_runs_no_check():
@@ -182,11 +233,32 @@ def test_no_job_continues_after_a_failure_or_runs_on_a_condition():
     jobs = load(CI)["jobs"]
     for name, job in jobs.items():
         assert "continue-on-error" not in job, name
-        assert ("if" in job) == (name in (AGGREGATE, DEPLOY)), name
+        assert ("if" in job) == (name in (AGGREGATE, DEPLOY, BASE_JOB)), name
         for step in job["steps"]:
             assert "continue-on-error" not in step, name
             if "if" in step:
-                assert step["uses"].startswith("actions/upload-pages-artifact@"), name
+                assert step["if"] in allowed_conditions(step), (name, step)
+
+
+def allowed_conditions(step: dict) -> list[str]:
+    """The conditions a step of a check job may have, by what it does."""
+    run, uses = step.get("run", ""), step.get("uses", "")
+    if uses.startswith("actions/upload-pages-artifact@"):
+        return ["${{ !cancelled() && hashFiles('site/_site/index.html') != '' }}"]
+    if run == COLLECT_BASE or "verification-base-candidate" in str(step.get("with")):
+        return [ON_MAIN]
+    if run.startswith(FETCH_BASE.split(" ")[0]) and "--run" not in run:
+        return [ON_PULL_REQUEST]
+    if "--run" in run:
+        return [
+            "${{ github.event_name == 'pull_request' && "
+            "needs.build.outputs.base-run != '' }}"
+        ]
+    if BASE_OPTION in run:
+        return ["${{ steps.base.outputs.accepted == 'true' }}"]
+    if VERIFY in run:
+        return ["${{ steps.base.outputs.accepted != 'true' }}"]
+    return []
 
 
 def test_the_jobs_have_the_agreed_timeouts():
@@ -197,6 +269,7 @@ def test_the_jobs_have_the_agreed_timeouts():
         assert job["timeout-minutes"] == 45, name
     assert jobs[AGGREGATE]["timeout-minutes"] == 5
     assert jobs[DEPLOY]["timeout-minutes"] == 10
+    assert jobs[BASE_JOB]["timeout-minutes"] == 10
 
 
 def test_the_site_is_built_in_one_job_and_uploaded_with_its_record():
@@ -206,13 +279,16 @@ def test_the_site_is_built_in_one_job_and_uploaded_with_its_record():
     steps = jobs["build"]["steps"]
     names = [step.get("run") or step["uses"].split("@")[0] for step in steps]
     verify = names.index(f"{VERIFY} --all --only build")
-    # The record is written after the build passed and before the uploads.
+    # The record is written after the build passed and before the uploads;
+    # what a run on main stored follows the uploads of the site.
     assert names[verify + 1 :] == [
         RECORD,
         "actions/upload-pages-artifact",
         "actions/upload-artifact",
+        COLLECT_BASE,
+        "actions/upload-artifact",
     ]
-    pages, record = steps[-2], steps[-1]
+    pages, record = steps[-4], steps[-3]
     assert pages["with"]["path"] == "site/_site"
     # Without a condition GitHub skips the step after a failed one. This one
     # runs whenever a site was built, unless the run was cancelled.
@@ -241,6 +317,7 @@ def test_a_job_that_checks_the_built_site_checks_the_one_that_was_built():
             for s in steps
             if s.get("uses", "").startswith("actions/download-artifact@")
         ]
+        # The base comes after the site and before any check.
         assert [d["with"]["name"] for d in downloads] == [
             "github-pages",
             "built-site-record",
@@ -250,7 +327,7 @@ def test_a_job_that_checks_the_built_site_checks_the_one_that_was_built():
         order = [steps.index(downloads[-1])]
         order += [i for i, s in enumerate(steps) if s.get("run") == FETCH]
         order += [i for i, s in enumerate(steps) if VERIFY in s.get("run", "")]
-        assert order == sorted(order) and len(order) == 3, name
+        assert order == sorted(order) and len(order) == 4, name
 
 
 def test_the_lean_packages_are_saved_by_the_build_job_only():
@@ -273,3 +350,111 @@ def test_deploy_job_publishes_the_verified_artifact_and_builds_nothing():
     assert len(job["steps"]) == 1
     assert job["steps"][0]["uses"].startswith("actions/deploy-pages@")
     assert "run" not in job["steps"][0]
+
+
+def steps_with(job: dict, text: str) -> list[dict]:
+    return [s for s in job["steps"] if text in s.get("run", "")]
+
+
+def test_a_run_on_main_never_receives_a_base():
+    # ADR 014 decision 2: main executes and checks every lesson. The only
+    # steps that fetch a base run on a pull request, and no step of the
+    # workflow fetches it on any other event.
+    jobs = load(CI)["jobs"]
+    fetching = [
+        (name, step)
+        for name, job in jobs.items()
+        for step in job["steps"]
+        if "fetch-base.sh" in step.get("run", "") or "--base" in step.get("run", "")
+    ]
+    assert fetching
+    for name, step in fetching:
+        assert "github.event_name == 'pull_request'" in step.get("if", "") or (
+            "steps.base.outputs.accepted == 'true'" in step.get("if", "")
+        ), (name, step)
+    for name in ("build", "e2e"):
+        [fetch] = [
+            s
+            for s in jobs[name]["steps"]
+            if s.get("id") == "base" and "fetch-base.sh" in s.get("run", "")
+        ]
+        assert "github.event_name == 'pull_request'" in fetch["if"]
+        assert "push" not in fetch["if"]
+    # The step that passes the base needs the step that accepted one.
+    for name in ("build", "e2e"):
+        [with_base] = steps_with(jobs[name], BASE_OPTION)
+        assert with_base["if"] == "${{ steps.base.outputs.accepted == 'true' }}"
+
+
+def test_the_base_is_fetched_with_the_read_token_and_nothing_else():
+    jobs = load(CI)["jobs"]
+    for name in ("build", "e2e"):
+        for step in steps_with(jobs[name], "fetch-base.sh"):
+            assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
+            assert set(step["env"]) <= {"GH_TOKEN", "BASE_RUN"}
+    # What the build job accepted reaches the checking jobs as a run number,
+    # which the script checks again; the number is never put into a command.
+    assert load(CI)["jobs"]["build"]["outputs"] == {
+        "base-run": "${{ steps.base.outputs.run-id }}"
+    }
+    for step in steps_with(jobs["e2e"], "--run"):
+        assert step["env"]["BASE_RUN"] == "${{ needs.build.outputs.base-run }}"
+        assert "${{" not in step["run"]
+
+
+def test_the_base_is_published_by_main_only_after_verify_passed():
+    jobs = load(CI)["jobs"]
+    job = jobs[BASE_JOB]
+    # After the required check, which passes only when every job did, and
+    # only on main. A pull request run cannot reach it, so no pull request
+    # (and no fork) uploads an artifact of that name.
+    assert job["needs"] == AGGREGATE
+    assert job["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    assert "permissions" not in job
+    # No command: it copies the artifact the build job of this run made.
+    assert not [s for s in job["steps"] if "run" in s]
+    assert [s["uses"].split("@")[0] for s in job["steps"]] == [
+        "actions/download-artifact",
+        "actions/upload-artifact",
+    ]
+    download, upload = job["steps"]
+    assert download["with"]["name"] == "verification-base-candidate"
+    assert upload["with"]["name"] == "verification-base"
+    assert upload["with"]["if-no-files-found"] == "error"
+    # Nothing else uploads under the name that a pull request run reads.
+    uploads = [
+        step["with"]["name"]
+        for j in jobs.values()
+        for step in j["steps"]
+        if step.get("uses", "").startswith("actions/upload-artifact@")
+    ]
+    assert uploads.count("verification-base") == 1
+    # The required check does not wait for it: a failed publication means the
+    # next pull requests run without a base, never that main fails.
+    assert BASE_JOB not in jobs[AGGREGATE]["needs"]
+
+
+def test_the_candidate_of_the_base_is_made_on_main_only():
+    build = load(CI)["jobs"]["build"]
+    candidate = [
+        s
+        for s in build["steps"]
+        if s.get("with", {}).get("name") == "verification-base-candidate"
+    ]
+    assert len(candidate) == 1
+    assert candidate[0]["if"] == ON_MAIN
+    [collect] = steps_with(build, "collect-base.sh")
+    assert collect["if"] == ON_MAIN
+
+
+def test_the_scripts_that_take_the_base_use_the_run_record():
+    # The decision is made by the script, which the tests of
+    # test_fetch_base.py hold to the record of the producing run. The
+    # workflow does not decide from a name, a time, or a file of the base.
+    text = CI.read_text()
+    assert "download-artifact" in text
+    for step in (s for j in load(CI)["jobs"].values() for s in j["steps"]):
+        if step.get("uses", "").startswith("actions/download-artifact@"):
+            assert step["with"]["name"] != "verification-base"
+            assert "run-id" not in step["with"]
+            assert "github-token" not in step["with"]

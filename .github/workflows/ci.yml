@@ -69,6 +69,13 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    # The one added scope: reading the runs and artifacts of earlier runs, to
+    # find the verified base of a pull request (ADR 014 decision 2).
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      base-run: ${{ steps.base.outputs.run-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -77,7 +84,21 @@ jobs:
         with:
           lean-packages: save
           browser: "true"
+
+      # Only a pull request run looks for a base; a run on main never receives
+      # one and executes and checks every lesson. The script accepts a base
+      # by the record of the run that produced it and otherwise leaves none.
+      - name: Fetch the verified base
+        id: base
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/fetch-base.sh "$RUNNER_TEMP/base"
+      - name: Verify the group build against the base
+        if: ${{ steps.base.outputs.accepted == 'true' }}
+        run: ./scripts/verify.sh --all --only build --base "$RUNNER_TEMP/base"
       - name: Verify the group build
+        if: ${{ steps.base.outputs.accepted != 'true' }}
         run: ./scripts/verify.sh --all --only build
 
       - name: Record the files of the built site
@@ -103,12 +124,30 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      # A run on main built and checked every lesson. What it stored is kept
+      # for the job 'base', which publishes it as the base of later pull
+      # requests once 'verify' passed.
+      - name: Collect the base
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: ./scripts/collect-base.sh "$RUNNER_TEMP/verification-base"
+      - name: Upload the base candidate
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification-base-candidate
+          path: ${{ runner.temp }}/verification-base
+          retention-days: 1
+          if-no-files-found: error
+
   # The checks of the built site that compare no bytes with it, in a
   # browser, side by side.
   e2e:
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -132,7 +171,22 @@ jobs:
           path: ${{ runner.temp }}/built-site
       - name: Unpack the built site and compare it with its record
         run: ./scripts/fetch-built-site.sh "$RUNNER_TEMP/built-site"
+      # The base the build job took, by its run, checked again by the same
+      # script, so that every job selects against the same base.
+      - name: Fetch the verified base of the build job
+        id: base
+        if: ${{ github.event_name == 'pull_request' && needs.build.outputs.base-run != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_RUN: ${{ needs.build.outputs.base-run }}
+        run: ./scripts/fetch-base.sh --run "$BASE_RUN" "$RUNNER_TEMP/base"
+      - name: Verify the group e2e-${{ matrix.part }} against the base
+        if: ${{ steps.base.outputs.accepted == 'true' }}
+        env:
+          PART: ${{ matrix.part }}
+        run: ./scripts/verify.sh --all --only "e2e-$PART" --base "$RUNNER_TEMP/base"
       - name: Verify the group e2e-${{ matrix.part }}
+        if: ${{ steps.base.outputs.accepted != 'true' }}
         env:
           PART: ${{ matrix.part }}
         run: ./scripts/verify.sh --all --only "e2e-$PART"
@@ -174,3 +228,27 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # Publishes what a run on main stored as the base of later pull requests,
+  # after every job succeeded. It runs nothing of the base and has no write
+  # permission: uploading an artifact needs none. A pull request run never
+  # reaches it, and what it publishes is accepted only by the record of this
+  # run (a push run on main whose 'verify' succeeded).
+  base:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download the base candidate
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verification-base-candidate
+          path: ${{ runner.temp }}/verification-base
+      - name: Publish the base
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification-base
+          path: ${{ runner.temp }}/verification-base
+          retention-days: 30
+          if-no-files-found: error

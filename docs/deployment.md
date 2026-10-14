@@ -33,7 +33,29 @@ pull request -> CI jobs, check verify -> merge to main -> CI jobs on main
 4. The workflow is read-only (`contents: read`). Only the deploy job has
    `pages: write` and `id-token: write`, and it authenticates with the
    short-lived token GitHub issues to the run. No secret is stored or
-   referenced.
+   referenced. The jobs `build` and `e2e` have one more scope, `actions: read`,
+   so that a pull request run can read the runs and artifacts of earlier runs
+   to find the base of step 5; no job has any other write permission.
+5. **The base of a pull request** (ADR 014 decision 2). On a push to `main`
+   the `build` job runs every lesson, collects what it stored (the executed
+   results, the digest of every lesson, and the checksum of every page,
+   `scripts/collect-base.sh`) and uploads it as `verification-base-candidate`
+   for one day. The job `base` runs after `verify` passed, only on `main`,
+   and republishes it as the artifact `verification-base` for 30 days. A pull
+   request run (`scripts/fetch-base.sh`) takes the base from the latest run
+   of `ci.yml` that the runs API records as a `push` run on `main` of this
+   repository that completed with success, whose job `verify` concluded with
+   success, and that holds exactly one unexpired artifact of that name whose
+   recorded digest is the digest of the download. The name of an artifact,
+   its recency, and its contents decide nothing; an artifact of a pull
+   request run, a fork, or a failed run is not accepted, and a pull request
+   cannot upload one (the job `base` does not run for it). The archive is
+   unpacked only when it holds plain relative paths, no link, and the three
+   parts of a base; nothing in it is executed or read as configuration. The
+   `e2e` jobs take the very base the `build` job took, by its run number, and
+   check it again. A base that is missing, rejected, damaged, or of another
+   format gives a full run, never a failed one. A run on `main` is never
+   given a base.
 
 Deployment is automatic for every verified commit on `main`. Nobody deploys by
 hand, and nothing deploys from a branch.
