@@ -466,6 +466,18 @@ the division of the built-site tests in `tests/e2e/shards.json`) and one
 assembly renders the one built site from their results (ADR 014 decision
 11, F113). No check is dropped.
 
+**The transport of the base (ADR 014 decision 2, F61 step 7).** CI keeps the
+base as an artifact. A run on `main` uploads it only after `verify` passed
+(the job `base`); a pull request run reads it with the one added scope
+`actions: read` and accepts it only by the record of the run that produced
+it (a `push` run of `ci.yml` on `refs/heads/main` of this repository, whose
+job `verify` concluded with success), never by the name, the recency, or the
+contents of the artifact. It checks the digest of the download, the paths of
+the archive, and the completeness of the base before the script reads it, and
+executes nothing of it. A pull request, including one from a fork, cannot
+publish a base, and a run on `main` receives none. See
+[deployment](deployment.md) for the steps and the permissions.
+
 Not part of verification, by decision: the link maintenance check of the
 reference register (ADR 009) and any contact with an LLM provider, a coding
 agent, or a data portal.

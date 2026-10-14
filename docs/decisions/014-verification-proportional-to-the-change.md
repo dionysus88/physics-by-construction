@@ -14,6 +14,16 @@ decision 8 require before a check runs less often. Decision 11 amends ADR
 shards whose results one assembly turns into the one built site. ADR 005
 is unchanged.
 
+Implementation of F61 (Issue #147) in stages: the input digest, the check
+identity, the selection, the store, the regenerated context, and the page
+checks by selection (decisions 1, 3, 5, 6, 9, 10) were merged with pull
+requests #152, #158, and #159. The transport of the base through artifacts
+(decision 2) and the workflow and permission change it needs (`actions:
+read` on the jobs `build` and `e2e`) are in the pull request that adds
+`scripts/fetch-base.sh`; the measurement of F61 (step 9) follows once that
+workflow has run on `main`. The status of this ADR changes with the human's
+merge decision, not with this note.
+
 Date: 2026-10-12
 
 ## Context

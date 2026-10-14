@@ -37,6 +37,8 @@ in `docs/workflow.md`.
 | `scripts/check-determinism.sh` | Builds the site a second time and requires byte-identical output |
 | `scripts/ci-aggregate.sh` | Decides the required CI check `verify` from the results of the jobs: passes only when every expected job succeeded (ADR 012) |
 | `scripts/fetch-built-site.sh` | Hands the site of the CI `build` job to the jobs that check it: records the checksum of every file, and in the other jobs unpacks the artifact and requires exactly those files (ADR 012) |
+| `scripts/fetch-base.sh` | Retrieves the verified base of a pull request run from the artifacts of earlier runs, accepting it only by the record of the producing run (a successful `push` run on `main` whose `verify` succeeded), the digest of the download, and a safe, complete archive; otherwise no base (ADR 014) |
+| `scripts/collect-base.sh` | Gathers what a full build left (digests, page checksums, executed results) into the base that a run on `main` uploads (ADR 014) |
 | `scripts/fetch-data.sh` | Learner-side download of a full dataset by its card's URLs and checksums; never run by verification, the build, or CI, and refuses to run when `CI` is set |
 | `scripts/check-links.sh`, `scripts/lib/check_links.py` | On-demand check of the external links in the reference register; reports a dead link or a missing anchor. Not in `verify.conf`, no CI job (ADR 009) |
 | `scripts/compare-lessons.sh` | Builds a base revision and the working tree and requires the built lesson pages to be identical apart from the footer and the embedded commit |
