@@ -1,0 +1,439 @@
+---
+title: "Kinetic theory of gases"
+description: >-
+  Why a gas of colliding particles settles into the Maxwell distribution of
+  speeds, and a check of the simulated gas of the first lesson against the
+  analytic distribution at the temperature the simulation reached.
+lesson:
+  id: kinetic-theory-of-gases
+  strand: thermodynamics
+  order: 2
+  difficulty: 2
+  course: thermodynamics
+  slot: T2
+  methods: [simulation]
+  outcomes:
+    - Derive the Maxwell distribution of speeds from the independence and the isotropy of the velocity components
+    - Define the temperature of a gas from its mean kinetic energy
+    - Check the speeds of a simulated gas against the analytic distribution at its own temperature, within a stated tolerance
+  related: [random-walks-and-diffusion]
+  format: 2
+  preview: fig-speed-distribution
+  prerequisites:
+    lessons: [particles-in-a-box]
+    outside:
+      - "Probability: the Gaussian distribution, the distribution function of a random variable, and its quantiles"
+      - "Statistics: the mean, the standard deviation, and the standard error of a mean"
+      - "Calculus: integrating a Gaussian, and changing to polar coordinates"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+The molecules of the air in a room move at hundreds of metres per second, and
+each of them changes its velocity billions of times a second in collisions with
+the others. No molecule keeps its speed, yet the fraction of molecules that
+move faster than some value is steady, and the value that marks the fastest
+tenth of them depends on one number, the temperature. Where does that
+distribution come from, and why does only the temperature appear in it?
+
+The gas lesson built a gas of colliding discs and showed that its speeds follow
+the Maxwell distribution, by one moment ratio. This lesson takes that gas as it
+is, from `pbc.abm.gas`, and asks the question in the other order. First it
+derives what the distribution has to be, from two properties of the collisions.
+Then it measures the whole curve, not one moment, at the temperature the
+simulated gas has reached, and compares it with the derived curve at several
+points. The checks are numerical checks of a model against a theory, with the
+tolerance of the gas lesson. No real gas is measured here.
+
+## Assumptions
+
+1. **The gas of the first lesson.** Two-dimensional identical hard discs,
+   elastic collisions, perfectly reflecting walls, a dilute gas, and a time
+   step that resolves a collision. The assumptions of that lesson hold here
+   unchanged, and the numbers below are those of that gas: the three-dimensional
+   curve is different.
+2. **The velocity components are independent and the gas is isotropic.** The
+   derivation needs that the probability of a velocity depends only on its
+   length, not on a direction, and that the two components do not influence each
+   other. A gas with a bulk flow, or one held in a field that favours a
+   direction, breaks isotropy. The simulation removes the mean velocity at the
+   start for this reason.
+3. **The gas has relaxed.** The distribution is the end of the collisions, not
+   their start. The measurement begins after the relaxation time of the gas
+   lesson, and a measurement taken earlier would see the start, a narrow band of
+   speeds.
+4. **The temperature is the mean kinetic energy.** The program defines
+   $k_BT$ as the mean kinetic energy of a disc, $\tfrac12 m\langle v^2\rangle$,
+   which is the temperature of a two-dimensional gas when each direction holds
+   $\tfrac12k_BT$. The comparison therefore uses a distribution at the energy
+   that the same speeds give, not at an independently measured temperature, and
+   the check tests the shape, not the absolute scale.
+5. **The runs are independent, the snapshots are not.** The speeds of one run at
+   successive snapshots, and the discs within a snapshot, are correlated. The
+   standard error is taken from the spread between runs with different seeds,
+   never from the number of discs or snapshots.
+6. **Randomness is seeded.** A run is a function of its seed, so the page is the
+   same at every build.
+
+## Explanation
+
+### What the distribution has to be
+
+Take the probability density of the velocity $(v_x, v_y)$ of one disc in the
+relaxed gas. Two things are known about it. The plane has no preferred
+direction, so the density depends only on the speed, $f(v_x, v_y) = g(v^2)$.
+And the two components are independent, so it is also a product,
+$f = h(v_x)\,h(v_y)$. A function of $v_x^2 + v_y^2$ that is also a product of
+a function of $v_x$ and a function of $v_y$ must be an exponential of the
+square: taking the logarithm, $\ln g(v_x^2 + v_y^2) = \ln h(v_x) + \ln h(v_y)$,
+and putting $v_y = 0$ and then differentiating shows that $\ln h$ is a
+constant minus a constant times $v_x^2$. So each component is Gaussian with
+mean zero,
+
+$$
+h(v_x) \propto \exp\!\left(-\frac{m v_x^2}{2k_BT}\right),
+$$
+
+where the constant in the exponent is the definition of the temperature:
+$\langle \tfrac12 m v_x^2\rangle = \tfrac12 k_BT$ for each of the two directions.
+The argument says what the form must be if the collisions give the gas the two
+properties. It does not show that they do; that is what the simulation tests.
+
+### The distribution of speeds
+
+In polar coordinates the area element is $v\,\mathrm dv\,\mathrm d\theta$, and
+the density depends only on $v$, so integrating over the angle gives the
+density of the speed,
+
+$$
+f(v) = \frac{m v}{k_BT}\exp\!\left(-\frac{m v^2}{2k_BT}\right).
+$$
+
+A check against measured speeds is easier with the distribution function, the
+probability that a disc is slower than $v$, which the integral of $f$ gives in
+closed form,
+
+$$
+F(v) = 1 - \exp\!\left(-\frac{m v^2}{2k_BT}\right).
+$$
+
+Its inverse is the speed below which a fraction $p$ of the discs lie,
+$v_p = \sqrt{-2k_BT\ln(1 - p)/m}$. Two other numbers follow from the density: the
+speed at which it peaks, $\sqrt{k_BT/m}$, and the mean speed
+$\langle v\rangle = \sqrt{\pi k_BT/(2m)}$. The mean is larger than the peak
+because the density has a long tail towards high speeds.
+
+### The check
+
+The simulated gas has a temperature, $k_BT = \tfrac12 m\langle v^2\rangle$, from
+its own speeds. The check takes that temperature, computes the speeds $v_p$ below
+which the distribution says the fractions $p = 0.1, 0.25, 0.5, 0.75, 0.9$ lie,
+and counts the fraction of the gas that is really below each. If the distribution
+is right, the counted fraction is $p$. The count is made in each independent
+run, and the mean over the runs is compared with $p$ in units of its standard
+error, with the tolerance of the gas lesson: agreement within $4$ standard
+errors, a chosen tolerance, not a law. With six runs the standard error is itself
+uncertain, so chance alone exceeds four standard errors in about one case in a
+hundred at one point, and a failure at several points is a reason to look at the
+model, not a proof against it.
+
+## Code
+
+The analytic distribution is `pbc.thermodynamics.kinetic`: the distribution
+function, its inverse, and the two characteristic speeds. The gas is the one of
+the first lesson, run by `pbc.abm.gas.measure`, which this lesson calls without
+change.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.thermodynamics import kinetic
+
+excerpt(kinetic.speed_cdf)
+```
+
+```{python}
+#| echo: false
+excerpt(kinetic.speed_quantile)
+```
+
+The measured side is the fraction of speeds below a threshold, the empirical
+distribution function.
+
+```{python}
+#| echo: false
+excerpt(kinetic.fractions_below)
+```
+
+## Worked examples
+
+```{python}
+#| echo: false
+import numpy as np
+
+from pbc.authoring import table
+```
+
+### The speeds of the relaxed gas at the quantiles of the model
+
+Six runs of the gas of the first lesson, each from its own seed, relaxed and
+then measured. For each run the quantile speeds are computed at that run's
+temperature.
+
+```{python}
+#| label: quantile-check
+from pbc.abm.gas import mean_and_error, measure
+from pbc.thermodynamics.kinetic import fractions_below, speed_quantile
+
+MASS = 1.0  # the mass of a disc in pbc.abm.gas, kg
+SEEDS = range(6)
+PROBABILITIES = np.array([0.1, 0.25, 0.5, 0.75, 0.9])
+
+measurements = [measure(seed) for seed in SEEDS]
+fractions = np.array(
+    [
+        fractions_below(m.speeds, speed_quantile(PROBABILITIES, m.kt, MASS))
+        for m in measurements
+    ]
+)
+means = fractions.mean(axis=0)
+errors = fractions.std(axis=0, ddof=1) / np.sqrt(len(measurements))
+distances = np.abs(means - PROBABILITIES) / errors
+
+table(
+    [
+        (p, mean, error, distance)
+        for p, mean, error, distance in zip(PROBABILITIES, means, errors, distances)
+    ],
+    [
+        ("predicted fraction", "", ".2f"),
+        ("measured fraction", "", ".3f"),
+        ("standard error", "", ".3f"),
+        ("difference", "standard errors", ".1f"),
+    ],
+    "The fraction of the speeds below the quantile speed of the Maxwell distribution at the temperature of each run, averaged over six runs, at five predicted fractions.",
+)
+```
+
+[The speeds of the relaxed gas follow the Maxwell distribution at its own
+temperature: the measured fraction below each of five quantile speeds agrees with
+the predicted fraction within four standard errors.]{.claim
+type="numerically-verified" scope="a dilute gas of hard discs in two dimensions,
+six seeds, five quantiles, four standard errors" evidence="quantile-check"}
+The largest difference is `{python} f"{distances.max():.1f}"` standard errors, over
+five points of the curve, from the tenth to the ninetieth percentile.
+
+### A wrong temperature is seen
+
+A check that cannot fail is worth nothing. Take the same speeds and compare them
+with the distribution at a temperature that is ten per cent too high, the kind of
+error a mistaken definition of the temperature would make.
+
+```{python}
+#| label: wrong-temperature
+SCALE = 1.1
+wrong = np.array(
+    [
+        fractions_below(m.speeds, speed_quantile(PROBABILITIES, SCALE * m.kt, MASS))
+        for m in measurements
+    ]
+)
+wrong_means = wrong.mean(axis=0)
+wrong_errors = wrong.std(axis=0, ddof=1) / np.sqrt(len(measurements))
+wrong_distances = np.abs(wrong_means - PROBABILITIES) / wrong_errors
+
+table(
+    [
+        (p, mean, distance)
+        for p, mean, distance in zip(PROBABILITIES, wrong_means, wrong_distances)
+    ],
+    [
+        ("predicted fraction", "", ".2f"),
+        ("measured fraction", "", ".3f"),
+        ("difference", "standard errors", ".1f"),
+    ],
+    "The same comparison against the distribution at a temperature ten per cent too high.",
+)
+```
+
+The wrong curve fails at `{python} f"{int((wrong_distances > 4.0).sum())}"` of the
+five points, by up to `{python} f"{wrong_distances.max():.0f}"` standard errors, so
+the check has the power to tell a ten per cent error in the temperature from the
+right value. A smaller error may not be seen.
+
+### The curve and the mean speed
+
+```{python}
+#| label: fig-speed-distribution
+#| fig-cap: "The distribution function of the measured speeds follows the Maxwell distribution function at the temperature of the gas; the two curves are close all along, and the checks above say how close."
+#| fig-alt: "Line plot of the fraction of discs slower than a speed against the speed in metres per second. A solid curve of the measured speeds rises from zero in an S shape towards one, and a dashed curve of the Maxwell distribution function lies close along it."
+#| fig-status: simulated
+import matplotlib.pyplot as plt
+
+from pbc.thermodynamics.kinetic import speed_cdf
+
+pooled = np.concatenate([m.speeds.ravel() for m in measurements])
+kt = float(np.mean([m.kt for m in measurements]))
+v = np.linspace(0.0, pooled.max(), 300)
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(v, fractions_below(pooled, v), color="#00429d", label="gas")
+ax.plot(v, speed_cdf(v, kt, MASS), color="#93003a", linestyle="--",
+        label="Maxwell distribution")
+ax.set_xlabel("speed (m/s)")
+ax.set_ylabel("fraction of discs slower")
+ax.legend()
+plt.show()
+```
+
+The pooled speeds of the six runs are used for the picture only, which the fifth
+assumption allows for a picture and not for a standard error. The figure and the
+table agree: the gas follows the curve.
+
+```{python}
+#| label: mean-speed-check
+from pbc.thermodynamics.kinetic import mean_speed, most_probable_speed
+
+ratios = np.array(
+    [np.mean(m.speeds) / mean_speed(m.kt, MASS) for m in measurements]
+)
+ratio_mean, ratio_error = mean_and_error(ratios)
+
+table(
+    [
+        (
+            mean_speed(kt, MASS),
+            most_probable_speed(kt, MASS),
+            ratio_mean,
+            ratio_error,
+            abs(ratio_mean - 1.0) / ratio_error,
+        )
+    ],
+    [
+        ("mean speed", "m/s", ".3f"),
+        ("most probable speed", "m/s", ".3f"),
+        ("measured mean / predicted mean", "", ".4f"),
+        ("standard error", "", ".4f"),
+        ("difference", "standard errors", ".1f"),
+    ],
+    "The two characteristic speeds at the mean temperature of the six runs, and the ratio of the measured mean speed to the predicted one.",
+)
+```
+
+The mean speed is larger than the most probable speed, as the long tail of the
+density requires, and the measured mean agrees with the predicted one: their ratio
+is `{python} f"{ratio_mean:.4f}"`, `{python} f"{abs(ratio_mean - 1.0) / ratio_error:.1f}"`
+standard errors from one.
+
+## Limits {#limits}
+
+- **A model checked against a theory, not against a gas.** The data are
+  simulated, and the result says that the model produces the distribution that the
+  derivation predicts. It says nothing about air; no claim of this lesson is
+  experimentally supported.
+- **The temperature is not independent.** The same speeds give the temperature
+  and are compared with the curve at that temperature, so the comparison tests the
+  shape of the distribution at a scale it fixes itself. The absolute scale of the
+  distribution is a definition here, and a check against a thermometer would be a
+  different test.
+- **Five points and a tolerance.** The quantiles sample the curve at five
+  places, and a model wrong by less than four standard errors passes. The test of
+  a wrong temperature shows the size of error that is seen.
+- **Two dimensions.** The curve is that of a plane. In three dimensions the speed
+  density has a factor $v^2$ and the mean speed another constant; the method of
+  the check would be the same.
+- **A dilute, simple gas.** Only hard elastic discs at a small packing fraction
+  are modelled: no internal motion, no attraction, no dense liquid.
+
+::: {.exercise .self-check}
+The derivation says that independence of the components and isotropy force a
+Gaussian. Why is it then not enough to show that the simulated gas has zero mean
+velocity?
+
+::: {.solution}
+A zero mean velocity says only that the first moment vanishes, and many
+distributions have it. The derivation needs the full density to depend on the
+speed alone and to factor into the two components; the check of the quantile
+fractions tests the whole shape of the speed distribution, which is where a gas
+that is isotropic and independent differs from one that is merely at rest on
+average.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**A hotter gas.** Start the gas at twice the speed and measure one seed. By what
+factor does the temperature change, and does the fraction below the median speed
+of the model stay at one half?
+
+::: {.hint}
+The temperature is the mean kinetic energy.
+:::
+
+::: {.solution}
+The kinetic energy is proportional to the square of the speed, so the temperature
+rises by a factor of four. The shape of the distribution at the new temperature is
+the same curve in units of $\sqrt{k_BT/m}$.
+
+```{python}
+from pbc.abm.gas import SPEED
+
+hot = measure(0, speed=2.0 * SPEED)
+cold = measurements[0]
+median = speed_quantile(np.array([0.5]), hot.kt, MASS)
+table(
+    [(hot.kt / cold.kt, fractions_below(hot.speeds, median)[0])],
+    [
+        ("temperature ratio", "", ".2f"),
+        ("fraction below the predicted median", "", ".3f"),
+    ],
+    "The temperature of the hot gas in units of that of the first gas, and the fraction of its speeds below the median of the model at its own temperature.",
+)
+```
+
+One seed is one run, so the fraction differs from one half by about the spread
+between runs.
+:::
+:::
+
+::: {.exercise}
+**Fewer collisions.** Measure one seed without relaxing it. What does the
+distribution look like at the quantiles?
+
+::: {.solution}
+Without relaxation the speeds are still the narrow band of the start, so the
+fractions below the quantile speeds are far from the predicted ones.
+
+```{python}
+start = measure(0, relax=0.0, duration=0.5)
+raw = fractions_below(start.speeds, speed_quantile(PROBABILITIES, start.kt, MASS))
+table(
+    list(zip(PROBABILITIES, raw)),
+    [("predicted fraction", "", ".2f"), ("measured fraction", "", ".3f")],
+    "The fraction of the speeds below each quantile of the model, for a gas measured during its first half second.",
+)
+```
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/thermodynamics/kinetic.py",
+        "src/pbc/abm/gas.py",
+    ],
+    tests=[
+        "tests/unit/test_thermodynamics.py",
+        "tests/unit/test_gas.py",
+    ],
+)
+```

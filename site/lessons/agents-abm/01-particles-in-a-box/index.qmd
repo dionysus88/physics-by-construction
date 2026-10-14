@@ -9,7 +9,8 @@ lesson:
   strand: agents-abm
   order: 1
   difficulty: 2
-  course: mechanics
+  course: thermodynamics
+  slot: T0
   methods: [simulation, abm]
   outcomes:
     - Build a gas of colliding discs from one local rule
