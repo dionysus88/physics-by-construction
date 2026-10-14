@@ -333,15 +333,23 @@ def test_an_incomplete_or_unsafe_archive_is_rejected(
     assert_no_base(api, api.fetch(), why)
 
 
-def test_an_archive_holding_a_link_is_rejected(api: Api, tmp_path: Path):
+def put_archive_with_link(
+    api: Api, tmp_path: Path, *, link_first: bool = False, padding: int = 0
+) -> None:
+    """Make the one artifact of the run an archive that holds a link."""
     archive = tmp_path / "link.zip"
+    link = zipfile.ZipInfo("freeze/link")
+    link.create_system = 3
+    link.external_attr = (stat.S_IFLNK | 0o777) << 16
     with zipfile.ZipFile(archive, "w") as zipped:
+        if link_first:
+            zipped.writestr(link, "/etc/passwd")
         for name, content in good_entries().items():
             zipped.writestr(name, content or b"")
-        link = zipfile.ZipInfo("freeze/link")
-        link.create_system = 3
-        link.external_attr = (stat.S_IFLNK | 0o777) << 16
-        zipped.writestr(link, "/etc/passwd")
+        for number in range(padding):
+            zipped.writestr(f"freeze/padding/{number:06d}-{'x' * 60}.txt", b"x")
+        if not link_first:
+            zipped.writestr(link, "/etc/passwd")
     data = archive.read_bytes()
     api.put(f"repos/{REPO}/actions/runs/{RUN}/artifacts", {"artifacts": []})
     api.add_artifact(RUN, 600)
@@ -349,7 +357,21 @@ def test_an_archive_holding_a_link_is_rejected(api: Api, tmp_path: Path):
     listing = api.read(f"repos/{REPO}/actions/runs/{RUN}/artifacts")
     listing["artifacts"][0]["digest"] = "sha256:" + hashlib.sha256(data).hexdigest()
     api.put(f"repos/{REPO}/actions/runs/{RUN}/artifacts", listing)
+
+
+def test_an_archive_holding_a_link_is_rejected(api: Api, tmp_path: Path):
+    put_archive_with_link(api, tmp_path)
     assert_no_base(api, api.fetch(), "holds ")
+
+
+def test_a_link_before_a_listing_longer_than_a_pipe_is_found_by_the_listing(
+    api: Api, tmp_path: Path
+):
+    """The rejection comes from the listing of the archive, not only from the
+    check of what was unpacked: `unzip -Z | grep -q` must not fail with the
+    SIGPIPE of unzip (pipefail) when grep stops at the first link."""
+    put_archive_with_link(api, tmp_path, link_first=True, padding=4000)
+    assert_no_base(api, api.fetch(), "the archive holds a link")
 
 
 def test_nothing_of_the_base_is_executed(api: Api):

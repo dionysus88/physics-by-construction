@@ -67,7 +67,9 @@ uv run --locked --project "$root" python -m pbc.authoring.exercises "$project"
 if [[ -n "$stubs" ]]; then
   while IFS= read -r stub; do
     log="$(lake env lean "$stub" 2>&1)" || { printf '%s\n' "$log" >&2; fail "$stub does not compile"; }
-    if grep -v -e "declaration uses .sorry." <<<"$log" | grep -q .; then
+    # Not a pipe into 'grep -q' (SIGPIPE under pipefail): read what remains.
+    remaining="$(grep -v -e "declaration uses .sorry." <<<"$log" || true)"
+    if [[ -n "$remaining" ]]; then
       printf '%s\n' "$log" >&2
       fail "$stub reports more than its 'sorry' warnings"
     fi
