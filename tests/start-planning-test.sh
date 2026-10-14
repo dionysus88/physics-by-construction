@@ -929,6 +929,11 @@ setup_approved_repo() {
   ) || fail "the first planning of $label failed"
   mkdir -p "$worktree/docs/decisions"
   printf '# ADR 001: Local component\n\n## Status\n\nAccepted.\n' >"$worktree/docs/decisions/001-local-component.md"
+  # A requirements file larger than a pipe buffer, as a real project has.
+  if [[ "${PAD_REQUIREMENTS:-}" == 1 ]]; then
+    yes 'A line of the approved requirements that only makes the file large.' |
+      head -n 4000 >>"$worktree/docs/PROJECT_REQUIREMENTS.md"
+  fi
   record_planning_approval "$worktree"
   git -C "$worktree" add -A
   git -C "$worktree" -c user.name="Planning Test" -c user.email="planning-test@example.com" \
@@ -962,6 +967,17 @@ run_change() {
 
 phases() {
   awk -F= '/^PHASE=/ { print $2 }' "$1" | paste -sd, -
+}
+
+# The check that the requirements are approved reads a file larger than a pipe
+# buffer: grep -q stops at the status line and must not fail the check with the
+# SIGPIPE of the producer (pipefail).
+big_repo="$(PAD_REQUIREMENTS=1 setup_approved_repo big)"
+[[ "$(git -C "$big_repo" show origin/main:docs/PROJECT_REQUIREMENTS.md | wc -c)" -gt 200000 ]] ||
+  fail "the requirements of the big fixture are not larger than a pipe buffer"
+MOCK_CHANGE_PLANNER="$add_feature" run_change "$big_repo" change-big "" big-change --change "$change_request" || {
+  cat "$tmp/change-big.out" >&2
+  fail "a change cycle on a large approved requirements file failed"
 }
 
 # A new feature that fits the requirements changes only the roadmap. Only the
