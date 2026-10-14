@@ -27,6 +27,7 @@ default_group="default"
 
 usage() {
   echo "Usage: $0 [--all] [--reuse]"
+  echo "       $0 [--all] --base <directory> [--only <group>[,<group>...]]"
   echo "       $0 [--all] --only <group>[,<group>...]"
   echo "       $0 --groups"
   echo
@@ -41,6 +42,12 @@ usage() {
   echo "as '<name> [<group>]: <command>'; one without a group is in 'default'."
   echo "A partial run records nothing and cannot be combined with --reuse: only"
   echo "a run of every check verifies the content."
+  echo
+  echo "--base names the directory of a verified base (digests.json and freeze/, as"
+  echo "a run on main publishes them). The script selects once what this run"
+  echo "executes and checks, writes the selection to .agents/verification/selection.json,"
+  echo "and records the base. Without it every lesson is executed and checked. A"
+  echo "base that cannot be used gives a full run, with the reason (ADR 014)."
   echo
   echo "--groups prints the groups that have a check, one per line."
   exit 1
@@ -57,11 +64,17 @@ reuse=0
 list_groups=0
 only=""
 partial=0
+base=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all) run_all=1 ;;
     --reuse) reuse=1 ;;
     --groups) list_groups=1 ;;
+    --base)
+      [[ $# -ge 2 && -n "$2" ]] || usage
+      base="$2"
+      shift
+      ;;
     --only)
       [[ $# -ge 2 && "$2" =~ ^[a-z0-9][a-z0-9-]*(,[a-z0-9][a-z0-9-]*)*$ ]] || usage
       only="$2"
@@ -72,11 +85,15 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+if [[ -n "$base" && "$reuse" -eq 1 ]]; then
+  echo "Error: --base cannot be combined with --reuse: a run with a base is a verification against that base, not of the content alone." >&2
+  exit 1
+fi
 if [[ "$partial" -eq 1 && "$reuse" -eq 1 ]]; then
   echo "Error: --only cannot be combined with --reuse: a partial run is not a verification, so there is nothing to reuse." >&2
   exit 1
 fi
-if [[ "$list_groups" -eq 1 && ( "$partial" -eq 1 || "$reuse" -eq 1 || "$run_all" -eq 1 ) ]]; then
+if [[ "$list_groups" -eq 1 && ( "$partial" -eq 1 || "$reuse" -eq 1 || "$run_all" -eq 1 || -n "$base" ) ]]; then
   usage
 fi
 
@@ -223,13 +240,30 @@ if [[ "$partial" -eq 1 ]]; then
   echo "Only the groups: ${only//,/, }. A partial run is not a verification and records nothing."
 fi
 
+# The selection of the run (ADR 014 decision 5): made once, here, and written
+# to the one file the checks read. A run without --base removes any selection
+# an earlier run left, so that it verifies everything.
+selection_file="$root/.agents/verification/selection.json"
+if [[ -e "$selection_file" ]]; then rm -f "$selection_file"; fi
+selection_note=""
+if [[ -n "$base" ]]; then
+  [[ -d "$base" ]] || echo "Note: the base $base is not a directory; the run is a full run."
+  base_abs="$(cd "$base" 2>/dev/null && pwd -P || printf '%s' "$base")"
+  selection_note="$(cd "$root" && uv run --locked python -m pbc.authoring.selection --root "$root" --base "$base_abs")" ||
+    config_fail "the selection against the base $base failed."
+  echo "== Selection =="
+  echo "$selection_note"
+  selection_note="${selection_note%%$'\n'*}"
+fi
+
 # With --reuse, a recorded pass for exactly this content stands in for a run.
 # A record made without the workflow self-tests does not cover a run that
 # needs them.
 tree_before=""
 if [[ "$recordable" -eq 1 ]]; then
   tree_before="$(fingerprint_worktree "$root" "$scratch")" || tree_before=""
-  if [[ "$reuse" -eq 1 && -n "$tree_before" && "$(verification_field "$root" tree)" == "$tree_before" ]]; then
+  if [[ "$reuse" -eq 1 && -n "$tree_before" && "$(verification_field "$root" tree)" == "$tree_before" &&
+    -z "$(verification_field "$root" selection)" ]]; then
     recorded_workflow="$(verification_field "$root" workflow-tests)"
     if [[ "$recorded_workflow" != "skipped" || ( -n "$workflow_skipped" && "$run_all" -eq 0 ) ]]; then
       echo
@@ -308,7 +342,7 @@ if [[ "$recordable" -eq 1 ]]; then
     else
       workflow_state="ran"
     fi
-    verification_write "$root" "$tree_before" "$workflow_state" ||
+    verification_write "$root" "$tree_before" "$workflow_state" "$selection_note" ||
       echo "Warning: could not record the passed verification." >&2
   else
     verification_forget "$root"

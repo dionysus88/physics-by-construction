@@ -219,6 +219,22 @@ passed and `--reuse` is refused, so `review-feature.sh` and
 existing record, like any failing run. The workflow self-tests keep their own
 rule with `--only`: they run when a workflow file changed, or with `--all`.
 
+### Selection against a base
+
+`./scripts/verify.sh --base <directory>` (ADR 014) names the directory of a
+verified base: `digests.json` (the input digest of every lesson and the
+identity of the checks, written by `python -m pbc.authoring.digest`) and
+`freeze/` (the executed results). The script computes the selection once with
+`pbc.authoring.selection` and writes it to `.agents/verification/selection.json`,
+the one place the checks read it. A lesson is executed when its digest differs
+from the base's; a base that is missing, truncated, of another format, or
+without an identity, a lesson without a digest, and a change to the checks
+themselves give a full run, and the reason is printed and recorded. The
+option combines with `--only`, not with `--reuse` or `--groups`. A run
+without it removes an earlier selection and verifies everything. The record
+of a run with a base carries a `selection:` line that names the base, and
+`--reuse` never takes such a record for a verification of the content alone.
+
 ### Recorded verification
 
 A run in which every check passed is recorded in `.agents/verification/passed`,
