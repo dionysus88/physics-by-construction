@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from numbers import Real
 from pathlib import Path
 
+from pbc.authoring.context import current_page, marker
 from pbc.authoring.repository import (
     REPOSITORY_ROOT,
     BuildCommit,
@@ -46,10 +47,11 @@ class Excerpt:
     """The source text of one object, or of a part of it, with where it was
     read from.
 
-    As the result of a code cell it renders as a highlighted listing followed
-    by the file and lines it came from. With notes it renders as a listing
-    with marked lines and a numbered list of notes in the page text; with an
-    interface, a table of inputs and outputs comes first.
+    As the result of a code cell it leaves a marker; the page the reader gets
+    shows a highlighted listing followed by the file and lines it came from,
+    with the commit of the run (``pbc.authoring.context``). With notes it is a
+    listing with marked lines and a numbered list of notes in the page text;
+    with an interface, a table of inputs and outputs comes first.
     """
 
     name: str  # "<module>:<object>", for example "pbc.sample:damped_oscillation"
@@ -137,7 +139,45 @@ class Excerpt:
             "```\n\n"
         )
 
+    def payload(self) -> dict:
+        """What the region is built from, apart from the commit."""
+        return {
+            "name": self.name,
+            "source": self.source,
+            "path": self.path,
+            "first_line": self.first_line,
+            "last_line": self.last_line,
+            "region": self.region,
+            "lines": None if self.lines is None else list(self.lines),
+            "notes": [[n.line, n.code, n.text] for n in self.notes],
+            "interface": [[p.name, p.kind, p.type, p.unit] for p in self.interface],
+        }
+
+    @classmethod
+    def from_payload(
+        cls, payload: dict, commit: BuildCommit, repository: str
+    ) -> Excerpt:
+        """The region a marker stands for, for ``commit``."""
+        lines = payload["lines"]
+        return cls(
+            name=payload["name"],
+            source=payload["source"],
+            path=payload["path"],
+            first_line=payload["first_line"],
+            last_line=payload["last_line"],
+            commit=commit,
+            repository=repository,
+            region=payload["region"],
+            lines=None if lines is None else (lines[0], lines[1]),
+            notes=tuple(Note(*note) for note in payload["notes"]),
+            interface=tuple(Parameter(*item) for item in payload["interface"]),
+        )
+
     def _repr_markdown_(self) -> str:
+        return marker("excerpt", current_page(), self.payload())
+
+    def markdown(self) -> str:
+        """The content of the region, for the commit this was built with."""
         return (
             "::: {.excerpt}\n"
             f"{self._interface_table()}"

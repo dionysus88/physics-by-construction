@@ -25,11 +25,13 @@ from playwright.sync_api import Browser, BrowserContext, Page, Response, Route
 
 from pbc.authoring import previews
 from pbc.authoring.design import CONTROL_CONTRAST, contrast_ratio
+from pbc.authoring.pages import selected as selected_pages
 from pbc.authoring.path import LearningPath
 from pbc.authoring.progress import EXPORT_FILE, STORAGE_KEY
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
 from pbc.data.status import allowed_statuses, artifact_types, needs_artifact
+from support.paths import BUILT_SITE
 from support.site_server import SiteServer
 
 DESKTOP = {"width": 1280, "height": 800}
@@ -422,11 +424,31 @@ def _open(context: BrowserContext, url: str) -> Page:
     return page
 
 
-def _urls(site_dir: Path, server: SiteServer) -> list[tuple[str, str]]:
+def _urls(
+    site_dir: Path, server: SiteServer, pages: list[Path] | None = None
+) -> list[tuple[str, str]]:
     return [
         (_name(site_dir, page), server.url + _name(site_dir, page))
-        for page in html_pages(site_dir)
+        for page in (html_pages(site_dir) if pages is None else pages)
     ]
+
+
+def checked_pages(site_dir: Path) -> list[Path]:
+    """The pages the checks of one page run for (ADR 014 decision 3).
+
+    Without a base, every page. With one, the pages whose bytes differ from the
+    base's with the build commit normalised, and the pages of the lessons the
+    run executed; a page that is byte-identical to a page of ``main`` that was
+    checked is not checked again. Only the checks of one page use this."""
+    pages = html_pages(site_dir)
+    # The selection belongs to the site this repository built, not to a site
+    # built from a fixture.
+    chosen = (
+        selected_pages(site_dir) if site_dir.resolve() == BUILT_SITE.resolve() else None
+    )
+    if chosen is None:
+        return pages
+    return [page for page in pages if _name(site_dir, page) in set(chosen)]
 
 
 def check_requests_and_cookies(
@@ -604,7 +626,7 @@ def check_readable_without_javascript(
                 browser, server, lambda url: None, viewport=viewport
             ) as with_scripts,
         ):
-            for name, url in _urls(site_dir, server):
+            for name, url in _urls(site_dir, server, checked_pages(site_dir)):
                 page = _open(without_scripts, url)
                 problems = page.evaluate(_UNREADABLE_CONTENT)
                 static = page.evaluate(_CONTENT, ENHANCEMENT)
@@ -667,7 +689,7 @@ def check_no_horizontal_scroll(
             viewport=viewport,
             java_script_enabled=javascript,
         ) as context:
-            for name, url in _urls(site_dir, server):
+            for name, url in _urls(site_dir, server, checked_pages(site_dir)):
                 page = _open(context, url)
                 content, screen, images, figures = page.evaluate(_WIDTHS)
                 if content > screen:
@@ -712,7 +734,7 @@ def check_accessibility(
     }
     for viewport in (DESKTOP, PHONE):
         with _context(browser, server, lambda url: None, viewport=viewport) as context:
-            for name, url in _urls(site_dir, server):
+            for name, url in _urls(site_dir, server, checked_pages(site_dir)):
                 page = _open(context, url)
                 results = Axe().run(page, options=options)
                 for finding in results.response["violations"]:
@@ -942,7 +964,7 @@ def measure_payloads(
     asked for, so the same site gives the same result on every run."""
     base = urlsplit(server.url).path
     sizes = {}
-    for name, url in _urls(site_dir, server):
+    for name, url in _urls(site_dir, server, checked_pages(site_dir)):
         requested: set[str] = set()
 
         def note(response: Response, requested: set[str] = requested) -> None:

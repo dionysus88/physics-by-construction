@@ -140,6 +140,8 @@ def test_each_kind_of_input_changes_the_digest(repository, name):
         ("site/index.html", "<p>render output</p>\n"),
         ("site/_site/index.html", "<p>render output</p>\n"),
         ("site/_freeze/x/y.json", "{}\n"),
+        ("site/_digests.json", "{}\n"),
+        ("site/_timings.json", "[]\n"),
         (f"{LESSON}/index.html", "<p>render output</p>\n"),
     ],
 )

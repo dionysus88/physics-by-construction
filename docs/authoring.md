@@ -204,6 +204,15 @@ level-2 sections. These are required, and none may be empty:
 | Exercises | `exercises` | At least one exercise; every exercise has its solution on the page. A lesson with an interactive visualization may have the section `interactive-visualization` instead or as well (see "Widgets"). |
 | Reproduce this | `reproduce-this` | The output of `reproduce_this()`, see below. Keep it last. |
 
+The header (`lesson_header()`), the "Reproduce this" section, and every code or
+Lean excerpt (`excerpt`, `lean_excerpt`, `lean_evidence`) name things outside
+the lesson: the other lessons and the commit of the build. You write the cells
+as shown here; what they leave in the page while it renders is a marker, and the
+build replaces it afterwards with the header and the excerpt of the tree and
+the commit it builds (ADR 014 decision 9). So a lesson that the build did not
+execute again, because nothing it depends on changed, still shows the
+navigation and the commit of the current build.
+
 A section is found by its identifier. Pandoc derives the identifier from the
 heading text, so `## Worked examples` has the identifier `worked-examples`.
 To give a section a title of its own, state the identifier:

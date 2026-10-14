@@ -131,7 +131,7 @@ def test_excerpt_is_the_region_of_the_file_as_it_is(project: Path):
 
 
 def test_excerpt_renders_a_lean_listing_that_names_its_source(project: Path):
-    text = lean_excerpt(MODULE, "first", project)._repr_markdown_()
+    text = lean_excerpt(MODULE, "first", project).markdown()
 
     assert f'```{{.lean source="{MODULE}:first"}}' in text
     assert "theorem first : (1 : Nat) = 1 := rfl" in text
@@ -199,7 +199,7 @@ def test_evidence_states_commit_versions_and_links(project: Path):
         mathlib_revision=evidence.mathlib_revision,
         commit=COMMIT,
         repository=REPOSITORY,
-    )._repr_markdown_()
+    ).markdown()
 
     assert "Lean 4.99.0" in text
     assert "Mathlib v4.99.0" in text and evidence.mathlib_revision in text
@@ -220,7 +220,7 @@ def test_evidence_of_a_dirty_checkout_says_so(project: Path):
         repository=REPOSITORY,
     )
 
-    assert "uncommitted changes" in dirty._repr_markdown_()
+    assert "uncommitted changes" in dirty.markdown()
 
 
 def test_evidence_needs_a_module(project: Path):

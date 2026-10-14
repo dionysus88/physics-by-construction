@@ -98,7 +98,7 @@ def test_listing_survives_a_code_fence_inside_the_source():
         '    ```\n    function()\n    ```\n    """\n'
     )
 
-    markdown = _excerpt_of(source, BuildCommit("abc", dirty=False))._repr_markdown_()
+    markdown = _excerpt_of(source, BuildCommit("abc", dirty=False)).markdown()
 
     opening = markdown.splitlines()[1]
     fence = opening[: len(opening) - len(opening.lstrip("`"))]
@@ -108,7 +108,7 @@ def test_listing_survives_a_code_fence_inside_the_source():
 
 
 def test_excerpt_links_to_its_lines_at_the_built_commit():
-    markdown = _excerpt_of("x = 1\n", BuildCommit("abc123", False))._repr_markdown_()
+    markdown = _excerpt_of("x = 1\n", BuildCommit("abc123", False)).markdown()
 
     assert (
         "https://example.org/repository/blob/abc123/src/pbc/example.py#L3-L5"
@@ -117,7 +117,7 @@ def test_excerpt_links_to_its_lines_at_the_built_commit():
 
 
 def test_excerpt_without_a_known_commit_has_no_link():
-    markdown = _excerpt_of("x = 1\n", BuildCommit(None, False))._repr_markdown_()
+    markdown = _excerpt_of("x = 1\n", BuildCommit(None, False)).markdown()
 
     assert "https://" not in markdown
     assert "src/pbc/example.py" in markdown
@@ -166,7 +166,7 @@ def test_a_note_marks_its_line_and_is_plain_text_in_the_page():
         notes={"x=state.x + state.v * dt,": "The old velocity moves the particle."},
     )
 
-    markdown = shown._repr_markdown_()
+    markdown = shown.markdown()
     assert [note.line for note in shown.notes] == [shown.first_line + 2]
     marked = shown.first_line + 2
     assert f'class="line marked" data-line="{marked}"' in markdown
@@ -223,7 +223,7 @@ def test_interface_lists_inputs_output_and_the_units_of_the_docstring():
     assert rows["dt"].unit == "s"
     assert rows["state"].type == "State"
     assert rows["return"].kind == "output"
-    assert "| `dt` | input |" in shown._repr_markdown_()
+    assert "| `dt` | input |" in shown.markdown()
 
 
 # --- build commit -------------------------------------------------------------
@@ -305,14 +305,14 @@ def test_commands_check_out_the_built_commit(lesson_directory: Path):
         f"git checkout {sha}",
         "uv sync --locked",
     )
-    assert f"/tree/{sha}" in reproduction._repr_markdown_()
+    assert f"/tree/{sha}" in reproduction.markdown()
 
 
 def test_the_summary_is_short_and_the_full_listing_is_in_a_closed_details(
     lesson_directory: Path,
 ):
     reproduction = reproduce_this(code=[CODE], tests=[TESTS])
-    text = reproduction._repr_markdown_()
+    text = reproduction.markdown()
     summary, details = text.split('<details class="reproduce-details">')
 
     assert "<details open" not in text
@@ -341,8 +341,8 @@ def test_a_page_that_shows_lean_proofs_runs_the_lean_check_before_rendering(
     assert commands.index("./scripts/check-lean.sh") < len(commands) - 1
     assert commands[-1].startswith("uv run --locked quarto render ")
     assert "./scripts/check-lean.sh" not in without.commands
-    assert "a Lean file the page shows" in with_lean._repr_markdown_()
-    assert "check-lean.sh" not in without._repr_markdown_()
+    assert "a Lean file the page shows" in with_lean.markdown()
+    assert "check-lean.sh" not in without.markdown()
 
 
 def test_uncommitted_changes_are_stated_on_the_page(lesson_directory: Path):
@@ -357,7 +357,7 @@ def test_uncommitted_changes_are_stated_on_the_page(lesson_directory: Path):
             tests=reproduction.tests,
             commit=commit,
             repository=reproduction.repository,
-        )._repr_markdown_()
+        ).markdown()
 
     assert "uncommitted changes" in text(dirty)
     assert "uncommitted changes" not in text(clean)

@@ -16,6 +16,7 @@ from pathlib import Path
 
 import yaml
 
+from pbc.authoring.context import marker
 from pbc.authoring.glossary import Glossary, before_you_begin
 from pbc.authoring.graph import (
     RELATED_MARKER,
@@ -938,8 +939,9 @@ class LessonHeader:
     difficulty, outcomes, prerequisites, related lessons, and the previous
     and next lesson.
 
-    As the result of a code cell it renders as a list of those facts, with
-    links.
+    As the result of a code cell it leaves a marker; the page the reader gets
+    shows a list of those facts, with links, built after the render from the
+    front matter of every lesson (``pbc.authoring.context``).
     """
 
     path: LearningPath
@@ -948,7 +950,19 @@ class LessonHeader:
     # list that links each to its entry; without, they end the Prerequisites.
     glossary: Glossary | None = None
 
+    @classmethod
+    def from_payload(cls, site: Path, page: str, payload: dict) -> LessonHeader:
+        """The header of the lesson ``page`` of the site project at ``site``."""
+        if payload:
+            raise ValueError("a header marker holds no facts")
+        path = LearningPath.read(site)
+        return cls(path, path.at_page(page), Glossary.read(site))
+
     def _repr_markdown_(self) -> str:
+        return marker("header", self.lesson.page, {})
+
+    def markdown(self) -> str:
+        """The content of the header, from the lessons as they are now."""
         path, lesson, page = self.path, self.lesson, self.lesson.page
         course = _COURSE[lesson.course]
         in_course = path.in_course(course)

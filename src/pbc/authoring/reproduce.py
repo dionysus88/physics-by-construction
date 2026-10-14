@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from pbc.authoring.context import marker
 from pbc.authoring.lean import LEAN_DIRECTORY
 from pbc.authoring.repository import (
     REPOSITORY_ROOT,
@@ -36,8 +37,9 @@ def _repository_files(kind: str, paths: Sequence[str]) -> tuple[str, ...]:
 class Reproduction:
     """What a learner needs to regenerate a lesson page from a clone.
 
-    As the result of a code cell it renders as the commit, the files, and the
-    commands.
+    As the result of a code cell it leaves a marker; the page the reader gets
+    shows the commit, the files, and the commands, which the post-render step
+    builds from the commit of the run (``pbc.authoring.context``).
     """
 
     page: str  # the lesson page, relative to the repository root
@@ -84,7 +86,34 @@ class Reproduction:
             return f"`{path}`"
         return f"[`{path}`]({self.repository}/blob/{self.commit.sha}/{path})"
 
+    def payload(self) -> dict:
+        """What the region is built from, apart from the commit."""
+        return {"page": self.page, "code": list(self.code), "tests": list(self.tests)}
+
+    @classmethod
+    def from_payload(
+        cls, page: str, payload: dict, commit: BuildCommit, repository: str
+    ) -> Reproduction:
+        """The region of the lesson ``page`` (relative to the site) for ``commit``."""
+        if payload["page"] != f"{SITE_DIRECTORY}/{page}":
+            raise ValueError(f"the marker names the page {payload['page']!r}")
+        return cls(
+            page=payload["page"],
+            code=_repository_files("code", payload["code"]),
+            tests=_repository_files("test", payload["tests"]),
+            commit=commit,
+            repository=repository,
+        )
+
     def _repr_markdown_(self) -> str:
+        return marker(
+            "reproduce",
+            Path(self.page).relative_to(SITE_DIRECTORY).as_posix(),
+            self.payload(),
+        )
+
+    def markdown(self) -> str:
+        """The content of the section, for the commit this was built with."""
         sha = self.commit.sha
         if sha is None:
             built_from = (

@@ -2,7 +2,11 @@ project:
   type: website
   output-dir: _site
   # Puts the skip link before the navigation bar of every page.
+  # context.py first: it replaces the markers the lesson cells leave by the
+  # header, the commit, and the excerpts (ADR 014 decision 9), and the scripts
+  # after it read the finished pages.
   post-render:
+    - context.py
     - skip-link.py
     - search-fallback.py
     - search-index.py

@@ -450,12 +450,12 @@ def test_a_card_exists_only_for_a_published_lesson(page: str):
 
 def test_the_header_shows_the_slot_and_the_position_in_the_path():
     path = LearningPath.read(SITE_SOURCE)
-    course_lesson = LessonHeader(path, path.lesson("kinematics"))._repr_markdown_()
+    course_lesson = LessonHeader(path, path.lesson("kinematics")).markdown()
     assert "Slot\n:   M1, Kinematics as a program" in course_lesson
-    path_lesson = LessonHeader(path, path.lesson("agent-experiment"))._repr_markdown_()
+    path_lesson = LessonHeader(path, path.lesson("agent-experiment")).markdown()
     assert (
         "Slot\n:   AI0, number 1 of the 9 slots of the path [Physics reasoning"
         " and scientific agents]" in path_lesson
     )
-    gas = LessonHeader(path, path.lesson("particles-in-a-box"))._repr_markdown_()
+    gas = LessonHeader(path, path.lesson("particles-in-a-box")).markdown()
     assert "Slot\n" not in gas
