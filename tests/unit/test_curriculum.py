@@ -289,6 +289,9 @@ def test_the_published_lessons_that_fill_a_slot_carry_it():
         "scientific-review": "AI4",
         "experimental-design-agent": "D9",
         "proving-what-the-simulation-showed": "L1",
+        "wave-equation": "W1",
+        "interference-and-resonance": "W2",
+        "sound-and-the-doppler-effect": "W9",
         # The gas lesson gets its slot with its course (F70), with T1 to T3.
         "particles-in-a-box": "T0",
         "random-walks-and-diffusion": "T1",
@@ -419,18 +422,22 @@ def test_a_course_without_a_lesson_is_named_in_one_sentence_and_shows_no_slot(
     page: str,
 ):
     path = LearningPath.read(SITE_SOURCE)
-    # Mechanics has lessons, and thermodynamics since F70.
-    without = COURSES[2:]
+    # Mechanics has lessons, thermodynamics since F70 and waves since F71; the
+    # others have none yet.
+    without = [course for course in COURSES[2:] if course.id != "waves"]
     assert [course.id for course in path.planned_courses] == [
         course.id for course in without
     ]
     sentences = [
-        line for line in page.splitlines() if line.startswith("6 further courses")
+        line
+        for line in page.splitlines()
+        if line.startswith(f"{len(without)} further courses")
     ]
     assert len(sentences) == 1
     for course in without:
         assert course.title in sentences[0]
         assert f"{{#course-{course.id}}}" not in page
+    assert "Waves and optics" not in sentences[0]
     assert f"{{#course-{COURSES[1].id}}}" in page
 
 
