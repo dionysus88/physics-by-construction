@@ -1,0 +1,668 @@
+---
+title: "Lagrangian mechanics"
+description: >-
+  The equations of motion of a constrained or coupled system from one
+  function, the kinetic minus the potential energy, simulated and checked
+  against the Newtonian form for the pendulum, two coupled springs, a planet,
+  and the equations of the double pendulum.
+lesson:
+  id: lagrangian-mechanics
+  strand: mechanics
+  order: 14
+  difficulty: 3
+  course: mechanics
+  slot: M10
+  methods: [simulation]
+  outcomes:
+    - Write the Lagrangian of a system in coordinates that fit its constraints
+    - Obtain and simulate its equations of motion from the Euler-Lagrange equations
+    - Check the equations against the Newtonian form in cases with a closed form
+    - Read a conserved momentum off a coordinate that the Lagrangian does not contain
+  related: [hamiltonian-mechanics]
+  format: 2
+  preview: fig-planet-orbit
+  prerequisites:
+    lessons: [energy-conservation, double-pendulum-chaos]
+    outside:
+      - "Calculus: partial derivatives, and the chain rule for a function of several variables"
+      - "Linear algebra: solving a system of linear equations written with a matrix"
+      - "Trigonometry: the sine and cosine, and polar coordinates"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+A bead slides on a wire bent into a curve, a bob swings on a rod, two masses
+are tied by springs. Newton's second law applies to every one of them, but in
+the form of the first lesson it needs the forces, and some of those are
+forces nobody chooses: the push of the wire on the bead, the tension in the
+rod. They are whatever it takes to keep the motion on the curve, and they
+depend on the motion. The pendulum of the energy lesson avoided them by
+resolving the weight along the arc and keeping one coordinate. Doing that for
+a rod with a second rod hung from it, as the previous lesson did and only
+stated the result, is a page of geometry, and a slip in it is not visible.
+
+This lesson replaces the geometry with a procedure. Write down the kinetic and
+the potential energy in whatever coordinates fit the system, form their
+difference, and take derivatives. The result is the equations of motion, with
+no force of constraint in them, and the program that takes the derivatives is
+short enough to check on cases where Newton's law can be solved. The lesson
+checks it on the pendulum, on two coupled springs, on a planet in polar
+coordinates, and on the double pendulum of the previous lesson, whose
+equations it thereby compares with an independent derivation.
+
+## Assumptions
+
+The model and the program rest on these assumptions. Each one names what
+goes wrong when it does not hold.
+
+1. **Ideal constraints.** The forces that hold the system on its constraint do
+   no work, as the tension of a rod or the push of a smooth wire does not. With
+   friction on the wire the procedure gives the wrong motion, because the
+   friction does work along the path and is not in the potential.
+2. **Forces from a potential.** Every force that is not a constraint comes from
+   a potential energy that depends on the coordinates. A drag, which depends
+   on the velocity and does negative work, is not in $U$; it enters as a
+   generalised force, which this lesson does not need.
+3. **Coordinates that describe the configuration completely and
+   independently.** One angle for the pendulum, two for the double pendulum.
+   With more coordinates than degrees of freedom the equations need the
+   constraints added, and the matrix of the next section would have no
+   inverse.
+4. **A kinetic energy quadratic in the velocities.** The program solves a
+   linear system for the accelerations, which needs that. Relativistic motion
+   and motion in a magnetic field have Lagrangians that are not of this form.
+5. **Derivatives by central differences.** The program takes the derivatives of
+   the Lagrangian numerically, with a step that is a compromise between
+   truncation and round-off; its accuracy, near one part in a million, is
+   measured below and limits every agreement the lesson reports.
+6. **The equations are as accurate as the stepper.** The simulations use the
+   classical Runge-Kutta method with a step far below the fastest time scale.
+
+## From a function to the equations of motion {#explanation}
+
+### The Euler-Lagrange equations
+
+Let the configuration of a system be given by the **generalised coordinates**
+$q_1, \dots, q_n$, and write $\dot q_i$ for their rates of change. The
+**Lagrangian** is the kinetic energy minus the potential energy, as a function
+of the coordinates and their rates,
+
+$$
+L(q, \dot q) = T(q, \dot q) - U(q),
+$$
+
+and the motion obeys the **Euler-Lagrange equations**,
+
+$$
+\frac{\mathrm{d}}{\mathrm{d}t}\frac{\partial L}{\partial \dot q_i}
+= \frac{\partial L}{\partial q_i},
+\qquad i = 1, \dots, n .
+$$
+
+They follow from requiring that the motion makes the time integral of $L$
+stationary among nearby paths with the same ends, the principle of
+stationary action; this lesson takes them as given and checks what they say.
+
+For a particle on a line, $L = \tfrac12 m \dot x^2 - U(x)$, so
+$\partial L/\partial \dot x = m\dot x$, whose time derivative is $m\ddot x$,
+and $\partial L/\partial x = -U'(x)$. The equation is $m\ddot x = -U'(x)$,
+Newton's second law with the force minus the gradient of the potential. In
+Cartesian coordinates the new procedure is the old law, written differently.
+The gain is that nothing in the equations depends on the coordinates being
+Cartesian.
+
+### A pendulum, a constraint that is not there
+
+The bob of a pendulum on a rod of length $l$ is at the position
+$(l\sin\theta, -l\cos\theta)$, with $\theta$ the angle from the downward
+vertical, so its speed is $l\dot\theta$ and its height $-l\cos\theta$. The
+Lagrangian has one coordinate,
+
+$$
+L = \tfrac12 m l^2 \dot\theta^2 + m g l \cos\theta,
+$$
+
+and the Euler-Lagrange equation reads
+$\mathrm{d}(m l^2\dot\theta)/\mathrm{d}t = -m g l \sin\theta$, so
+
+$$
+\ddot\theta = -\frac{g}{l}\sin\theta .
+$$
+
+This is the equation of the energy lesson, got without resolving a force along
+an arc and without the tension of the rod, which has dropped out because it
+does no work. The tension is lost with it: the equation says nothing about it,
+and a design that needs the tension needs Newton's law in the plane.
+
+### Coupled coordinates
+
+Two equal masses sit between two walls, each held to its wall by a spring
+$k$ and to each other by a spring $\kappa$. With the displacements $x_1$ and
+$x_2$ from rest,
+
+$$
+L = \tfrac12 m(\dot x_1^2 + \dot x_2^2)
+  - \tfrac12 k (x_1^2 + x_2^2) - \tfrac12 \kappa (x_1 - x_2)^2 .
+$$
+
+The equations are $m\ddot x_1 = -k x_1 - \kappa(x_1 - x_2)$ and the same with
+the indices swapped, which is what Newton's law gives from the three spring
+forces. The sum and the difference of the coordinates decouple them. In phase,
+$x_1 = x_2$, the middle spring is not stretched and the frequency is
+$\omega_+^2 = k/m$; out of phase, $x_1 = -x_2$, it is stretched twice as much
+as either, and $\omega_-^2 = (k + 2\kappa)/m$. These are the closed forms that
+the program is checked against.
+
+### The matrix form, and the double pendulum
+
+For a kinetic energy quadratic in the rates, $T = \tfrac12 \dot q^{\mathsf T}
+M(q)\,\dot q$ with a symmetric **mass matrix** $M$, the Euler-Lagrange
+equations are linear in the accelerations. Expanding the time derivative of
+$\partial L/\partial \dot q_i$ with the chain rule gives
+
+$$
+\sum_j \frac{\partial^2 L}{\partial \dot q_i\,\partial \dot q_j}\,\ddot q_j
+= \frac{\partial L}{\partial q_i}
+- \sum_j \frac{\partial^2 L}{\partial \dot q_i\,\partial q_j}\,\dot q_j ,
+$$
+
+and the matrix on the left is $M$. The program forms these four arrays by
+central differences of $L$ and solves for $\ddot q$. For the double pendulum
+the Lagrangian is written from the positions of the two bobs, with the angles
+as coordinates and the velocities by the chain rule, and everything else is
+done by the program. The equations of the previous lesson are what this gives
+in closed form, and the lesson compares them below.
+
+### What is conserved
+
+If a coordinate does not appear in $L$, its equation says
+$\mathrm{d}p/\mathrm{d}t = 0$ for the **generalised momentum**
+$p_i = \partial L/\partial \dot q_i$: the momentum conjugate to a cyclic
+coordinate is conserved. And if $L$ does not depend on the time, the quantity
+$E = \sum_i p_i \dot q_i - L$ is conserved, the energy; for $L = T - U$ with
+$T$ quadratic in the rates it is $T + U$. A planet in the plane of its orbit
+shows both. In polar coordinates $(r, \phi)$,
+
+$$
+L = \tfrac12 m(\dot r^2 + r^2\dot\phi^2) + \frac{G M m}{r},
+$$
+
+the angle $\phi$ is absent, so $p_\phi = m r^2\dot\phi$, the angular momentum,
+is conserved: the second law of Kepler, as a consequence of the form of $L$
+rather than of a calculation. The planet in these coordinates also has a
+closed form to check the program against, the period of a bound orbit.
+
+## The program {#code}
+
+The reusable code is `pbc.mechanics.lagrangian`. A Lagrangian is a function of
+two vectors, the coordinates and their rates, that returns joules; the
+Euler-Lagrange operator turns it into an acceleration in the sense of the
+stepping interface, so the simulations of the earlier lessons apply.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.mechanics import lagrangian
+
+excerpt(
+    lagrangian.euler_lagrange,
+    notes={
+        "force, _, mass, mixed = _derivatives(lagrangian, q, qdot, h)": (
+            "The four arrays of derivatives of the Lagrangian, by central"
+            " differences with the step ``h``: the generalised forces, the"
+            " momenta, the mass matrix, and the mixed second derivatives."
+        ),
+        "return np.linalg.solve(mass, force - mixed @ qdot)": (
+            "The linear system of the explanation, solved for the"
+            " accelerations: mass matrix times acceleration equals the force"
+            " minus the mixed term times the rates."
+        ),
+    },
+)
+```
+
+The generalised momentum and the energy function, which the conservation laws
+of the explanation use:
+
+```{python}
+#| echo: false
+excerpt(lagrangian.generalised_momentum)
+```
+
+```{python}
+#| echo: false
+excerpt(lagrangian.energy_function)
+```
+
+The three Lagrangians of the module. The last is written from the positions of
+the bobs and nothing else.
+
+```{python}
+#| echo: false
+excerpt(lagrangian.pendulum_lagrangian)
+```
+
+```{python}
+#| echo: false
+excerpt(lagrangian.coupled_springs_lagrangian)
+```
+
+```{python}
+#| echo: false
+excerpt(
+    lagrangian.double_pendulum_lagrangian,
+    notes={
+        "vx2 = vx1 + l2 * np.cos(q[1]) * qdot[1]": (
+            "The velocity of the second bob is that of the first plus its own"
+            " motion about it: the chain rule, not a derivation by hand."
+        ),
+        "return float(kinetic - m1 * g * height1 - m2 * g * height2)": (
+            "The kinetic energy minus the potential energy, the weights times"
+            " the heights below the pivot."
+        ),
+    },
+)
+```
+
+## Worked examples
+
+### The pendulum against the Newtonian form
+
+The pendulum is [one kilogram]{.given} on a [one-metre]{.given} rod. The
+Newtonian form is the tangential weight of the energy lesson. The cell compares
+the accelerations of the two at several angles, and then simulates the
+Lagrangian pendulum and compares its period with the elliptic integral.
+
+```{python}
+#| label: pendulum-check
+import numpy as np
+from scipy.constants import g
+
+from pbc.authoring import table
+from pbc.mechanics.dynamics import State, newton, simulate
+from pbc.mechanics.integrators import rk4_step
+from pbc.mechanics.lagrangian import (
+    coupled_springs_lagrangian,
+    double_pendulum_lagrangian,
+    energy_function,
+    euler_lagrange,
+    generalised_momentum,
+    pendulum_lagrangian,
+)
+from pbc.mechanics.pendulum import pendulum_force, pendulum_period
+
+mass, length = 1.0, 1.0
+from_lagrangian = euler_lagrange(pendulum_lagrangian(mass, length))
+newtonian = newton(mass, pendulum_force(mass, length))
+
+rows = []
+for angle in (0.1, 1.0, 2.0, 3.0):
+    theta, rate = np.array([angle]), np.array([0.7])
+    a_lagrange = length * from_lagrangian(0.0, theta, rate)[0]
+    a_newton = newtonian(0.0, length * theta, rate)[0]
+    rows.append((angle, a_newton, a_lagrange, abs(a_lagrange / a_newton - 1.0)))
+
+table(
+    rows,
+    columns=[
+        ("angle", "rad", ".1f"),
+        ("acceleration along the arc, Newton", "m/s²", ".5f"),
+        ("from the Lagrangian", "m/s²", ".5f"),
+        ("relative difference", "", ".1e"),
+    ],
+    caption="Acceleration of the pendulum bob along the arc at four angles, from the tangential weight and from the Euler-Lagrange equation, with the relative difference.",
+)
+```
+
+[The equation from the Lagrangian is the Newtonian one]{.claim
+type="numerically-verified" scope="the pendulum, four angles, any velocity
+because the force does not depend on it" evidence="pendulum-check"}: the
+largest relative difference is `{python} f"{max(r[3] for r in rows):.0e}"`, which is the
+accuracy of the central differences. A simulation then has to reproduce a
+result that nothing but the exact equation gives, the period at large
+amplitude:
+
+```{python}
+#| label: pendulum-period
+amplitude = 1.5  # rad
+dt = 0.01  # s
+run = simulate(State(0.0, [amplitude], [0.0]), from_lagrangian, dt, 400, step=rk4_step)
+below = np.where((run.x[:-1, 0] > 0) & (run.x[1:, 0] <= 0))[0][0]
+quarter = run.t[below] + run.x[below, 0] / (run.x[below, 0] - run.x[below + 1, 0]) * dt
+
+table(
+    [(amplitude, pendulum_period(length, amplitude), 4 * quarter)],
+    columns=[("amplitude", "rad", ".1f"), ("period, elliptic integral", "s", ".5f"), ("period, simulation", "s", ".5f")],
+    caption="Period of the Lagrangian pendulum at a large amplitude, from the closed form and from the simulation, to five decimals.",
+)
+```
+
+[The simulated period of the Lagrangian pendulum is the closed-form
+one]{.claim type="numerically-verified" scope="amplitude of one and a half
+radians, classical Runge-Kutta method" evidence="pendulum-period"}, to a
+relative `{python} f"{abs(4 * quarter / pendulum_period(length, amplitude) - 1.0):.0e}"`.
+
+### Two coupled springs
+
+The masses are [half a kilogram]{.given}, the wall springs
+[four newtons per metre]{.given}, and the middle spring
+[one and a half newtons per metre]{.given}. The cell starts the system in each
+of the two modes, compares the Lagrangian accelerations with the closed-form
+$-\omega^2 x$, and then simulates a general start with the Lagrangian and with
+Newton's law and compares the paths.
+
+```{python}
+#| label: coupled-springs
+from pbc.mechanics.oscillator import spring
+
+m_spring, k_wall, k_mid = 0.5, 4.0, 1.5
+springs = euler_lagrange(coupled_springs_lagrangian(m_spring, k_wall, k_mid))
+
+rows = []
+for label, mode, stiffness in (("in phase", [1.0, 1.0], k_wall), ("out of phase", [1.0, -1.0], k_wall + 2 * k_mid)):
+    q = 0.3 * np.array(mode)
+    a = springs(0.0, q, np.zeros(2))
+    rows.append((label, np.sqrt(stiffness / m_spring), np.sqrt(-a[0] / q[0])))
+
+table(
+    rows,
+    columns=[("mode", "", ""), ("closed form", "rad/s", ".5f"), ("from the Lagrangian", "rad/s", ".5f")],
+    caption="Angular frequency of the two normal modes of the coupled springs, from the closed form and from the accelerations of the Lagrangian, to five decimals.",
+)
+
+wall, between = spring(k_wall), lambda t, x, v: k_mid * np.array([-(x[0] - x[1]), x[0] - x[1]])
+newtonian_springs = newton(m_spring, wall, between)
+start = State(0.0, [0.3, -0.1], [0.2, 0.5])
+by_lagrange = simulate(start, springs, 0.01, 1000, step=rk4_step)
+by_newton = simulate(start, newtonian_springs, 0.01, 1000, step=rk4_step)
+path_gap = np.max(np.abs(by_lagrange.x - by_newton.x))
+```
+
+[The Lagrangian reproduces both normal-mode frequencies]{.claim
+type="numerically-verified" scope="the stated masses and springs"
+evidence="coupled-springs"} and the two simulations, of the same start with
+the Lagrangian and with the forces, differ by at most
+`{python} f"{path_gap:.0e}"` m over ten seconds, which is round-off: for a Lagrangian that is
+quadratic in both the coordinates and the rates, the central differences have
+no truncation error, so the agreement here is far better than in the
+nonlinear examples.
+
+### A planet in polar coordinates
+
+The planet has the mass [one kilogram]{.given} and the attraction has the
+strength $G M = 4\,\mathrm{m}^3/\mathrm{s}^2$. It starts at [one metre]{.given}
+from the centre with a tangential speed [of one and a half metres per
+second]{.given}, which is below the speed of a circular orbit at that distance,
+so the orbit is an ellipse that starts at its far end. The cell writes the
+Lagrangian in $(r, \phi)$ itself, forms the equations with the Euler-Lagrange
+operator, and runs one period, which has a closed form from the semi-major
+axis $a$, $T = 2\pi a^{3/2}/\sqrt{G M}$, with $a$ from the energy.
+
+```{python}
+#| label: planet
+def planet_lagrangian(gm, m):
+    """Polar coordinates (r, phi): L = m (r'^2 + r^2 phi'^2) / 2 + G M m / r."""
+    def lagrangian(q, qdot):
+        return 0.5 * m * (qdot[0] ** 2 + q[0] ** 2 * qdot[1] ** 2) + gm * m / q[0]
+    return lagrangian
+
+
+gm, m_planet = 4.0, 1.0
+r0, speed = 1.0, 1.5
+orbit = euler_lagrange(planet_lagrangian(gm, m_planet))
+planet_energy = 0.5 * m_planet * speed**2 - gm * m_planet / r0
+semi_major = -gm * m_planet / (2.0 * planet_energy)
+orbital_period = 2.0 * np.pi * np.sqrt(semi_major**3 / gm)
+
+start = State(0.0, [r0, 0.0], [0.0, speed / r0])
+steps = round(orbital_period / 0.005)
+orbit_run = simulate(start, orbit, orbital_period / steps, steps, step=rk4_step)
+lagr = planet_lagrangian(gm, m_planet)
+momentum = np.array([generalised_momentum(lagr, x, v)[1] for x, v in zip(orbit_run.x, orbit_run.v, strict=True)])
+energies = np.array([energy_function(lagr, x, v) for x, v in zip(orbit_run.x, orbit_run.v, strict=True)])
+turns = (orbit_run.x[-1, 1] - orbit_run.x[0, 1]) / (2 * np.pi)
+
+table(
+    [
+        ("angular momentum", momentum[0], np.max(np.abs(momentum / momentum[0] - 1.0))),
+        ("energy", energies[0], np.max(np.abs(energies / energies[0] - 1.0))),
+    ],
+    columns=[("quantity", "", ""), ("start", "", ".5f"), ("largest relative change", "", ".1e")],
+    caption="Angular momentum and energy of the planet over one orbit, from the Lagrangian, at the start and the largest relative change.",
+)
+```
+
+[The angular momentum $p_\phi$ and the energy are constant over the orbit to
+the accuracy of the method]{.claim type="numerically-verified"
+scope="one bound orbit, classical Runge-Kutta method" evidence="planet"}, as
+the form of $L$ says: the angular momentum is conserved because the angle is
+absent from it, and it changes by a relative
+`{python} f"{np.max(np.abs(momentum / momentum[0] - 1.0)):.0e}"`. The orbit is
+closed, as the closed form of the period says: after one period the radius is
+`{python} f"{orbit_run.x[-1, 0]:.5f}"` m, back to its start, and the angle has
+advanced by `{python} f"{turns:.5f}"` turns. The radial period of the Kepler
+orbit equals the angular one, which is the statement that the orbit does not
+precess.
+
+```{python}
+#| label: fig-planet-orbit
+#| fig-cap: "The orbit of the planet from the Euler-Lagrange equations in polar coordinates, drawn in Cartesian axes. The path closes on itself after one period, an ellipse with the attracting centre at one focus, as the period from the semi-major axis requires."
+#| fig-alt: "Plot of the orbit in the plane with equal axes. A closed elongated ellipse with a point marking the centre of attraction near one end of the ellipse, inside it, and a marker for the starting point at the far end of the ellipse."
+#| fig-status: simulated
+import matplotlib.pyplot as plt
+
+from pbc.authoring import FIGURE_COLOURS
+
+x_plane = orbit_run.x[:, 0] * np.cos(orbit_run.x[:, 1])
+y_plane = orbit_run.x[:, 0] * np.sin(orbit_run.x[:, 1])
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(x_plane, y_plane, color=FIGURE_COLOURS[0], linestyle="-", label="orbit")
+ax.plot([0.0], [0.0], marker="*", color=FIGURE_COLOURS[1], linestyle="", markersize=10, label="centre")
+ax.plot([x_plane[0]], [y_plane[0]], marker="o", color=FIGURE_COLOURS[2], linestyle="", label="start")
+ax.set_aspect("equal")
+ax.set_xlabel("x (m)")
+ax.set_ylabel("y (m)")
+ax.legend(loc="upper right")
+plt.show()
+```
+
+The figure is the simulation of the table, from the same run, and the closing
+of the curve is the check that the period of the closed form is the one that
+the equations give.
+
+### The equations of the double pendulum
+
+The previous lesson gave the angular accelerations of the double pendulum in
+closed form. The Lagrangian here is written from the positions of the bobs, and
+the program takes the derivatives. The cell compares the two at random states,
+and then follows both from a regular start.
+
+```{python}
+#| label: double-pendulum-check
+from pbc.mechanics.chaos import double_pendulum
+
+masses, lengths = (1.0, 2.0), (1.0, 0.7)
+closed_form = double_pendulum(*masses, *lengths)
+derived = euler_lagrange(double_pendulum_lagrangian(*masses, *lengths))
+
+rng = np.random.default_rng(7)
+worst = 0.0
+for _ in range(200):
+    q, qdot = rng.uniform(-3.0, 3.0, 2), rng.uniform(-3.0, 3.0, 2)
+    a_closed, a_derived = closed_form(0.0, q, qdot), derived(0.0, q, qdot)
+    worst = max(worst, np.max(np.abs(a_derived - a_closed) / (1.0 + np.abs(a_closed))))
+
+regular = State(0.0, [0.3, 0.2], [0.0, 0.0])
+path_closed = simulate(regular, closed_form, 0.01, 1000, step=rk4_step)
+path_derived = simulate(regular, derived, 0.01, 1000, step=rk4_step)
+path_difference = np.max(np.abs(path_closed.x - path_derived.x))
+
+table(
+    [(worst, path_difference)],
+    columns=[("largest relative difference of the accelerations", "", ".1e"), ("largest difference of the angles over ten seconds", "rad", ".1e")],
+    caption="The equations of the double pendulum from the Lagrangian against the closed form of the previous lesson, at two hundred random states and along one regular motion.",
+)
+```
+
+[The closed-form accelerations of the double pendulum agree with the
+Euler-Lagrange equations of its Lagrangian]{.claim type="numerically-verified"
+scope="unequal masses and rods, two hundred random states and a regular
+start" evidence="double-pendulum-check"}. That removes the caveat of the
+previous lesson: its equations were checked by the linear modes and the energy,
+and now also by an independent derivation, the nonlinear terms included. The
+agreement is to the accuracy of the central differences, so a mistake smaller
+than that would not show.
+
+## Limits {#limits}
+
+- The agreement of the equations is to the accuracy of the central
+  differences, about one part in a million at the step of the module. The
+  last exercise measures how it depends on the step. A closed form with an
+  error below that is not found by this check.
+- The derivatives are numerical, so the program is slower than the closed form
+  (each acceleration needs dozens of evaluations of the Lagrangian) and its
+  error is not controlled by the stepper. A symbolic derivation gives exact
+  equations; this lesson does not use one.
+- Only ideal constraints and potential forces are covered. A force that
+  depends on the velocity, or friction, needs a generalised force, and a
+  constraint that depends on the velocity needs multipliers; neither is
+  treated.
+- The Euler-Lagrange equations are taken as given from the principle of
+  stationary action, not derived. The lesson shows that they give Newton's law
+  in Cartesian coordinates and agree with it in the cases checked, which is
+  evidence of their use and not a proof of their generality.
+- The tension of a rod and the push of a wire are not found. A design that
+  needs them returns to Newton's law with the constraint.
+- The conserved quantities are checked on one bound orbit. That the angular
+  momentum is conserved whenever the angle is absent is the content of the
+  derivation above and is not tested for other systems.
+
+::: {.exercise .self-check}
+The Lagrangian method gives the equation of the pendulum without ever
+computing the tension in the rod. A colleague says that this means the
+tension plays no role in the motion. Is that right?
+
+::: {.solution}
+No. The tension is what keeps the bob on the circle, and the method has
+absorbed it into the choice of the coordinate: by describing the position
+with the one angle the motion is already on the circle, so the force that
+holds it there needs no equation. The tension does no work, since it is
+perpendicular to the motion, which is why the energy and the Lagrangian do not
+need it, but it still has a value at every instant, and it is the force that
+a rod must withstand. To find it, return to Newton's law in the plane, with
+the acceleration towards the pivot the motion gives. The method trades the
+force of constraint for the coordinates; it does not say the force is zero.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**The Atwood machine.** Two masses, [three kilograms and one kilogram]{.given},
+hang from a rope over a light, smooth pulley. Take the position of the heavier
+mass below its start as the one coordinate. Write the Lagrangian, find the
+acceleration with the program, and compare it with the closed form
+$(m_1 - m_2) g/(m_1 + m_2)$ that Newton's law gives from the tension of the
+rope.
+
+::: {.hint}
+Both masses move at the same speed, and the rope length ties the position of
+the second to the first, so one coordinate is enough: the kinetic energy has
+the sum of the masses, and the potential energy the difference.
+:::
+
+::: {.solution}
+```{python}
+m_heavy, m_light = 3.0, 1.0
+
+
+def atwood(q, qdot):
+    return 0.5 * (m_heavy + m_light) * qdot[0] ** 2 + (m_heavy - m_light) * g * q[0]
+
+
+a_program = euler_lagrange(atwood)(0.0, np.array([0.0]), np.array([0.0]))[0]
+a_exact = (m_heavy - m_light) / (m_heavy + m_light) * g
+
+table(
+    [(a_exact, a_program, abs(a_program / a_exact - 1.0))],
+    columns=[("from Newton's law", "m/s²", ".5f"), ("from the Lagrangian", "m/s²", ".5f"), ("relative difference", "", ".1e")],
+    caption="Acceleration of the Atwood machine from the tension of the rope and from the Lagrangian, to five decimals.",
+)
+```
+
+The two agree to the accuracy of the derivatives. The Lagrangian has no
+tension in it. Newton's law needs the tension to be eliminated between the two
+masses, and gives it as a by-product,
+`{python} f"{2 * m_heavy * m_light / (m_heavy + m_light) * g:.2f}"` N, which the
+Lagrangian never computes.
+:::
+:::
+
+::: {.exercise}
+**The step of the differences.** Compare the accelerations of the double
+pendulum of the last example with the closed form for the difference steps
+[0.1, 0.01, 0.001, 0.0001, and 0.00001]{.given} at the same random states.
+Which step is best, and why does the error rise on both sides of it?
+
+::: {.hint}
+There are two errors: one that falls with the step, from replacing a
+derivative by a difference, and one that rises as the step falls, from
+subtracting nearly equal numbers.
+:::
+
+::: {.solution}
+```{python}
+rows = []
+for h in (1e-1, 1e-2, 1e-3, 1e-4, 1e-5):
+    candidate = euler_lagrange(double_pendulum_lagrangian(*masses, *lengths), h=h)
+    rng = np.random.default_rng(7)
+    worst_h = 0.0
+    for _ in range(50):
+        q, qdot = rng.uniform(-3.0, 3.0, 2), rng.uniform(-3.0, 3.0, 2)
+        a_closed = closed_form(0.0, q, qdot)
+        worst_h = max(worst_h, np.max(np.abs(candidate(0.0, q, qdot) - a_closed) / (1.0 + np.abs(a_closed))))
+    rows.append((h, worst_h))
+
+table(
+    rows,
+    columns=[("difference step", "rad", ".0e"), ("largest relative difference", "", ".1e")],
+    caption="Largest relative difference between the accelerations from the Lagrangian and the closed form, for five difference steps.",
+)
+```
+
+The error falls with the step, as the square of it, down to a step of about
+`{python} f"{min(rows, key=lambda r: r[1])[0]:.0e}"`, and then rises again. The first part is the
+truncation of the second difference. The second is round-off: a second
+difference divides a small difference of values of order one by the square of
+the step, so the error of a double-precision number is multiplied by the
+inverse square of the step. The best step is where the two are equal, which is
+why the module uses it and why a smaller step would not be better.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/mechanics/dynamics.py",
+        "src/pbc/mechanics/integrators.py",
+        "src/pbc/mechanics/lagrangian.py",
+        "src/pbc/mechanics/chaos.py",
+        "src/pbc/mechanics/pendulum.py",
+        "src/pbc/mechanics/oscillator.py",
+    ],
+    tests=[
+        "tests/unit/test_lagrangian.py",
+        "tests/unit/test_chaos.py",
+        "tests/unit/test_pendulum.py",
+        "tests/unit/test_oscillator.py",
+    ],
+)
+```
