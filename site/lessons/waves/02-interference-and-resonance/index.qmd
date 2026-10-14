@@ -1,0 +1,750 @@
+---
+title: "Interference and resonance"
+description: >-
+  Waves add: pulses pass through each other, a plucked string sounds at its
+  mode frequencies, a push at one of them builds up without limit, a grid
+  disperses what the equation does not, and two sources make a pattern.
+lesson:
+  id: interference-and-resonance
+  strand: waves
+  order: 2
+  difficulty: 2
+  course: waves
+  slot: W2
+  methods: [simulation]
+  outcomes:
+    - Use the linearity of the wave equation to build standing waves and modes from travelling ones
+    - Check the frequencies of a simulated string against the analytic mode frequencies
+    - Show a resonance, and measure the dispersion that a grid adds to a wave
+    - Predict the pattern of two coherent sources and check it by adding their waves
+  related: []
+  format: 2
+  preview: fig-modes-spectrum
+  prerequisites:
+    lessons: [wave-equation]
+    outside:
+      - "Trigonometry: the sum of two sines, and the identity for the product of a sine and a cosine"
+      - "Complex numbers: the form exp(i x) of a wave and the modulus of a sum"
+---
+
+```{python}
+#| echo: false
+import numpy as np
+
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+Two ripples on a pond cross, and where they cross the water shows a pattern of
+calm and rough lines that neither ripple had. A guitar string, plucked in the
+middle or near the end, sounds the same note with a different colour. A wine
+glass sings when a singer holds the right pitch, and breaks when the pitch is
+held loudly. The lesson builds on one property of the wave equation of the
+previous lesson to explain all of them: its solutions add.
+
+The lesson uses the program of that lesson as the instrument. It builds a
+standing wave from two travelling ones, finds the notes of a plucked string
+in the spectrum of a simulation and compares them with the analytic
+frequencies, drives the string at a mode and away from it, and measures what
+the grid does to the frequencies, which is a small error in this case and a
+real effect in a physical chain of beads. It ends with two sources whose
+waves are added one by one and compared with the formula of the pattern.
+
+## Assumptions
+
+1. **The medium is linear.** The wave equation has the displacement and its
+   derivatives to the first power only, so the sum of two solutions is a
+   solution. That holds for small amplitudes. A string plucked hard, or sound
+   at the volume of a jet engine, steepens its waves and makes new
+   frequencies, and then the sum of two solutions is not a solution.
+2. **Fixed ends, a uniform string.** Every mode frequency below follows from
+   the two ends and the one speed $c$. A string with a heavier section, or a
+   pipe with a bulge, has modes that are not whole multiples of one number.
+3. **No damping.** A mode keeps its amplitude for ever, and a driven mode
+   grows without a bound. Every real resonance is limited by loss, and the
+   height and width of a resonance peak measure it.
+4. **Coherent sources of one wavelength, far from the screen.** The pattern of
+   two sources needs a fixed phase relation between them and one wavelength.
+   Light from two bulbs has neither. The far-field formula needs the screen
+   far from the sources compared with their separation.
+5. **The grid is fine enough.** A wave of the wavelength of a few cells is not
+   represented well, and the dispersion example measures how badly.
+6. **A sampled signal and a window.** A frequency read from a simulation
+   comes from a record of finite length, with the resolution that the length
+   allows, refined by a fit; its error is of the order stated in the tables.
+
+## Adding waves {#explanation}
+
+If $u_1$ and $u_2$ solve $u_{tt} = c^2 u_{xx}$, so does $a\,u_1 + b\,u_2$ for
+any numbers $a$ and $b$, because differentiation is linear. This is the
+**principle of superposition**. Its consequences are large. Two waves that
+meet do not change each other: each goes on as if the other were not there,
+and where they overlap the displacements add. The numerical scheme of the
+previous lesson is made of sums of values, so it is linear too, and its
+solution for a sum of starting shapes is the sum of the solutions, to
+round-off.
+
+### Standing waves and modes
+
+A wave $\sin(kx - \omega t)$ travels to the right and $\sin(kx + \omega t)$ to
+the left, with $\omega = ck$. Their sum is, by the sum-to-product identity,
+
+$$
+\sin(kx - \omega t) + \sin(kx + \omega t) = 2\,\sin(kx)\,\cos(\omega t).
+$$
+
+This is a **standing wave**: a fixed shape $\sin kx$ whose size oscillates in
+time, with points that never move, the **nodes**, where $\sin kx = 0$. On a
+string of length $L$ with both ends fixed, an end is a node, so $kL$ is a
+whole multiple of $\pi$:
+
+$$
+k_n = \frac{n\pi}{L},
+\qquad
+f_n = \frac{\omega_n}{2\pi} = \frac{n\,c}{2L},
+\qquad n = 1, 2, 3, \dots
+$$
+
+These are the **modes** of the string, and $f_1$ is the fundamental. The
+frequencies are whole multiples of the first, which is why a string sounds as
+a note and not as noise. Any shape of the string at rest is a sum of modes,
+its sine series $\sum_n b_n \sin(n\pi x/L)$, and each term then oscillates at
+its own frequency. A string plucked at a distance $a$ from one end has
+
+$$
+b_n = \frac{2L^2\,\sin(n\pi a/L)}{n^2\pi^2\,a\,(L - a)}
+$$
+
+for a unit height. The amplitude falls as $1/n^2$, a plucked string has a
+mellow sound, and $b_n$ is zero for every mode that has a node where the
+string was plucked. Plucked at a third of its length, a string has no third
+mode.
+
+### Resonance
+
+Push the string with a force that has the shape of mode $n$ and varies as
+$\cos\Omega t$. The amplitude $a$ of the mode follows an oscillator driven
+at the frequency $\Omega$, as the harmonic oscillator of the mechanics
+course did,
+
+$$
+\ddot a + \omega_n^2\,a = \cos\Omega t
+\quad\Rightarrow\quad
+a(t) = \frac{\cos\Omega t - \cos\omega_n t}{\omega_n^2 - \Omega^2}
+$$
+
+for a start at rest. The size is bounded and set by the distance between the
+two frequencies. When $\Omega \to \omega_n$ the numerator and denominator
+both go to zero, and the limit is
+
+$$
+a(t) = \frac{t\,\sin\omega_n t}{2\,\omega_n},
+$$
+
+which grows in proportion to the time without limit: a **resonance**. The
+force is always in step with the motion, so every cycle adds a push in the
+direction the string is moving, and no loss stops it in the model.
+
+### Dispersion from the grid
+
+A mode of the grid with wavenumber $k$ oscillates, by the calculation of the
+previous lesson, at the angular frequency
+
+$$
+\omega(k) = \frac{2}{\Delta t}\,\arcsin\!\left(C\,\sin\frac{k\,\Delta x}{2}\right),
+$$
+
+which is close to $ck$ for waves long compared with the cell and falls below
+it for short ones. A wave whose frequency is not proportional to its
+wavenumber is **dispersive**: its phase speed $\omega/k$ depends on the
+wavelength. A packet of waves then travels at the **group velocity**
+$\mathrm{d}\omega/\mathrm{d}k$, not at the phase speed, and a pulse made of
+many wavelengths spreads out as its parts fall behind each other. The same
+formula describes a physical system. A chain of equal masses joined by equal
+springs, which is a model of a crystal, obeys the scheme with $\Delta t \to 0$,
+$\omega = (2c/\Delta x)\,\sin(k\Delta x/2)$ with $c$ set by the springs and
+the masses, and its waves disperse for the same reason: a wave shorter than a
+few spacings is not a wave of a continuous string.
+
+### Two sources
+
+Two point sources with the same phase and the wavelength $\lambda$ lie a
+distance $d$ apart. At a far screen, the paths from them to a point at the
+angle $\theta$ from the normal differ by $d\sin\theta$. The waves arrive in
+phase, and add up, when the difference is a whole number of wavelengths, and
+cancel when it is a half-integer number of wavelengths. Adding the two
+amplitudes, $1 + e^{\mathrm{i}\,2\pi d\sin\theta/\lambda}$, and squaring the
+modulus gives the intensity
+
+$$
+I(\theta) = 4\,I_1\,\cos^2\!\left(\frac{\pi d \sin\theta}{\lambda}\right),
+$$
+
+with $I_1$ the intensity of one source. The bright fringes are at
+$\sin\theta = m\lambda/d$. The sum of intensities would be $2 I_1$ everywhere;
+the pattern averages to it, and moves the energy from the dark lines to the
+bright ones.
+
+## Code
+
+The modes, the spectrum of a recording, and the sum of two sources are in
+`pbc.waves.modes`; the frequencies of the grid and the driven mode are in
+`pbc.waves.wave`.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.waves import modes, wave
+
+excerpt(modes.spectrum_peaks)
+```
+
+```{python}
+#| echo: false
+excerpt(modes.two_source_amplitude)
+```
+
+```{python}
+#| echo: false
+excerpt(wave.numerical_angular_frequency)
+```
+
+## Worked examples
+
+```{python}
+#| echo: false
+import matplotlib.pyplot as plt
+
+from pbc.authoring import table
+from pbc.waves.modes import (
+    centroid,
+    measured_frequency,
+    spectrum_peaks,
+    string_frequency,
+    triangle,
+    triangle_mode_amplitude,
+    two_source_amplitude,
+    two_source_pattern,
+    wave_packet,
+)
+from pbc.waves.wave import (
+    driven_mode_amplitude,
+    error_norm,
+    grid,
+    numerical_angular_frequency,
+    numerical_group_velocity,
+    solve,
+)
+```
+
+### Pulses pass through each other
+
+The string is [1 m]{.given} long with the wave speed [100 m/s]{.given}. Two
+pulses of the same shape are placed on it, one near each end and heading for
+the middle, one pointing up and one down. Both ends are fixed. The Courant
+number is one half, with four hundred cells.
+
+```{python}
+#| label: superposition-run
+LENGTH = 1.0  # string length, m
+SPEED = 100.0  # wave speed, m/s
+cells = 400
+dx = LENGTH / cells
+dt = 0.5 * dx / SPEED
+x = grid(LENGTH, cells)
+
+
+def pulse(centre, sign):
+    return sign * np.exp(-(((x - centre) / 0.04) ** 2))
+
+
+up = pulse(0.2, +1.0)
+down = pulse(0.8, -1.0)
+steps = round(0.0045 / dt)
+kwargs = dict(c=SPEED, dx=dx, dt=dt, n_steps=steps, every=1)
+both = solve(up + down, np.zeros_like(x), **kwargs)
+only_up = solve(up, np.zeros_like(x), **kwargs)
+only_down = solve(down, np.zeros_like(x), **kwargs)
+linearity_gap = error_norm(both.u, only_up.u + only_down.u)
+LINEARITY_BOUND = 1e-12
+assert linearity_gap < LINEARITY_BOUND, "the sum of two solutions is not the solution of the sum"
+```
+
+```{python}
+#| label: fig-superposition
+#| fig-cap: "Two pulses of opposite sign run towards each other. At the moment they overlap, the field is the sum and nearly cancels; afterwards each continues as if the other had not been there."
+#| fig-alt: "Four stacked curves of displacement against position on a string, at increasing times. In the top curve a positive bump near the left and a negative bump near the right. In the second they are closer. In the third they overlap in the middle and the sum is small. In the fourth the positive bump has moved to the right half and the negative to the left half."
+#| fig-status: simulated
+times = [0.0, 0.0025, 0.004, 0.0045]
+fig, ax = plt.subplots(figsize=(6.4, 4.2))
+for row, t in enumerate(times):
+    j = int(np.argmin(np.abs(both.t - t)))
+    ax.plot(x, both.u[j] - 2.4 * row, color="#00429d")
+    ax.text(1.02, -2.4 * row, f"{both.t[j] * 1000:.1f} ms", va="center")
+ax.set_xlabel("position (m)")
+ax.set_ylabel("displacement, shifted for each time")
+ax.set_yticks([])
+ax.set_xlim(0, 1.15)
+plt.show()
+```
+
+[The field of two pulses released together equals the sum of the fields of
+each released alone.]{.claim type="numerically-verified"
+scope="two Gaussian pulses, fixed ends, Courant number one half" evidence="superposition-run"}
+The largest difference between the two, over every node and every step of the
+run, is below `{python} f"{LINEARITY_BOUND:.0e}"`, which is round-off. The
+figure shows what that means: after they overlap, each pulse continues with
+its own shape and sign. The data are simulated, and the check is the linearity
+of the scheme, not a measurement of any real string.
+
+### The notes of a plucked string
+
+The string is plucked into a triangle at a third of its length, held at rest,
+and let go. The program records the displacement at one node, at forty-five
+hundredths of the length, for twenty periods of the fundamental, and the
+spectrum of the record is read.
+
+```{python}
+#| label: modes-run
+n_cells = 200
+dx = LENGTH / n_cells
+dt = 0.5 * dx / SPEED
+xs = grid(LENGTH, n_cells)
+steps = round(0.4 / dt)
+pluck = solve(
+    triangle(xs, length=LENGTH, at=LENGTH / 3),
+    np.zeros_like(xs),
+    c=SPEED, dx=dx, dt=dt, n_steps=steps,
+)
+probe = round(0.45 * n_cells)
+record = pluck.u[:, probe]
+found = spectrum_peaks(record, dt, count=4)
+present = [1, 2, 4, 5]  # the third mode has a node at the pluck
+analytic = np.array([string_frequency(n, length=LENGTH, c=SPEED) for n in present])
+scheme = np.array(
+    [
+        numerical_angular_frequency(n * np.pi / LENGTH, c=SPEED, dx=dx, dt=dt)
+        / (2 * np.pi)
+        for n in present
+    ]
+)
+deviation = np.abs(found - analytic) / analytic
+MODE_TOLERANCE = 2e-3  # a chosen tolerance on the relative difference
+assert np.all(deviation < MODE_TOLERANCE), "a mode is not where the formula puts it"
+assert np.all(np.abs(found - scheme) / scheme < 1e-4), "a peak is off the grid's own frequency"
+assert abs(triangle_mode_amplitude(3, length=LENGTH, at=LENGTH / 3)) < 1e-12
+
+table(
+    [
+        (n, a, f, d * 100)
+        for n, a, f, d in zip(present, analytic, found, deviation)
+    ],
+    [
+        ("mode", "", "d"),
+        ("analytic n c / 2L", "Hz", ".2f"),
+        ("simulated", "Hz", ".2f"),
+        ("difference", "%", ".3f"),
+    ],
+    "The frequencies of the four strongest peaks of the spectrum of a plucked string, against the analytic mode frequencies, to two decimals.",
+)
+```
+
+```{python}
+#| label: fig-modes-spectrum
+#| fig-cap: "The spectrum of the displacement of one node of a plucked string. The peaks stand at the whole multiples of the fundamental, marked by dashed lines; the third mode, which has a node at the pluck, is missing."
+#| fig-alt: "Line plot of spectrum magnitude against frequency from zero to three hundred hertz. A tall peak near fifty hertz, a lower one near one hundred, none near one hundred fifty, and lower ones near two hundred and two hundred fifty. Dashed vertical lines run through each whole multiple of fifty hertz including the empty one."
+#| fig-status: simulated
+size = 8 * record.size
+spectrum = np.abs(np.fft.rfft((record - record.mean()) * np.hanning(record.size), size))
+frequency = np.arange(spectrum.size) / (size * dt)
+band = frequency < 320.0
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(frequency[band], spectrum[band], color="#00429d")
+for n in range(1, 7):
+    ax.axvline(string_frequency(n, length=LENGTH, c=SPEED), color="#93003a",
+               linestyle="--", linewidth=0.8)
+ax.set_xlabel("frequency (Hz)")
+ax.set_ylabel("spectrum magnitude (arbitrary units)")
+plt.show()
+```
+
+[The peaks of the spectrum of a simulated plucked string lie at the analytic
+frequencies $n c / 2L$, and no peak lies at the third, which has a node at the
+pluck.]{.claim type="numerically-verified"
+scope="a string plucked at a third, fixed ends, two hundred cells, twenty periods recorded"
+evidence="modes-run"}
+The largest relative difference between a peak and the analytic frequency is
+`{python} f"{deviation.max() * 100:.3f}"` per cent, inside the chosen tolerance
+of `{python} f"{MODE_TOLERANCE * 100:.1f}"` per cent. The grid
+accounts for it: the frequencies of the scheme itself differ from the analytic
+ones by up to
+`{python} f"{np.max(np.abs(scheme - analytic) / analytic) * 100:.3f}"` per cent
+for these four modes, and the peaks of the record agree with those. The data
+are simulated; the check is the formula.
+
+### A push at a mode and away from it
+
+The same string is pushed with a force in the shape of the first mode, at the
+frequency of that mode and at seven tenths of it. The amplitude of the mode is
+read by projecting the field on the shape of the mode, and compared with the
+exact formula.
+
+```{python}
+#| label: resonance-run
+n_cells = 100
+dx = LENGTH / n_cells
+dt = 0.5 * dx / SPEED
+xs = grid(LENGTH, n_cells)
+shape = np.sin(np.pi * xs / LENGTH)
+omega1 = np.pi * SPEED / LENGTH
+steps = round(0.2 / dt)
+
+
+def driven(drive):
+    result = solve(
+        np.zeros_like(xs), np.zeros_like(xs),
+        c=SPEED, dx=dx, dt=dt, n_steps=steps,
+        forcing=lambda t: shape * np.cos(drive * t),
+    )
+    amplitude = result.u @ shape / (shape @ shape)
+    exact = driven_mode_amplitude(
+        result.t, length=LENGTH, n=1, c=SPEED, drive=drive
+    )
+    return result.t, amplitude, exact
+
+
+t_on, amp_on, exact_on = driven(omega1)
+t_off, amp_off, exact_off = driven(0.7 * omega1)
+gap_on = np.max(np.abs(amp_on - exact_on)) / np.max(np.abs(exact_on))
+gap_off = np.max(np.abs(amp_off - exact_off)) / np.max(np.abs(exact_off))
+assert gap_on < 0.02 and gap_off < 0.02
+growth = np.max(np.abs(amp_on[-steps // 5 :])) / np.max(np.abs(amp_on[: steps // 5]))
+
+table(
+    [
+        ("at the mode frequency", np.max(np.abs(amp_on)), gap_on * 100),
+        ("at seven tenths of it", np.max(np.abs(amp_off)), gap_off * 100),
+    ],
+    [
+        ("drive", "", ""),
+        ("largest amplitude of the mode in the run", "", ".2e"),
+        ("largest gap from the exact amplitude", "% of its largest value", ".2f"),
+    ],
+    "The largest amplitude of the first mode in a run of ten periods, and how far the simulation is from the exact formula, for the two drives.",
+)
+```
+
+```{python}
+#| label: fig-resonance
+#| fig-cap: "The amplitude of the first mode of the driven string. At its own frequency the envelope grows in proportion to the time; away from it the amplitude beats at a fixed size. Dashed lines are the exact formulas."
+#| fig-alt: "Line plot of the amplitude against time over ten periods. One curve oscillates with an envelope that rises steadily to a few times its start. A second curve oscillates in beats with a small constant envelope. Dashed curves of the exact formulas lie on both."
+#| fig-status: simulated
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(t_on * 1000, amp_on, color="#00429d", label="at the mode frequency")
+ax.plot(t_on * 1000, exact_on, color="#00429d", linestyle="--", linewidth=0.8)
+ax.plot(t_off * 1000, amp_off, color="#93003a", label="at seven tenths of it")
+ax.plot(t_off * 1000, exact_off, color="#93003a", linestyle="--", linewidth=0.8)
+ax.set_xlabel("time (ms)")
+ax.set_ylabel("amplitude of the first mode (arbitrary units)")
+ax.legend()
+plt.show()
+```
+
+[A force at the frequency of a mode makes its amplitude grow in proportion to
+the time, and a force at another frequency leaves it bounded; the simulation
+follows both exact formulas.]{.claim type="numerically-verified"
+scope="the first mode, fixed ends, one hundred cells, ten periods" evidence="resonance-run"}
+The amplitude in the last fifth of the run is `{python} f"{growth:.1f}"` times
+the amplitude in the first fifth at resonance, while away from it the
+amplitude never exceeds `{python} f"{np.max(np.abs(amp_off)):.1e}"`, in the same units, set by the
+distance of the two frequencies. In a real string the growth stops where loss
+balances the push, and this model has none.
+
+### What the grid does to a wave
+
+The frequency of a standing mode is read from the zero crossings of the
+displacement at its first antinode, for modes from the longest on the string
+to the shortest the grid holds nearly, and compared with the analytic frequency
+and with the formula of the grid.
+
+```{python}
+#| label: dispersion-run
+n_cells = 100
+dx = LENGTH / n_cells
+dt = 0.5 * dx / SPEED
+xs = grid(LENGTH, n_cells)
+mode_numbers = [1, 5, 10, 20, 40, 60, 80]
+steps = round(0.3 / dt)
+rows = []
+for n in mode_numbers:
+    result = solve(
+        np.sin(n * np.pi * xs / LENGTH), np.zeros_like(xs),
+        c=SPEED, dx=dx, dt=dt, n_steps=steps,
+    )
+    antinode = max(1, round(n_cells / (2 * n)))
+    measured = measured_frequency(result.u[:, antinode], result.t)
+    k = n * np.pi / LENGTH
+    formula = numerical_angular_frequency(k, c=SPEED, dx=dx, dt=dt) / (2 * np.pi)
+    exact_f = SPEED * k / (2 * np.pi)
+    rows.append((n, k * dx / np.pi, exact_f, formula, measured, measured / exact_f))
+agreement = max(abs(row[4] / row[3] - 1.0) for row in rows)
+assert agreement < 1e-3, "the measured frequency is not the one of the scheme"
+
+table(
+    rows,
+    [
+        ("mode", "", "d"),
+        ("wavenumber over the largest the grid holds", "", ".2f"),
+        ("analytic", "Hz", ".1f"),
+        ("formula of the grid", "Hz", ".1f"),
+        ("measured", "Hz", ".1f"),
+        ("measured over analytic", "", ".3f"),
+    ],
+    "The frequency of seven standing modes of the grid: analytic, from the dispersion relation of the scheme, and read from the zero crossings of a run, with the ratio of the measured to the analytic value.",
+)
+```
+
+[The frequencies of the scheme follow its dispersion relation, which
+departs from $\omega = ck$ for waves of a few cells.]{.claim
+type="numerically-verified"
+scope="one hundred cells, Courant number one half, modes from the first to the eightieth"
+evidence="dispersion-run"}
+The measured frequency agrees with the formula of the grid to
+`{python} f"{agreement:.1e}"` in relative terms, for every mode, and falls
+below the analytic frequency by `{python} f"{(1 - rows[-1][5]) * 100:.0f}"` per
+cent for the highest mode shown, which has barely
+`{python} f"{2 * n_cells / mode_numbers[-1]:.1f}"` cells per wavelength.
+
+A packet shows the second consequence. A packet with a carrier of
+[1.2 radians per cell]{.given} is released at rest on a longer string, and its
+right-going half travels for a few milliseconds; the speed of its centre is read from the displacement of the centre of its energy.
+
+```{python}
+#| label: packet-run
+n_cells = 400
+dx = LENGTH / n_cells
+dt = 0.5 * dx / SPEED
+xs = grid(LENGTH, n_cells)
+carrier = 1.2 / dx
+packet = wave_packet(xs, centre=0.25, width=0.05, k=carrier)
+steps = round(0.0025 / dt)
+packet_run = solve(
+    packet, np.zeros_like(xs), c=SPEED, dx=dx, dt=dt, n_steps=steps, every=steps
+)
+right_half = packet_run.u[-1] * (xs > 0.3)
+packet_speed = (centroid(xs, right_half) - 0.25) / packet_run.t[-1]
+group = float(numerical_group_velocity(carrier, c=SPEED, dx=dx, dt=dt))
+assert abs(packet_speed / group - 1.0) < 0.02
+```
+
+The centre of the packet moves at `{python} f"{packet_speed:.1f}"` m/s over
+`{python} f"{packet_run.t[-1] * 1000:.1f}"` ms; the group velocity of the grid is
+`{python} f"{group:.1f}"` m/s, and the wave speed of the string is
+`{python} f"{SPEED:.0f}"` m/s. [A packet of short waves on the grid travels
+slower than the wave speed of the equation it solves, at the group velocity of
+the scheme.]{.claim type="numerically-verified"
+scope="one packet, carrier of a few cells per wavelength, Courant number one half"
+evidence="packet-run"} The error is not in the physics of the string, and it
+is a physical effect in a chain of beads: whether the dispersion is a defect
+of a method or a property of a medium depends on what the grid stands for.
+
+### Two sources
+
+Two sources with the same phase, [five wavelengths]{.given} apart, are
+placed on a line. The waves $e^{\mathrm{i}kr}/r$ of the two are added at
+each of many points of a screen [20 km]{.given} away, in units of the
+wavelength, and the intensity is compared with the formula of the far field.
+
+```{python}
+#| label: interference-run
+wavelength = 1.0
+separation = 5.0 * wavelength
+distance = 20000.0 * wavelength
+angle = np.linspace(-0.2, 0.2, 801)
+summed = two_source_amplitude(
+    angle, separation=separation, wavelength=wavelength, distance=distance
+)
+intensity = (summed * distance) ** 2  # one source gives 1 at this distance
+formula = two_source_pattern(angle, separation=separation, wavelength=wavelength)
+pattern_gap = np.max(np.abs(intensity - formula))
+PATTERN_TOLERANCE = 5e-3  # in units of the intensity of one source
+assert pattern_gap < PATTERN_TOLERANCE
+bright = np.arcsin(np.arange(-1, 2) * wavelength / separation)
+bright_values = two_source_pattern(bright, separation=separation, wavelength=wavelength)
+```
+
+```{python}
+#| label: fig-interference
+#| fig-cap: "The intensity on a far screen of two coherent sources, in units of the intensity of one source: the waves added one by one (solid) and the cosine-squared formula (dashed). The dashed line at two is the sum of the two intensities."
+#| fig-alt: "Line plot of intensity against angle from minus point two to plus point two radians. A periodic series of bright humps reaching four and dark points reaching zero, regularly spaced. A dashed horizontal line at the value two lies in the middle between them, and a dashed curve lies on the solid curve."
+#| fig-status: simulated
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.plot(angle, intensity, color="#00429d", label="waves added")
+ax.plot(angle, formula, color="#93003a", linestyle="--", linewidth=0.8,
+        label="formula")
+ax.axhline(2.0, color="gray", linestyle=":", label="sum of two intensities")
+ax.set_xlabel("angle (rad)")
+ax.set_ylabel("intensity (units of one source)")
+ax.legend(loc="upper right", fontsize=8)
+plt.show()
+```
+
+[The intensity of two coherent sources, found by adding their waves, follows
+$4\cos^2(\pi d\sin\theta/\lambda)$ in the far field.]{.claim
+type="numerically-verified"
+scope="two sources five wavelengths apart, a screen twenty thousand wavelengths away"
+evidence="interference-run"}
+The largest difference between the summed intensity and the formula is
+`{python} f"{pattern_gap:.1e}"` units of the intensity of one source, and the
+formula reaches `{python} f"{bright_values.max():.0f}"` at the bright fringes,
+at angles that satisfy $\sin\theta = m\lambda/d$, twice the sum of the two
+intensities. Energy is not created: the pattern averages to that sum and
+moves energy from the dark lines to the bright ones. The data are simulated;
+the check is the formula.
+
+## Limits {#limits}
+
+- **A linear, lossless model.** Every real string, pipe, and glass has loss,
+  which limits a resonance to a finite height and width; the lesson shows the
+  limit without loss, in which growth has no end.
+- **Frequencies from a finite record.** The spectrum has a finite resolution
+  and the peak is refined by a fit. The agreement is of the order of a tenth
+  of a per cent here and is not the accuracy of the scheme.
+- **Dispersion by the grid is not a measurement of a medium.** The lesson
+  measures the scheme's dispersion and states its form. That a chain of beads
+  has the same form is derived, not measured.
+- **Point sources, coherent and in phase.** Sources of finite size, a broad
+  range of wavelengths, or a changing phase wash the pattern out.
+  Diffraction by a slit of finite width is a later lesson.
+
+::: {.exercise .self-check}
+Plucked at its middle, why does a string sound only the odd modes?
+
+::: {.choices}
+::: {.choice}
+The even modes have a frequency that the string cannot reach.
+
+::: {.feedback}
+Every whole multiple of the fundamental is a mode of the string, odd or
+even; nothing prevents the string from oscillating at the even ones.
+:::
+:::
+
+::: {.choice correct="true"}
+The even modes have a node at the middle, so a pluck there gives them no
+amplitude.
+
+::: {.feedback}
+Correct: $\sin(n\pi/2)$ is zero for even $n$, so $b_n = 0$ for them.
+:::
+:::
+
+::: {.choice}
+Plucking at the middle adds energy to the odd modes only.
+
+::: {.feedback}
+Plucking gives each mode the share that its shape has in the pluck. The even
+modes have a node at the middle, and the shape of the pluck, a point there,
+cannot excite them.
+:::
+:::
+:::
+
+::: {.solution}
+The shape of a pluck at the middle is symmetric about the middle. Mode $n$
+is symmetric for odd $n$ and antisymmetric for even $n$, so the symmetric
+pluck contains no even mode. This is the same statement as the zero of
+$\sin(n\pi a/L)$ at $a = L/2$.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**A pipe closed at one end.** A string with one end fixed and the other free
+has the modes $\sin((2n - 1)\pi x / 2L)$. Pluck the string at a fifth of its length,
+with the right end free, record a node at six tenths of its length for
+twice as long as before, and find the first three peaks. How do they compare with
+$(2n-1)\,c/4L$?
+
+::: {.hint}
+The solver takes `left` and `right`. The first peak is the lowest.
+:::
+
+::: {.solution}
+```{python}
+n_cells = 200
+dx = LENGTH / n_cells
+dt = 0.5 * dx / SPEED
+xs = grid(LENGTH, n_cells)
+free = solve(
+    triangle(xs, length=LENGTH, at=0.2 * LENGTH), np.zeros_like(xs),
+    c=SPEED, dx=dx, dt=dt, n_steps=round(0.8 / dt), right="free",
+)
+peaks = spectrum_peaks(free.u[:, round(0.6 * n_cells)], dt, count=3, floor=0.05)
+expected = np.array([(2 * n - 1) * SPEED / (4 * LENGTH) for n in (1, 2, 3)])
+```
+
+The peaks are at `{python} ", ".join(f"{p:.1f}" for p in peaks)` Hz and the
+formula gives `{python} ", ".join(f"{p:.1f}" for p in expected)` Hz. They are
+the odd multiples of the fundamental of a string half as long: the free end
+is an antinode, and a quarter of a wavelength fits in the length for the first
+mode.
+:::
+:::
+
+::: {.exercise}
+**Beats.** Two sources of nearly the same frequency, $f_1 = 100$ Hz and
+$f_2 = 104$ Hz, are heard together. How often does the loudness repeat?
+
+::: {.hint}
+Add the two sines with the sum-to-product identity of the lesson.
+:::
+
+::: {.solution}
+```{python}
+f1, f2 = 100.0, 104.0
+t = np.linspace(0.0, 1.0, 20001)
+total = np.sin(2 * np.pi * f1 * t) + np.sin(2 * np.pi * f2 * t)
+envelope = 2 * np.abs(np.cos(np.pi * (f1 - f2) * t))
+beat_rate = abs(f1 - f2)
+```
+
+The sum equals $2\cos(\pi(f_1 - f_2)t)\,\sin(\pi(f_1 + f_2)t)$: a tone at
+the mean frequency under an envelope that vanishes `{python} f"{beat_rate:.0f}"`
+times per second, the difference of the frequencies. The largest value of the
+sum over one second is `{python} f"{np.max(np.abs(total)):.2f}"`, near the
+largest value `{python} f"{envelope.max():.0f}"` of the envelope.
+:::
+:::
+
+::: {.exercise}
+**Where is the first dark line?** For the two sources of the example, at what
+angle does the first dark line of the pattern lie?
+
+::: {.hint}
+The path difference is half a wavelength.
+:::
+
+::: {.solution}
+```{python}
+first_dark = np.arcsin(0.5 * wavelength / separation)
+value = two_source_pattern(first_dark, separation=separation, wavelength=wavelength)
+```
+
+The first dark line is at $\sin\theta = \lambda/2d$, which is
+`{python} f"{first_dark:.4f}"` rad here, and the formula gives the intensity
+`{python} f"{float(value):.3f}"` there, zero to round-off.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=["src/pbc/waves/wave.py", "src/pbc/waves/modes.py"],
+    tests=["tests/unit/test_waves.py"],
+)
+```
