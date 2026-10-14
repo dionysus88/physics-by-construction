@@ -354,11 +354,11 @@ function pathPage() {
     cleared = true;
     renderAll();
   });
-  const cards = [...document.querySelectorAll(".path-card[data-lesson-id]")];
+  const cards = [...document.querySelectorAll(".path-card[data-lesson-id], .path-link[data-lesson-id]")];
   // One link per lesson: its first card.
   const titles = new Map();
   for (const card of cards) {
-    const link = card.querySelector(".lesson-card-title a");
+    const link = card.querySelector(".lesson-card-title a, a.lesson-link");
     if (link && !titles.has(card.dataset.lessonId)) {
       titles.set(card.dataset.lessonId, link);
     }

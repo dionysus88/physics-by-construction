@@ -203,7 +203,7 @@ def test_sample_page_renders_every_design_component_with_its_colours(
         ".go-deeper",
         ".exercise.self-check",
         "details.hint",
-        ".path-cards .path-card",
+        ".path-rows .path-card",
         ".prerequisite-graph",
         ".footer-attribution",
         "figcaption .figure-status",

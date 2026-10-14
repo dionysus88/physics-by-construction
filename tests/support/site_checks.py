@@ -516,8 +516,18 @@ _UNREADABLE_CONTENT = """
       "script, style, template, annotation, annotation-xml, nav[role='doc-toc'],"
         + " svg > title, svg > desc"
     )) continue;
-    const details = element.closest("details:not([open])");
-    if (details && !element.closest("summary")) continue;
+    // Inside a closed <details> only its own summary is rendered; a summary
+    // inside the body of another closed <details> is hidden with that body.
+    let closed = false;
+    for (
+      let details = element.closest("details:not([open])");
+      details;
+      details = details.parentElement?.closest("details:not([open])")
+    ) {
+      const summary = element.closest("summary");
+      if (!summary || summary.parentElement !== details) closed = true;
+    }
+    if (closed) continue;
     const visible = element.checkVisibility({
       visibilityProperty: true,
       opacityProperty: true,

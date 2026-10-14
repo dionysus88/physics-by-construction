@@ -257,10 +257,10 @@ Friction removes energy, and the period depends on the stiffness and the mass.
 :::
 
 ```{=html}
-<ul class="path-cards">
-<li class="path-card"><h3>Sample lesson</h3><p class="path-card-meta">Mechanics, introductory</p><p>One sentence about the lesson.</p></li>
-<li class="path-card"><h3>Another lesson</h3><p class="path-card-meta">Mechanics, intermediate</p><p>One sentence about the lesson.</p></li>
-</ul>
+<ol class="path-rows">
+<li class="path-card"><div class="lesson-summary"><h4 class="lesson-card-title">Sample lesson</h4><p class="lesson-question">One sentence about the lesson.</p><p class="lesson-meta"><span class="level-badge">Introductory, level 1 of 3</span></p><ul class="chips"><li>Simulation</li></ul></div><details class="lesson-details"><summary>Details</summary><p>Outcomes and prerequisites.</p></details></li>
+<li class="planned-slot">M9 A planned lesson <span class="slot-status">(planned, not published)</span></li>
+</ol>
 <div class="prerequisite-graph" tabindex="0" role="region" aria-label="Sample prerequisite graph">
 <p>Kinematics, then Newton's laws, then the harmonic oscillator.</p>
 </div>

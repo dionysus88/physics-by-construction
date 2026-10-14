@@ -397,7 +397,10 @@ def test_every_unfilled_slot_of_a_course_with_a_lesson_and_of_every_path_is_plan
     page: str,
 ):
     path = LearningPath.read(SITE_SOURCE)
-    planned = re.findall(r'<li><span class="slot-label">([A-Z]+[0-9]+)</span>', page)
+    planned = re.findall(
+        r'<li class="planned-slot"[^>]*><span class="slot-label">([A-Z]+[0-9]+)</span>',
+        page,
+    )
     expected = [
         slot.label for course in path.courses for slot in path.planned_in_course(course)
     ]
@@ -428,24 +431,26 @@ def test_a_course_without_a_lesson_is_named_in_one_sentence_and_shows_no_slot(
 
 
 def test_a_planned_slot_has_no_link_and_no_card(page: str):
-    blocks = re.findall(r'<ul class="planned-slots">.*?</ul>', page, re.S)
+    blocks = re.findall(r'<li class="planned-slot".*?</li>', page, re.S)
     assert blocks
     for block in blocks:
         assert "<a " not in block and "path-card" not in block
         assert "planned, not published" in block
 
 
-def test_a_card_exists_only_for_a_published_lesson(page: str):
+def test_a_lesson_is_a_row_once_and_a_link_everywhere_else(page: str):
     path = LearningPath.read(SITE_SOURCE)
     cards = re.findall(r'<li class="path-card" data-lesson-id="([^"]+)"', page)
-    assert set(cards) == {item.id for item in path.lessons}
-    # Once under its course, once under each method, once under its path.
-    expected = (
-        sum(len(path.in_course(course)) for course in path.courses)
-        + sum(len(path.using(method)) for method in path.methods)
-        + sum(len(path.in_path(method_path)) for method_path in path.paths)
+    # The canonical content of a lesson is its row under its course, once.
+    assert sorted(cards) == sorted(item.id for item in path.lessons)
+    links = re.findall(r'<li class="path-link" data-lesson-id="([^"]+)"', page)
+    # Under each method and each path a lesson is one link, never a row.
+    expected = sum(len(path.using(method)) for method in path.methods) + sum(
+        len(path.in_path(method_path)) for method_path in path.paths
     )
-    assert len(cards) == expected
+    assert len(links) == expected
+    for section in re.findall(r'<ol class="path-links">.*?</ol>', page, re.S):
+        assert "path-card" not in section and "<dl>" not in section
 
 
 def test_the_header_shows_the_slot_and_the_position_in_the_path():
@@ -459,3 +464,43 @@ def test_the_header_shows_the_slot_and_the_position_in_the_path():
     )
     gas = LessonHeader(path, path.lesson("particles-in-a-box")).markdown()
     assert "Slot\n" not in gas
+
+
+def test_a_course_lists_lessons_and_planned_slots_in_the_order_of_the_file(page: str):
+    path = LearningPath.read(SITE_SOURCE)
+    for course in path.courses:
+        section = page.split(f"{{#course-{course.id}}}")[1].split("\n## ")[0]
+        rows = re.findall(
+            r'<li class="(?:path-card" data-lesson-id|planned-slot" data-state)'
+            r'="([^"]+)"[^>]*>(?:<span class="slot-label">([A-Z]+[0-9]+))?',
+            section,
+        )
+        shown = [label or path.lesson(name).slot for name, label in rows]
+        indexes = [path.curriculum.index(label) for label in shown if label]
+        assert indexes == sorted(indexes)
+        # A lesson without a slot comes after every slot.
+        assert shown == [label for label in shown if label] + [
+            label for label in shown if not label
+        ]
+        # The lessons are in the teaching order, planned rows between them.
+        assert [name for name, label in rows if not label] == [
+            item.id for item in path.in_course(course)
+        ]
+        assert len(rows) == len(path.in_course(course)) + len(
+            path.planned_in_course(course)
+        )
+
+
+def test_the_page_is_closed_by_default_and_loads_nothing_from_outside(page: str):
+    assert "<details open" not in page and " open>" not in page
+    sources = re.findall(r'(?:src|href)="(https?:[^"]+|//[^"]+)"', page)
+    assert sources == []
+    assert str(PathOverview(LearningPath.read(SITE_SOURCE), PATH_PAGE)) == page
+    ids = re.findall(r' id="([^"]+)"', page)
+    assert len(ids) == len(set(ids))
+
+
+def test_the_page_script_stores_nothing():
+    script = (SITE_SOURCE / "learner" / "path.js").read_text(encoding="utf-8")
+    for forbidden in ("localStorage", "sessionStorage", "document.cookie", "fetch("):
+        assert forbidden not in script

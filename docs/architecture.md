@@ -328,6 +328,21 @@ coordinate with the self-hosted search and need no script to reach any
 lesson. A thumbnail is the lesson's own verified figure named by `preview`,
 rendered small by the same executed cell during the build, or a conceptual
 SVG the repository generates; never a committed, copied, or external image.
+
+As built (F64): `pbc.authoring.path.PathOverview` writes the page. A course
+panel shows the preview of its representative lesson (the first lesson, in
+teaching order, that names its own figure in `preview`, else the first
+lesson) and links its first lesson. A course disclosure cannot open itself
+without a script, so a reader of a lesson who follows the course link lands on
+a closed course; `site/learner/path.js` opens the course the address points
+into. The method paths and the methods list each lesson as one link to its
+canonical page, never as a second row. The filters are links to every course,
+path, and method without a script; with `site/learner/path.js` they become a
+form that hides rows and stores nothing. They never change the page the search
+index is built from, so the search finds the same text with or without them.
+Each course holds the dependency map of its own lessons in a nested
+disclosure, drawn with ids scoped to the course, besides the whole map at the
+bottom of the page.
 Every existing link, bookmark, and graph node address stays valid. A test
 compares the page with the front matter and the curriculum file.
 

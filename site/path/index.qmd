@@ -5,16 +5,21 @@ description: >-
   prerequisites.
 ---
 
-The lessons are organised by course: a course is a physics subject, and
-every lesson belongs to one. Methods cut across courses: simulation, LLM
-agents, agent-based modelling, and formal proofs in Lean. Each lesson names
-the lessons it builds on and what it assumes you know from elsewhere, and
-says what you will be able to do after it. Read a course from its first
-lesson, follow one method across courses, or start with any lesson whose
-prerequisites you have.
+## Choose a physics course {#choose}
 
-This page is generated from the lessons when the site is built. A course or
-a method appears once it has a lesson.
+Every lesson belongs to one physics course. Each course teaches by three
+activities: **construct** the physics as a program you can run and check,
+**investigate** it against measurements and with experiments that an AI agent
+helps to run, and **verify** the result, by tests, by independent checks, or by
+a machine-checked proof in Lean. Open a course below to see its lessons in
+teaching order, each with one preview and its level. Each lesson names the
+lessons it builds on and says what you will be able to do after it. Read a
+course from its first lesson, follow one method across courses, or start with
+any lesson whose prerequisites you have.
+
+This page is generated from the lessons when the site is built. A course
+appears once it has a lesson, and a planned lesson is shown as planned.
+Methods and paths further down list the same lessons as links.
 
 ```{python}
 #| echo: false
