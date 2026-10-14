@@ -367,6 +367,74 @@ the planning change `final-curriculum` adds; until that feature is delivered
 the budget is exceeded, every new lesson adds to the `build` job, and the
 response of ADR 003, decision 6, stays due.
 
+### Selection against a base (F61), measured 2026-10-14
+
+F61 makes a pull request verify what it changed against the verified base of
+`main` (ADR 014). Measured from the Actions runs of 2026-10-14, with
+twenty-two lessons, on three pull requests that each change one lesson
+(measurement only, closed after the measurement), beside the runs on `main`.
+Wall clock is from the creation of the run to its end; runner time is the sum
+of the jobs. In every pull request run the log of the job `build` says
+"selective run against base 2e0bd620566f: 1 of 22 lessons executed, 21
+restored", and the `e2e` jobs select against the same base.
+
+| Run | Base | Wall clock | Runner time | `build` | `integration` | `workflow` | slowest `e2e` |
+|---|---|---|---|---|---|---|---|
+| Pull request #161, run 38547877605 (`mechanics/04`) | accepted | 14 min 01 s | 36 min 05 s | 7 min 57 s | 11 min 55 s | 4 min 34 s | 5 min 49 s |
+| Pull request #162, run 38547877332 (`lean/01`) | accepted | 13 min 50 s | 35 min 20 s | 7 min 31 s | 10 min 48 s | 4 min 20 s | 6 min 03 s |
+| Pull request #163, run 38547883087 (`agents-llm/01`) | accepted | 14 min 43 s | 37 min 57 s | 7 min 35 s | 14 min 29 s | 4 min 13 s | 5 min 49 s |
+| Pull request #161 before the base of its identity, run 38534115654 | rejected: the checks changed | 23 min 53 s | 51 min 16 s | 17 min 31 s | 14 min 08 s | 3 min 49 s | 6 min 07 s |
+| Push to `main`, run 38527223459, first run with the base job, cold caches | none | 29 min 46 s | 55 min 41 s | 23 min 05 s | 13 min 41 s | 3 min 55 s | 6 min 05 s |
+| Push to `main`, run 38545077253, with `deploy` | none | 21 min 59 s | 49 min 07 s | 15 min 42 s | 13 min 58 s | 4 min 46 s | 5 min 25 s |
+
+- **A pull request that changes one lesson takes 13 min 50 s to 14 min 43 s,
+  against 22 min 56 s and 25 min 00 s without a base (F58, above).** That is
+  9 to 10 minutes less, about 40 percent, and 2 to 3 minutes over the budget
+  of 12 minutes of ADR 003 and of acceptance criterion 1 of Issue #147. The
+  budget is **not met**.
+- **The longest path is `build` and then `e2e` (about 7.5 plus 6 minutes),
+  or `integration` alone (11 to 14.5 minutes, the longest job in #163).** Both
+  are about 14 minutes. What the selection removed is the execution of the
+  unchanged lessons; what remains is fixed cost: every job prepares its own
+  runner (about 100 s), the Lean build runs in full, and the checks that are
+  not per lesson (`integration`, `workflow`, the built-site checks of
+  `e2e-other`) run as before.
+- **The first measurement found a defect, which is fixed.** The first three
+  pull requests (runs 38530560443, 38530560503, 38530570255) failed in
+  `build`: `test_a_second_build_gives_byte_identical_previews` built a copy
+  without the selection of the run and compared previews restored from a
+  base made on another runner with previews computed on this one. The fix
+  starts the second build from the state of the run (pull request #164) and
+  the test still compares every preview byte for byte.
+- **A change to the checks makes the run a full run, as designed.** Pull
+  request #161 with the fix (run 38534115654) found the checks different from
+  the base's, rejected the base and executed every lesson (22 of 22): 23 min
+  53 s. Once `main` published the base of the new checks, the selection
+  applied.
+- **The run on `main` is a full run with a base published after it.** With
+  warm caches it took 21 min 59 s; the first run, with cold caches, 29 min
+  46 s, against 17 min 52 s on 2026-10-12 before F61. The difference to
+  that run is the Quarto store and the regenerated context; this has not been
+  separated from the runner differences measured on 2026-10-12.
+- **Not measured, and not claimed:** whether the token of a fork pull request
+  can read the base (it needs a pull request from a fork), the full-run
+  budget at 110 lessons (F113), and three consecutive runs: the three pull
+  requests ran at the same time (a start 3 seconds apart), on separate
+  runners.
+
+**Corrective actions proposed, to decide before F113 or in a follow-up of
+F61 (none is applied):**
+
+1. Split the job `integration` in two parts like `e2e` (it is the longest job
+   in two of three runs, 10 to 14.5 minutes) without dropping a test.
+2. Start the checks of the built site that need the base only after `build`,
+   as now, but let the `e2e-other` part (5 to 6 minutes) take the checks that
+   do not depend on the lessons in a job that runs beside `build`.
+3. Cut the preparation of the runner (about 100 s in each of 8 jobs) with the
+   caches already present: measure what is not cached before changing it.
+4. Accept the budget as 15 minutes for a pull request until the fixed cost is
+   reduced: this is a change of ADR 003 decision 5 and the owner's decision.
+
 ## Release (human)
 
 After the items above: tag the merge commit (`git tag -a mvp-v1.0.0`) and
