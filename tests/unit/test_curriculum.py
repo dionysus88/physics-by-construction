@@ -280,6 +280,10 @@ def test_the_published_lessons_that_fill_a_slot_carry_it():
         "energy-conservation": "M6",
         "momentum-and-collisions": "M7",
         "kepler-orbit": "M8",
+        "double-pendulum-chaos": "M9",
+        "lagrangian-mechanics": "M10",
+        "hamiltonian-mechanics": "M11",
+        "resonance": "M12",
         "gravitational-wave-strain": "M16",
         "verifying-scientific-code": "AI2",
         "automated-analysis-pipelines": "R1",
@@ -289,21 +293,26 @@ def test_the_published_lessons_that_fill_a_slot_carry_it():
         "scientific-review": "AI4",
         "experimental-design-agent": "D9",
         "proving-what-the-simulation-showed": "L1",
+        "wave-equation": "W1",
+        "interference-and-resonance": "W2",
+        "sound-and-the-doppler-effect": "W9",
+        # The gas lesson gets its slot with its course (F70), with T1 to T3.
+        "particles-in-a-box": "T0",
+        "random-walks-and-diffusion": "T1",
+        "kinetic-theory-of-gases": "T2",
+        "entropy-from-ensembles": "T3",
     }
-    # The gas lesson gets its slot with its course (F70); the Lean lessons
-    # beyond the baseline have none.
+    # The Lean lessons beyond the baseline have no slot.
     for lesson_id in (
-        "particles-in-a-box",
         "collision-momentum-proved",
         "symplectic-euler-conserved-energy",
         "lean-exercises-on-your-machine",
         "chirp-law-proved",
     ):
         assert slots[lesson_id] == ""
-    assert (
-        LearningPath.read(SITE_SOURCE).lesson("particles-in-a-box").course
-        == "mechanics"
-    )
+    # The gas lesson moved to its course by front matter, not by address (F70).
+    gas = LearningPath.read(SITE_SOURCE).lesson("particles-in-a-box")
+    assert (gas.course, gas.strand) == ("thermodynamics", "agents-abm")
 
 
 # --- Prerequisites as a graph (ADR 013 decision 8) ----------------------------
@@ -408,7 +417,11 @@ def test_every_unfilled_slot_of_a_course_with_a_lesson_and_of_every_path_is_plan
         slot.label for method in path.paths for slot in path.planned_in_path(method)
     ]
     assert planned == expected
-    assert "M9" in planned and "AI1" in planned and "EV1" in planned
+    assert "M13" in planned and "AI1" in planned and "EV1" in planned
+    # The thermodynamics course shows its eight planned slots (F70), not T0 to T3.
+    thermodynamics = [slot.label for slot in path.planned_in_course(COURSES[1])]
+    assert thermodynamics == ["T4", "T5", "T6", "T9", "T10", "T11", "T7", "T8"]
+    assert not {"T0", "T1", "T2", "T3"} & set(planned)
     assert not {item.slot for item in path.lessons} & set(planned)
 
 
@@ -416,18 +429,23 @@ def test_a_course_without_a_lesson_is_named_in_one_sentence_and_shows_no_slot(
     page: str,
 ):
     path = LearningPath.read(SITE_SOURCE)
+    # Mechanics has lessons, thermodynamics since F70 and waves since F71; the
+    # others have none yet.
+    without = [course for course in COURSES[2:] if course.id != "waves"]
     assert [course.id for course in path.planned_courses] == [
-        course.id for course in COURSES[1:]
+        course.id for course in without
     ]
     sentences = [
-        line for line in page.splitlines() if line.startswith("7 further courses")
+        line
+        for line in page.splitlines()
+        if line.startswith(f"{len(without)} further courses")
     ]
     assert len(sentences) == 1
-    for course in COURSES[1:]:
+    for course in without:
         assert course.title in sentences[0]
         assert f"{{#course-{course.id}}}" not in page
-    # T0 is listed only when its course has a lesson (F70).
-    assert ">T0<" not in page and ">T1<" not in page
+    assert "Waves and optics" not in sentences[0]
+    assert f"{{#course-{COURSES[1].id}}}" in page
 
 
 def test_a_planned_slot_has_no_link_and_no_card(page: str):
@@ -463,7 +481,8 @@ def test_the_header_shows_the_slot_and_the_position_in_the_path():
         " and scientific agents]" in path_lesson
     )
     gas = LessonHeader(path, path.lesson("particles-in-a-box")).markdown()
-    assert "Slot\n" not in gas
+    assert "Slot\n:   T0, Gas from simple agents" in gas
+    assert "Thermodynamics and statistical physics" in gas
 
 
 def test_a_course_lists_lessons_and_planned_slots_in_the_order_of_the_file(page: str):

@@ -125,8 +125,14 @@ site/                    Quarto project: the website source
   widgets/               Self-hosted JavaScript widgets (ES modules)
   assets/                Styles, fonts, vendored Lean syntax definition
 src/pbc/                 Importable Python package with all reusable lesson code
-  mechanics/             Models and integrators used by the mechanics course
-  thermodynamics/, waves/, electromagnetism/, fluids/, quantum/, astrophysics/, materials/
+  mechanics/             Models and integrators used by the mechanics course, including the
+                         double pendulum and Lyapunov estimate (`chaos`), the Euler-Lagrange
+                         operator (`lagrangian`), phase-space and modified-energy checks
+                         (`hamiltonian`), and the verified damped driven oscillator
+                         (`resonance`, F68; the reference solution F45 reuses)
+  thermodynamics/        Random walks and diffusion, the Maxwell distribution of a simulated gas,
+                         and the entropy of an ensemble (F70)
+  waves/, electromagnetism/, fluids/, quantum/, astrophysics/, materials/
                          Models of the other courses, one package each, added by the first
                          feature of the course (final curriculum); fem/ for the small
                          triangular finite-element solver shared by T10, T11, and MAT3 (F76),
@@ -234,10 +240,10 @@ created by the first roadmap feature that publishes a lesson of that course
 placeholder; no lesson is placed by a method tag alone. A strand's display
 title may change; its identifier and address never do. A published lesson
 changes its primary course by front matter only when its course comes into
-existence: the gas lesson of F11 becomes a thermodynamics lesson (slot
+existence: the gas lesson of F11 became a thermodynamics lesson (slot
 `T0`) under its `agents-abm` address with the first thermodynamics lessons
-(F70), which set `course` and `slot` together; before F70 the lesson has no
-slot and T0 is an unfilled planned slot (ADR 013 decision 6).
+(F70), which set `course` and `slot` together; before F70 the lesson had no
+slot and T0 was an unfilled planned slot (ADR 013 decision 6).
 
 Front matter, validated by a check. The exact schema is fixed by the feature
 that adds each field; "No other key is allowed" stays the rule between

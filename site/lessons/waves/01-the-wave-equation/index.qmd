@@ -1,0 +1,639 @@
+---
+title: "The wave equation"
+description: >-
+  A pulse on a string, solved by finite differences: how the scheme is
+  derived, how its error falls as the grid is refined, and where the Courant
+  number sets a limit that no refinement of the grid can move.
+lesson:
+  id: wave-equation
+  strand: waves
+  order: 1
+  difficulty: 2
+  course: waves
+  slot: W1
+  methods: [simulation]
+  outcomes:
+    - Derive the leapfrog scheme for the wave equation from centred differences
+    - Measure the order of convergence of the scheme against an exact solution
+    - Show that a Courant number above one makes the scheme grow without bound, at the rate the theory predicts
+  related: []
+  format: 2
+  preview: fig-pulse-reflections
+  prerequisites:
+    lessons: [harmonic-oscillator, numerical-integrators]
+    outside:
+      - "Calculus: partial derivatives, and the Taylor expansion of a function to second order"
+      - "Numerical methods: the order of a method and how it is measured from the error at two step sizes"
+---
+
+```{python}
+#| echo: false
+import numpy as np
+
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+Pluck a guitar string and a bump runs along it, reaches the end, and comes
+back turned upside down. The same happens to a pressure pulse in an organ pipe
+and to a ripple on a rope, and none of them carries matter from one end to the
+other: the string only moves up and down, and the shape travels. This lesson
+asks what equation says so, and how a program that knows only values on a
+grid, at discrete times, can reproduce the travelling shape and its
+reflection.
+
+The lesson derives the **wave equation** for a string, turns it into a
+program with centred differences, and then checks the program in the only way
+a numerical method can be trusted: against a case whose exact solution is
+known. Two checks come out of that. The error shrinks as the square of the
+grid spacing, and it is not allowed to shrink at all unless the time step
+stays below a limit that depends on the grid, the **CFL limit**. The lesson
+shows the limit, measures how fast the scheme blows up beyond it, and compares
+the rate with a formula.
+
+## Assumptions
+
+1. **A string of uniform density under uniform tension.** The wave speed is
+   the same everywhere. A string that gets thicker, or a pipe that widens,
+   reflects part of a wave where it changes, and the equation of this lesson
+   has no such term.
+2. **Small slopes.** The derivation keeps only terms linear in the slope of
+   the string. A pluck that is large compared with the length of the string
+   lengthens it, raises the tension, and the speed then depends on the
+   amplitude. The equation is linear because the amplitude is small.
+3. **Motion in one transverse direction, no stiffness, no friction.** A real
+   string resists bending, which makes short waves travel faster than long
+   ones, and it loses energy to the air and to its ends. Both effects would
+   add terms to the equation; here neither exists, and the waves of the
+   exact solution keep their shape for ever.
+4. **The ends are either held fixed or free to slide.** Two idealised
+   conditions. A real end gives, and reflects, a little of the wave to its
+   support.
+5. **A uniform grid with centred differences.** Space is cut into cells of
+   equal size and time into steps of equal length. A shape that changes
+   quickly on the scale of a cell, such as a sharp corner, is not resolved,
+   and the error of the scheme is not small for it.
+6. **Round-off is negligible, except where the lesson amplifies it.** The
+   instability of the last worked example starts from a size of the order of
+   round-off on purpose; every other result lies far above that level.
+
+## From a string to a program {#explanation}
+
+Take a string of mass $\mu$ per unit length under the tension $T$, and let
+$u(x,t)$ be its displacement from rest. A short piece of length
+$\mathrm{d}x$ is pulled at both ends along the string, with the tension $T$.
+When the slope $\partial u/\partial x$ is small, the vertical components of
+the two pulls differ by $T\,\partial^2 u/\partial x^2\,\mathrm{d}x$, and that
+net force accelerates the mass $\mu\,\mathrm{d}x$ of the piece:
+
+$$
+\begin{aligned}
+\mu\,\frac{\partial^2 u}{\partial t^2} &= T\,\frac{\partial^2 u}{\partial x^2}, \\
+\frac{\partial^2 u}{\partial t^2} &= c^2\,\frac{\partial^2 u}{\partial x^2},
+\qquad c = \sqrt{T/\mu}.
+\end{aligned}
+$$
+
+The speed $c$ is the only scale of the equation. It is a speed because of
+what the solutions look like. Any function $f$ gives a solution
+$u = f(x - ct)$, as the chain rule shows: both sides of the equation equal
+$c^2 f''$. The shape $f$ moves to the right without changing, and
+$g(x + ct)$ moves to the left. Every solution on an unbounded line is a sum
+of one of each, **d'Alembert's solution**
+
+$$
+u(x,t) = \tfrac12\bigl[F(x - ct) + F(x + ct)\bigr]
+$$
+
+for a string released at rest in the shape $F$.
+
+An end is a condition on $u$. With the end **fixed**, $u = 0$ there, and the
+sum above has to vanish at the end at every time. That happens when the
+shape is continued past the end as its mirror image with the sign reversed,
+so a pulse arrives at the end and its image leaves from behind it, turned
+upside down. With the end **free**, $\partial u/\partial x = 0$, the
+continuation has the same sign and the pulse comes back upright. Both are
+exact solutions, and the code uses them as the reference.
+
+### Centred differences and the leapfrog scheme
+
+Put the string on a grid, $x_i = i\,\Delta x$ at the times
+$t_n = n\,\Delta t$, and write $u_i^n$ for the value of the displacement
+there. The Taylor expansion of $u$ about $x_i$ gives
+
+$$
+\begin{aligned}
+\frac{u_{i+1} - 2u_i + u_{i-1}}{\Delta x^2}
+&= \frac{\partial^2 u}{\partial x^2} \\
+&\quad + \frac{\Delta x^2}{12}\,\frac{\partial^4 u}{\partial x^4} + \cdots,
+\end{aligned}
+$$
+
+because the odd powers of $\Delta x$ cancel between the two neighbours. The
+same holds in time. Replacing both derivatives of the equation by these
+differences and solving for the one unknown value, the one at the next time,
+gives the **leapfrog scheme**
+
+$$
+\begin{aligned}
+u_i^{n+1} &= 2u_i^n - u_i^{n-1} \\
+&\quad + C^2\left(u_{i+1}^n - 2u_i^n + u_{i-1}^n\right),
+\end{aligned}
+$$
+
+with
+$$
+C = \frac{c\,\Delta t}{\Delta x}.
+$$
+
+The **Courant number** $C$ is the fraction of a cell that a wave crosses in
+one time step. The scheme leaves out terms of order $\Delta x^2$ and
+$\Delta t^2$, so its error should fall by a factor of four when both are
+halved: it is a **second-order** method. The first step cannot use a value at
+$n-1$; it uses the Taylor expansion $u^1 = u^0 + \Delta t\,v^0 + \tfrac12 C^2
+\delta^2 u^0$, with $\delta^2 u^0$ the second difference of $u^0$, which has
+the same order. A fixed end is
+kept at zero. A free end uses a mirror image of the neighbouring node in
+place of the node behind the end, which is the discrete form of "no slope".
+
+### The CFL limit
+
+The value $u_i^{n+1}$ depends on $u_{i-1}^n$, $u_i^n$, and $u_{i+1}^n$ only,
+so information crosses at most one cell per step. The wave equation moves it
+at the speed $c$, which is $C$ cells per step. If $C > 1$ the true value at
+a node depends on a point that the scheme has not looked at. The
+Courant-Friedrichs-Lewy condition says that such a scheme cannot converge;
+it is a necessary condition, shown by the argument just made. For this
+scheme it is also sufficient, which the following calculation shows.
+
+Look for solutions that vary as $\lambda^n e^{\mathrm{i} k x_i}$ in the
+scheme, with $\lambda$ the factor by which a mode of wavenumber $k$ is
+multiplied in one step. Substitution into the scheme gives, with
+$s = \sin(k\Delta x/2)$,
+
+$$
+\lambda + \frac{1}{\lambda} = 2 - 4C^2 s^2 .
+$$
+
+The right side lies between $2 - 4C^2$ and $2$. If $C < 1$ it stays
+strictly between $-2$ and $2$ for every $s$, both roots of the quadratic have
+modulus one, and no mode grows: the scheme only oscillates. At $C = 1$ the
+shortest mode, $s = 1$, reaches $-2$ and the roots coincide at $\lambda = -1$.
+Their modulus is still one, but a repeated root allows a term that grows as
+$n(-1)^n$ when that mode carries an initial velocity. The limit is therefore
+the edge of stability, not a safe interior point. If $C > 1$ the shortest
+mode on the grid, $s = 1$, the zigzag $+,-,+,-$ of neighbouring nodes, has a
+right side below $-2$, and one root is real with modulus
+
+$$
+\lvert\lambda\rvert = \frac{b + \sqrt{b^2 - 4}}{2},
+$$
+
+with $b = 4C^2 - 2 > 2$.
+
+That factor multiplies the zigzag at every step. No spacing helps: the
+condition is on the ratio of the time step to the cell, so refining the
+grid in space without shortening the step moves $C$ up, not down. The
+second-order claim and the stability claim are what the examples below
+check.
+
+## Code
+
+The scheme is `solve` in `pbc.waves.wave`. It advances the whole field at
+once with array operations and records the field every few steps.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.waves import wave
+
+excerpt(wave.solve)
+```
+
+The exact solution and the growth factor are functions too, so that the page
+and the tests compare with the same code.
+
+```{python}
+#| echo: false
+excerpt(wave.reflected_pulse)
+```
+
+```{python}
+#| echo: false
+excerpt(wave.growth_factor)
+```
+
+## Worked examples
+
+```{python}
+#| echo: false
+from pbc.authoring import table
+```
+
+### A pulse and its reflection
+
+The string is [1 m]{.given} long, the wave speed is
+[100 m/s]{.given}, and it is plucked into a Gaussian bump of width
+[0.05 m]{.given} centred at [0.3 m]{.given}, at rest. Both ends are fixed.
+The grid has four hundred cells and the Courant number is one half.
+
+```{python}
+#| label: pulse-run
+from pbc.waves.wave import (
+    courant_number,
+    error_norm,
+    grid,
+    observed_order,
+    reflected_pulse,
+    solve,
+)
+
+LENGTH = 1.0  # string length, m
+SPEED = 100.0  # wave speed, m/s
+
+
+def bump(s):
+    return np.exp(-(((s - 0.3) / 0.05) ** 2))
+
+
+cells = 400
+dx = LENGTH / cells
+dt = 0.5 * dx / SPEED
+x = grid(LENGTH, cells)
+snapshot_times = [0.0, 0.004, 0.008, 0.012, 0.016]
+steps = round(snapshot_times[-1] / dt)
+run = solve(
+    bump(x), np.zeros_like(x), c=SPEED, dx=dx, dt=dt, n_steps=steps, every=1
+)
+pick = [int(np.argmin(np.abs(run.t - t))) for t in snapshot_times]
+exact = [
+    reflected_pulse(bump, x, run.t[j], length=LENGTH, c=SPEED, ends="fixed")
+    for j in pick
+]
+worst = max(error_norm(run.u[j], e) for j, e in zip(pick, exact))
+assert worst < 0.01, "the computed pulse leaves the exact one"
+```
+
+```{python}
+#| label: fig-pulse-reflections
+#| fig-cap: "The bump splits into two halves that run apart, and the one that reaches the fixed end at the right comes back turned upside down. Solid lines are the computed field at five times, dashed lines the exact solution, which they cover."
+#| fig-alt: "Five stacked curves of displacement against position along a string from zero to one metre. The top curve is a single bump near the left. Below it the bump has split in two halves that move apart, then the right half reaches the right end and a half of opposite sign, pointing down, appears to come back from it."
+#| fig-status: simulated
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(6.4, 4.2))
+for row, (j, e) in enumerate(zip(pick, exact)):
+    offset = -1.2 * row
+    ax.plot(x, run.u[j] + offset, color="#00429d")
+    ax.plot(x, e + offset, color="#93003a", linestyle="--", linewidth=1)
+    ax.text(1.02, offset, f"{run.t[j] * 1000:.0f} ms", va="center")
+ax.set_xlabel("position (m)")
+ax.set_ylabel("displacement, shifted for each time (arbitrary units)")
+ax.set_yticks([])
+ax.set_xlim(0, 1.12)
+plt.show()
+```
+
+[The computed field follows the exact solution of d'Alembert with a mirror
+image behind the fixed end.]{.claim type="numerically-verified"
+scope="a Gaussian pulse, fixed ends, Courant number one half, four hundred cells"
+evidence="pulse-run"}
+The largest difference between the computed and the exact displacement, over
+the five times shown, is `{python} f"{worst:.4f}"` in units of the pulse height.
+The pulse that arrives at the right end is turned upside down, which the
+figure shows and the sign of the continuation explains. The data are simulated;
+the check is the exact solution.
+
+### The error falls as the square of the spacing
+
+A single picture cannot tell a first-order method from a second-order one.
+The order is measured: halve the cell, keep the Courant number, compute the
+same time again, and compare the errors. The time is chosen so that the pulse
+has been reflected once. The comparison is made for the pulse and for a
+standing mode, the smooth shape $\sin(3\pi x/L)$, whose exact solution is a
+cosine in time.
+
+```{python}
+#| label: convergence
+from pbc.waves.wave import standing_mode
+
+cell_counts = np.array([50, 100, 200, 400, 800])
+pulse_time = 0.012
+mode_time = 0.0123
+
+
+def final_error(n_cells, shape, reference, time):
+    h = LENGTH / n_cells
+    xs = grid(LENGTH, n_cells)
+    n_steps = round(time / (0.5 * h / SPEED))
+    result = solve(
+        shape(xs),
+        np.zeros_like(xs),
+        c=SPEED,
+        dx=h,
+        dt=0.5 * h / SPEED,
+        n_steps=n_steps,
+        every=n_steps,
+    )
+    return error_norm(result.u[-1], reference(xs, result.t[-1]))
+
+
+def pulse_reference(xs, t):
+    return reflected_pulse(bump, xs, t, length=LENGTH, c=SPEED, ends="fixed")
+
+
+def mode_shape(xs):
+    return np.sin(3 * np.pi * xs / LENGTH)
+
+
+def mode_reference(xs, t):
+    return standing_mode(xs, t, length=LENGTH, n=3, c=SPEED)
+
+
+spacing = LENGTH / cell_counts
+pulse_errors = np.array(
+    [final_error(n, bump, pulse_reference, pulse_time) for n in cell_counts]
+)
+mode_errors = np.array(
+    [final_error(n, mode_shape, mode_reference, mode_time) for n in cell_counts]
+)
+# The coarsest grid of the pulse resolves its width badly, so the order is
+# fitted on the three finest grids.
+pulse_order = observed_order(spacing[-3:], pulse_errors[-3:])
+mode_order = observed_order(spacing, mode_errors)
+assert abs(pulse_order - 2.0) < 0.1 and abs(mode_order - 2.0) < 0.1
+
+table(
+    [
+        (n, h, ep, em)
+        for n, h, ep, em in zip(cell_counts, spacing, pulse_errors, mode_errors)
+    ],
+    [
+        ("cells", "", "d"),
+        ("spacing", "m", ".5f"),
+        ("error of the pulse", "", ".5f"),
+        ("error of the mode", "", ".5f"),
+    ],
+    "The largest error of the displacement at a fixed time, for the pulse and for the standing mode, as the spacing is halved with the Courant number at one half.",
+)
+```
+
+```{python}
+#| label: fig-convergence
+#| fig-cap: "The error of the pulse and of the mode against the spacing, on logarithmic axes. Both fall along a line of slope two; the dotted line shows a slope of one for comparison."
+#| fig-alt: "Log-log plot of error against grid spacing. Two descending lines of markers, one for the pulse and one for the mode, run parallel to a solid reference line of slope two and fall much faster than a dotted reference line of slope one."
+#| fig-status: simulated
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.loglog(spacing, pulse_errors, "o-", color="#00429d", label="pulse")
+ax.loglog(spacing, mode_errors, "s-", color="#93003a", label="standing mode")
+ax.loglog(spacing, mode_errors[-1] * (spacing / spacing[-1]) ** 2, color="gray",
+          label="slope two")
+ax.loglog(spacing, mode_errors[-1] * (spacing / spacing[-1]), color="gray",
+          linestyle=":", label="slope one")
+ax.set_xlabel("grid spacing (m)")
+ax.set_ylabel("largest error of the displacement")
+ax.legend()
+plt.show()
+```
+
+[The error of the scheme falls as the second power of the grid spacing at a
+fixed Courant number.]{.claim type="numerically-verified"
+scope="a pulse and a standing mode, fixed ends, Courant number one half, grids of fifty to eight hundred cells"
+evidence="convergence"}
+The fitted order is `{python} f"{pulse_order:.2f}"` for the pulse, on the
+three finest grids, and `{python} f"{mode_order:.2f}"` for the mode. The pulse
+at the coarsest grid is still outside the regime where the Taylor expansion
+holds, because a cell is not small compared with the width of the pulse; the
+table shows the error of the pulse falling by less than a factor of four
+there. The check is the exact solution, and the order is a measured one: it
+is the slope of a fitted line, with the finite range of grids it was fitted
+on.
+
+### The CFL limit
+
+The same program is now run at a Courant number that the stability argument
+allows and at some that it does not. The starting field is a zigzag of size
+$10^{-10}$, which is the size of an error that round-off alone would leave.
+Everything else is zero. The field is recorded at every step, and the factor
+by which its largest value grows per step over the last ten steps is compared
+with the factor of the formula.
+
+```{python}
+#| label: cfl-run
+from pbc.waves.wave import amplitude_growth, growth_factor, zigzag_run
+
+courants = [0.5, 0.9, 1.0, 1.02, 1.1, 1.5]
+runs = {c: zigzag_run(c) for c in courants}
+rows = []
+for c in courants:
+    result = runs[c]
+    peak = np.max(np.abs(result.u))
+    if c <= 1.0:
+        rows.append((c, peak / 1e-10, None, 1.0))
+    else:
+        rows.append((c, peak / 1e-10, amplitude_growth(result), growth_factor(c)))
+for c, peak_ratio, measured, predicted in rows:
+    if measured is not None:
+        assert abs(measured / predicted - 1.0) < 0.01
+assert all(row[1] < 1.5 for row in rows if row[0] <= 1.0)
+
+table(
+    rows,
+    [
+        ("Courant number", "", ".2f"),
+        ("largest value over forty steps, in units of the start", "", ".3g"),
+        ("measured growth per step", "", ".3f"),
+        ("predicted growth per step", "", ".3f"),
+    ],
+    "The largest value of the field in forty steps from a zigzag of the size of round-off, and, above the limit, its measured and predicted growth per step.",
+)
+```
+
+```{python}
+#| label: fig-cfl
+#| fig-cap: "The largest value of the field at each step, in units of its starting size, for four Courant numbers. Up to one it stays at the level of the start; above one it grows by a fixed factor per step, a straight line on this logarithmic scale."
+#| fig-alt: "Semi-logarithmic plot of the largest value of the field against the step number, from zero to forty. Lines for the Courant numbers one half and one are flat. Lines for one point zero two, one point one and one point five rise as straight lines, steeper for the larger number, and reach many orders of magnitude above the start."
+#| fig-status: simulated
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+for c, colour in zip((0.9, 1.0, 1.02, 1.1, 1.5), ("#4a7ab5", "#00429d", "#c9a227", "#d9622b", "#93003a")):
+    size = np.max(np.abs(runs[c].u), axis=1) / 1e-10
+    ax.semilogy(size, color=colour, label=f"C = {c}")
+ax.set_xlabel("step")
+ax.set_ylabel("largest value (units of the start)")
+ax.legend()
+plt.show()
+```
+
+[Up to a Courant number of one the field stays at the size of its start; above
+it the zigzag grows by the factor that the stability calculation predicts.]{.claim
+type="numerically-verified" scope="a zigzag of size 1e-10, free ends, sixty cells, forty steps"
+evidence="cfl-run"}
+The measured growth per step at the Courant number
+`{python} f"{courants[3]}"` is `{python} f"{rows[3][2]:.3f}"` against
+`{python} f"{rows[3][3]:.3f}"` predicted, and at `{python} f"{courants[5]}"` it
+is `{python} f"{rows[5][2]:.2f}"` against `{python} f"{rows[5][3]:.2f}"`. A
+Courant number only two per cent above the limit multiplies the zigzag by
+`{python} f"{rows[3][3]:.2f}"` at every step, so a start of the size of
+round-off reaches the size of the pulse after
+`{python} f"{np.log(1e10) / np.log(rows[3][3]):.0f}"` steps. A run past the
+limit does not degrade gracefully, it ends. At exactly one the scheme
+has no error at all on the grid: a wave crosses one cell per step, which is
+what the grid values need to follow it exactly, and the second exercise
+checks it.
+
+## Limits {#limits}
+
+- **Only a one-dimensional, linear, lossless, uniform medium.** The exact
+  solution exists because of these. A wave in a plane or in space spreads and
+  weakens, a medium that changes reflects, and a nonlinear one steepens its
+  waves into shocks. The scheme still applies with extra terms; the exact
+  checks of this lesson do not.
+- **The order is a property of smooth solutions.** A shape with a corner has
+  a larger error than the second-order law says and converges more slowly. The
+  pulse here is smooth and resolved on all but the coarsest grid.
+- **Stability is not accuracy.** At a Courant number below one the scheme
+  does not blow up, and still shifts the phase of every wave a little; the
+  next lesson measures that. A scheme that is stable is allowed to be wrong.
+- **The growth rate is that of the shortest mode.** The prediction is for the
+  zigzag, which dominates after a few steps. On a run that starts from a
+  smooth shape, the zigzag has to be seeded by round-off first, which takes
+  longer and depends on the machine; the lesson seeds it on purpose.
+
+::: {.exercise .self-check}
+A student halves the cell of a stable run to get a better answer, and keeps
+the same time step. What happens, and why?
+
+::: {.choices}
+::: {.choice}
+The error halves, because the cell is half as large.
+
+::: {.feedback}
+No. The scheme is second order, and the error would fall by a factor of four
+if the time step were halved as well. With the time step kept, the Courant
+number changes, and the statement does not follow.
+:::
+:::
+
+::: {.choice correct="true"}
+The Courant number doubles. If it was above one half, it is now above one
+and the run grows without bound.
+
+::: {.feedback}
+Correct: the Courant number is the speed times the time step over the cell,
+so halving the cell doubles it. Refining the grid in space requires a
+shorter step in time.
+:::
+:::
+
+::: {.choice}
+Nothing changes, because the scheme is stable.
+
+::: {.feedback}
+The scheme is stable only for a Courant number at most one, and the Courant
+number depends on the cell.
+:::
+:::
+:::
+
+::: {.solution}
+The Courant number is $C = c\,\Delta t/\Delta x$. With $\Delta t$ kept and
+$\Delta x$ halved, $C$ doubles. A run at $C = 0.6$ becomes a run at
+$C = 1.2$, beyond the limit, and the zigzag grows by a fixed factor at every
+step. The remedy is to refine in time with the space, which also gives the
+fourth of the error that second order promises.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**A free end.** Run the pulse of the first example with both ends free
+instead of fixed and compare it with the exact solution. Does the reflected
+pulse come back upright?
+
+::: {.hint}
+The solver takes `left` and `right`, and the exact solution takes `ends`.
+:::
+
+::: {.solution}
+```{python}
+free = solve(
+    bump(x), np.zeros_like(x), c=SPEED, dx=dx, dt=dt, n_steps=steps,
+    left="free", right="free", every=steps,
+)
+free_exact = reflected_pulse(
+    bump, x, free.t[-1], length=LENGTH, c=SPEED, ends="free"
+)
+free_error = error_norm(free.u[-1], free_exact)
+returned = free.u[-1][x > 0.75]
+```
+
+The largest difference from the exact solution is `{python} f"{free_error:.4f}"`.
+The part of the field in the right quarter of the string has its largest
+value `{python} f"{returned.max():.2f}"` and its smallest
+`{python} f"{returned.min():.2f}"`: it is positive, so it returned upright, as
+the continuation with the same sign says.
+:::
+:::
+
+::: {.exercise}
+**Exact at the limit.** Run the standing mode of the second example at a
+Courant number of exactly one, on one hundred cells, until the time of the
+example. How large is the error? Why is it so small?
+
+::: {.hint}
+Compare the error with the round-off of double-precision numbers.
+:::
+
+::: {.solution}
+```{python}
+n_cells = 100
+h = LENGTH / n_cells
+xs = grid(LENGTH, n_cells)
+at_limit = solve(
+    mode_shape(xs), np.zeros_like(xs), c=SPEED, dx=h, dt=h / SPEED,
+    n_steps=round(mode_time / (h / SPEED)), every=round(mode_time / (h / SPEED)),
+)
+limit_error = error_norm(at_limit.u[-1], mode_reference(xs, at_limit.t[-1]))
+```
+
+The error is below `{python} f"{max(1e-12, 10 ** np.ceil(np.log10(limit_error))):.0e}"`,
+which is round-off, not method error. At $C = 1$ the two error terms of the
+scheme, in space and in time, cancel: the scheme moves each value exactly one
+cell per step, and a wave that is a function of $x - ct$ does the same.
+:::
+:::
+
+::: {.exercise}
+**How much does a zigzag grow?** A run at $C = 1.05$ has a zigzag of size
+$10^{-10}$. After how many steps has the zigzag grown to the size of a pulse
+of height one?
+
+::: {.hint}
+The growth factor per step comes from the formula of the lesson, and the
+number of steps from a logarithm.
+:::
+
+::: {.solution}
+```{python}
+factor = growth_factor(1.05)
+needed = np.log(1e10) / np.log(factor)
+```
+
+The factor is `{python} f"{factor:.3f}"` per step, so
+`{python} f"{needed:.0f}"` steps bring $10^{-10}$ to one. That is a few
+dozen steps of a run that would otherwise need thousands; a program above the
+limit fails within the first fraction of its run.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=["src/pbc/waves/wave.py"],
+    tests=["tests/unit/test_waves.py"],
+)
+```

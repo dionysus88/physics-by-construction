@@ -1,0 +1,643 @@
+---
+title: "Double pendulum and chaos"
+description: >-
+  Two rods hung from each other: a motion that is regular at small angles and
+  chaotic at large ones, told apart by how fast two nearly identical starts
+  separate, and measured by an estimate of the Lyapunov exponent that is
+  checked against its expected sign in both regimes.
+lesson:
+  id: double-pendulum-chaos
+  strand: mechanics
+  order: 13
+  difficulty: 3
+  course: mechanics
+  slot: M9
+  methods: [simulation]
+  outcomes:
+    - Simulate the double pendulum and check it against its small-oscillation modes and its energy
+    - Measure how two nearly identical starts separate, in a regular and in a chaotic motion
+    - Estimate the largest Lyapunov exponent and say what its sign means
+    - State how long a chaotic motion can be predicted, and what a finer step does and does not change
+  related: [lagrangian-mechanics]
+  format: 2
+  preview: fig-separation
+  prerequisites:
+    lessons: [energy-conservation, numerical-integrators]
+    outside:
+      - "Calculus: the chain rule, and the exponential function as the solution of a rate proportional to the amount"
+      - "Trigonometry: the sine and cosine of a difference of angles"
+      - "Logarithms: the natural logarithm of a ratio, and its use to read a growth rate from a straight line on a logarithmic axis"
+      - "Linear algebra: the Euclidean norm of a vector"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+
+lesson_header()
+```
+
+Hang a second rod from the end of a pendulum, with a bob on each, and let the
+two swing in a vertical plane. Nothing in the setup is random: two masses, two
+rods, gravity, and the same laws as in every lesson before this one. Yet
+release it from a large angle twice, with the second start differing from the
+first by less than a hair's breadth, and for a while the two swings are the
+same and then they are not. The motion is deterministic and it cannot be
+predicted for long, and the same is true of weather, of the tumbling of
+bodies in orbit, and of a drop of dye in a stirred liquid. The question of the
+lesson is how to measure that, and how to tell a motion that is
+only complicated from one that is chaotic.
+
+The measure is the rate at which two nearby starts move apart: the **Lyapunov
+exponent**. The lesson builds the double pendulum on the stepping interface of
+the earlier lessons, trusts it for two independent reasons (the frequencies of
+its small oscillations and its energy), watches the separation of two starts in
+a regular and in a chaotic regime, and turns that into an estimate whose sign
+is checked in both. It ends with what the number does not say.
+
+## Assumptions
+
+The model and the program rest on these assumptions. Each one names what
+goes wrong when it does not hold.
+
+1. **Two rigid, massless rods in a plane, with point bobs.** Two angles
+   describe the configuration, and the tensions in the rods do no work. A
+   rod with mass, a bob of finite size, or a swing out of the plane (a
+   spherical double pendulum) is a different system with a different
+   number of coordinates.
+2. **No friction at the joints and no drag.** The energy is conserved and the
+   motion never settles. With friction the motion decays onto the hanging
+   rest position and has no chaos left to measure.
+3. **Constant gravity and constant lengths.** The weights are uniform and
+   the rods do not stretch.
+4. **The equations are those of the Lagrangian lesson.** They are given
+   here, and two checks stand in for the derivation: the frequencies of the
+   small oscillations, and the energy. The next lesson derives them from one
+   function and compares them with the program.
+5. **The step resolves the motion.** The classical Runge-Kutta method with a
+   step far below the fastest time scale of the pendulum keeps the energy
+   within a small bound for the runs here. A chaotic run amplifies every
+   error of the step, so a trajectory of a given run is the trajectory of the
+   method and that step, not an exact one; what can be trusted is a
+   statistical property of the motion, such as the exponent, and the short
+   time before errors have grown.
+6. **The separation is small.** The estimate follows two starts that differ
+   by a distance far smaller than the motion itself, and puts them back
+   together before the difference stops being small. A separation as large
+   as the motion measures the size of the region the motion fills, not the
+   exponent.
+
+## The double pendulum and the exponent {#explanation}
+
+### The equations of motion
+
+Let $\theta_1$ be the angle of the first rod from the downward vertical, and
+$\theta_2$ the angle of the second rod from the same line. The bobs have the
+masses $m_1$ and $m_2$ and the rods the lengths $l_1$ and $l_2$. The state of
+the program is the pair of angles as the position and the pair of angular
+velocities as the velocity, the same layout as the one-coordinate pendulum
+of the energy lesson with two entries instead of one.
+
+With $\Delta = \theta_1 - \theta_2$ the energy is
+
+$$
+E = \tfrac12 (m_1 + m_2)\, l_1^2\,\dot\theta_1^2
+  + \tfrac12 m_2\, l_2^2\,\dot\theta_2^2
+  + m_2\, l_1 l_2\, \dot\theta_1 \dot\theta_2 \cos\Delta
+  - (m_1 + m_2)\, g\, l_1 \cos\theta_1 - m_2\, g\, l_2 \cos\theta_2 .
+$$
+
+The cross term is why the double pendulum is not two pendulums side by side:
+the velocity of the second bob is the velocity of the first plus its own, and
+the kinetic energy of the sum has a product of the two angular velocities.
+The angular accelerations that follow, from the Lagrangian of the next
+lesson, are
+
+$$
+\ddot\theta_1 = \frac{-g(2m_1 + m_2)\sin\theta_1 - m_2 g \sin(\theta_1 - 2\theta_2)
+  - 2\sin\Delta\; m_2\,(\dot\theta_2^2 l_2 + \dot\theta_1^2 l_1\cos\Delta)}
+  {l_1\,(2m_1 + m_2 - m_2\cos 2\Delta)},
+$$
+
+$$
+\ddot\theta_2 = \frac{2\sin\Delta\,\bigl(\dot\theta_1^2 l_1 (m_1 + m_2)
+  + g(m_1 + m_2)\cos\theta_1 + \dot\theta_2^2 l_2 m_2\cos\Delta\bigr)}
+  {l_2\,(2m_1 + m_2 - m_2\cos 2\Delta)} .
+$$
+
+Both have the same denominator, which is the determinant of the matrix that
+multiplies the accelerations, and it never vanishes for positive masses.
+Nothing here is checked by being displayed. Two facts that can be computed
+check it. For small angles the sines and cosines can be linearised and the
+motion is a sum of two normal modes; for equal masses and equal rods their
+squared angular frequencies are
+
+$$
+\omega_\pm^2 = \frac{g}{l}\,(2 \pm \sqrt 2),
+$$
+
+the slower with the two bobs swinging together (the outer angle
+$\sqrt 2$ times the inner), the faster with them against each other. And the
+energy above must stay constant along a simulated motion, to the accuracy
+the earlier lessons established for the method.
+
+### Sensitivity to the start
+
+Take a start and a second start that differs from it by a small vector
+$\delta_0$ in the combined space of the two angles and the two angular
+velocities, and follow both. Let $d(t)$ be the length of the difference.
+While it is small the difference obeys the linearised equations of motion, so
+its growth does not depend on its size. In a **regular** motion it grows
+slowly, as a power of the time. In a **chaotic** motion it grows
+exponentially,
+
+$$
+d(t) \approx d_0\, e^{\lambda t},
+\qquad
+\lambda = \lim_{t \to \infty}\; \lim_{d_0 \to 0}\; \frac1t \ln\frac{d(t)}{d_0},
+$$
+
+and $\lambda$, with the unit one per second, is the **largest Lyapunov
+exponent**. The sign says what kind of motion it is. A positive exponent means
+that any error in the start, however small, is multiplied by a factor of $e$
+every $1/\lambda$ seconds. Zero means that errors grow at most as a power of
+time, as in the regular swing of a small oscillation. The exponent is a
+property of the motion and not of the pair of starts, for almost every pair.
+
+The consequence is a **predictability horizon**. If the start is known to a
+distance $d_0$ and a prediction is useful while the error stays below
+$\Delta$ (both measured as the distance in phase space, with the equal-weight
+metric of the estimate below, so $\Delta$ in the same units), the useful time is
+
+$$
+t_h \approx \frac1\lambda \ln\frac{\Delta}{d_0}.
+$$
+
+It is a logarithm of the accuracy of the start: a measurement a million times
+better buys only the same few extra $1/\lambda$ of useful prediction, once.
+
+### How the exponent is estimated
+
+The definition needs an infinitely small separation and an infinite time, and
+a program has neither. The estimate follows the pair of starts for a time
+$\tau$, measures the length $d_1$ of their difference, adds $\ln(d_1/d_0)$ to a
+running sum, and then moves the second start back along the line to the first
+until their distance is $d_0$ again. It repeats the rescaling to the end of
+the run, and the estimate is the sum divided by the time. The rescaling does
+two things: it keeps the separation inside the range where the linearised
+growth holds, and it keeps it from reaching the size of the whole region the
+motion fills, where it cannot grow any more. A single separation that is
+allowed to grow measures that size after a short while, and gives an exponent
+that falls to zero with the time whatever the motion.
+
+A finite run gives a finite-time estimate. In a regular motion its value falls
+as the run lengthens, roughly as one over the time, towards zero. In a chaotic
+motion it settles near a positive value and varies a little from one
+trajectory to another. Whether a run belongs to one or the other is read from
+that behaviour, not from one number.
+
+## The program {#code}
+
+The reusable code is `pbc.mechanics.chaos`. The double pendulum is an
+acceleration in the sense of the stepping interface, so every stepper of the
+earlier lessons applies to it unchanged.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.mechanics import chaos
+
+excerpt(
+    chaos.double_pendulum,
+    notes={
+        "den = 2.0 * m1 + m2 - m2 * np.cos(2.0 * delta)": (
+            "The denominator both accelerations share: the determinant of the"
+            " mass matrix, positive for positive masses."
+        ),
+        "return np.array([a1, a2])": (
+            "The two angular accelerations, in the order of the angles, in"
+            " radians per second squared."
+        ),
+    },
+)
+```
+
+The energy of the pendulum, with the cross term of the two angular velocities:
+
+```{python}
+#| echo: false
+excerpt(chaos.double_pendulum_energy)
+```
+
+The estimate of the exponent, with the rescaling of the second start:
+
+```{python}
+#| echo: false
+excerpt(
+    chaos.lyapunov_exponent,
+    notes={
+        "total += np.log(distance / separation)": (
+            "The growth since the last rescaling, as a logarithm, added to a"
+            " running sum. Logarithms add where the growth factors multiply."
+        ),
+        "gap *= separation / distance": (
+            "The rescaling: the same direction, the original distance, so the"
+            " second start stays near the first."
+        ),
+        "running.append(total / (first.t - initial.t))": (
+            "The estimate so far, in one per second: the sum divided by the"
+            " time. The list shows how the estimate settles, or does not."
+        ),
+    },
+)
+```
+
+## Worked examples
+
+### Two checks of the equations
+
+The pendulum of the examples has [equal masses of one kilogram]{.given} and
+[rods of one metre]{.given}. The first check starts the pendulum in the slow
+and in the fast normal mode, with an amplitude small enough for the linear
+theory, and measures the period from the passages of the first angle through
+zero, interpolated within the step. The second runs the pendulum from a
+regular and from a chaotic start and reports the drift of the energy.
+
+```{python}
+#| label: modes-and-energy
+import numpy as np
+from scipy.constants import g
+
+from pbc.authoring import table
+from pbc.mechanics.chaos import (
+    double_pendulum,
+    double_pendulum_energy,
+    lyapunov_exponent,
+)
+from pbc.mechanics.dynamics import State, simulate
+from pbc.mechanics.integrators import rk4_step
+
+mass, length = 1.0, 1.0  # kg, m
+pendulum = double_pendulum(mass, mass, length, length)
+dt = 0.01  # s
+
+
+def released(first, second):
+    """At rest, with the two rods at the given angles (rad)."""
+    return State(t=0.0, x=[first, second], v=[0.0, 0.0])
+
+
+def run(start, duration):
+    return simulate(start, pendulum, dt, round(duration / dt), step=rk4_step)
+
+
+def periods(trajectory):
+    """The times between the passages of the first angle through zero in the
+    same direction, interpolated within the step (s)."""
+    s, t = trajectory.x[:, 0], trajectory.t
+    before = np.where((s[:-1] > 0) & (s[1:] <= 0))[0]
+    crossings = t[before] + s[before] / (s[before] - s[before + 1]) * (t[before + 1] - t[before])
+    return np.diff(crossings)
+
+
+rows = []
+for label, ratio, factor in (("slow mode", np.sqrt(2.0), 2.0 - np.sqrt(2.0)), ("fast mode", -np.sqrt(2.0), 2.0 + np.sqrt(2.0))):
+    small = 1e-3  # rad
+    trajectory = run(released(small, small * ratio), 12.0)
+    analytic = 2.0 * np.pi / np.sqrt(g / length * factor)
+    rows.append((label, analytic, np.mean(periods(trajectory))))
+
+table(
+    rows,
+    columns=[("mode", "", ""), ("period from the equations", "s", ".4f"), ("simulated period", "s", ".4f")],
+    caption="Period of the two normal modes of the small oscillations: the closed form and the simulation, to four decimals.",
+)
+```
+
+[The simulated periods of both modes agree with the closed form to the four
+digits shown]{.claim type="numerically-verified" scope="equal masses and rods,
+amplitude of one thousandth of a radian, classical Runge-Kutta method"
+evidence="modes-and-energy"}, so the accelerations carry the right linear
+part: the restoring torques, the coupling of the two rods, and the factor
+$\sqrt 2$ that separates the modes. The nonlinear terms, which decide the
+chaos, are not tested by a linear check. The energy is the second check, and
+it sees them:
+
+```{python}
+#| label: energy-drift
+def drift(trajectory):
+    energy = double_pendulum_energy(trajectory.x, trajectory.v, mass, mass, length, length)
+    return np.max(np.abs(energy - energy[0])) / abs(energy[0])
+
+
+regular_start, chaotic_start = released(0.2, 0.2), released(2.0, 2.0)
+regular_run, chaotic_run = run(regular_start, 50.0), run(chaotic_start, 50.0)
+
+table(
+    [
+        ("regular", 0.2, drift(regular_run)),
+        ("chaotic", 2.0, drift(chaotic_run)),
+    ],
+    columns=[("start", "", ""), ("both angles", "rad", ".1f"), ("energy drift over 50 s", "", ".1e")],
+    caption="Relative energy drift of the double pendulum released at rest with both rods at the same angle, over fifty seconds, classical Runge-Kutta method.",
+)
+```
+
+[The energy stays within a small fraction of its start in both regimes]{.claim
+type="numerically-verified" scope="the two starts of the table, fifty seconds,
+classical Runge-Kutta method with the stated step" evidence="energy-drift"}, but
+the drift is `{python} f"{drift(chaotic_run) / drift(regular_run):.0e}"` times
+larger in the chaotic run. The energy drift of the method grows where the
+motion is violent, and this is the first sign that the program is not as exact
+in the chaotic regime as in the regular one.
+
+### Two starts that differ by a hair
+
+The cell starts a second pendulum [one hundred-millionth of a radian]{.given}
+away in the first angle and follows both for thirty seconds. The separation is
+the length of the difference of the four-component states: two angles in
+radians and two angular velocities in radians per second, with equal weight,
+so the distance is in units that measure time in seconds. A different time
+scale would change the distances and the tolerances quoted below, not the
+exponent.
+
+```{python}
+#| label: fig-separation
+#| fig-cap: "The distance between two nearly identical starts, on a logarithmic axis. In the regular motion it grows slowly and stays far below the size of the motion; in the chaotic motion it grows along a straight line, an exponential, until it reaches the size of the motion and cannot grow any more. The dashed line has the slope of the Lyapunov exponent estimated below."
+#| fig-alt: "Line plot of the distance between two starts against time, with a logarithmic vertical axis. The curve of the regular start rises slowly and stays low with small wiggles. The curve of the chaotic start rises steeply along a straight line for about ten seconds, then levels off at a high value and fluctuates. A dashed straight line with a slope that matches the steep part is drawn through the start of the chaotic curve."
+#| fig-status: simulated
+import matplotlib.pyplot as plt
+
+from pbc.authoring import FIGURE_COLOURS
+
+offset = 1e-8  # rad
+
+
+def separation(first, second):
+    return np.linalg.norm(np.hstack([first.x - second.x, first.v - second.v]), axis=1)
+
+
+def shifted(start):
+    return State(t=0.0, x=start.x + np.array([offset, 0.0]), v=start.v)
+
+
+regular_gap = separation(regular_run, run(shifted(regular_start), 50.0))
+chaotic_gap = separation(chaotic_run, run(shifted(chaotic_start), 50.0))
+
+estimates = {
+    name: lyapunov_exponent(start, pendulum, dt, round(100.0 / dt))
+    for name, start in (("regular", regular_start), ("chaotic", chaotic_start))
+}
+rate = estimates["chaotic"].exponent
+
+fig, ax = plt.subplots(figsize=(6.4, 3.6))
+ax.semilogy(regular_run.t, regular_gap, color=FIGURE_COLOURS[0], linestyle="-", label="regular start")
+ax.semilogy(chaotic_run.t, chaotic_gap, color=FIGURE_COLOURS[1], linestyle="--", label="chaotic start")
+t_line = np.linspace(0.0, 14.0, 50)
+ax.semilogy(t_line, offset * np.exp(rate * t_line), color="#57606a", linestyle=":", label="slope of the exponent")
+ax.set_xlabel("time (s)")
+ax.set_ylabel("distance between the two starts")
+ax.legend(loc="lower right")
+plt.show()
+```
+
+The figure is the simulation of the two starts, with the line drawn from the
+exponent that the next example estimates. The regular separation reaches
+`{python} f"{regular_gap.max():.0e}"` at the end and the chaotic separation
+`{python} f"{chaotic_gap.max():.1f}"`, which is the size of the motion itself:
+the starts began `{python} f"{offset:.0e}"` apart. The chaotic curve is straight on the
+logarithmic axis for the first stretch, which is what an exponential looks
+like, and then the separation can grow no more because the two pendulums are
+anywhere in the same region and the distance between two places in it is
+bounded.
+
+### The estimate in both regimes
+
+```{python}
+#| label: lyapunov-table
+rows = []
+for name, estimate in estimates.items():
+    row = [name]
+    for horizon in (25.0, 50.0, 100.0):
+        row.append(estimate.running[np.searchsorted(estimate.t, horizon) - 1])
+    rows.append(row)
+
+table(
+    rows,
+    columns=[("start", "", ""), ("after 25 s", "1/s", ".3f"), ("after 50 s", "1/s", ".3f"), ("after 100 s", "1/s", ".3f")],
+    caption="The estimate of the largest Lyapunov exponent of the two starts of the figure, after three lengths of the run, to three decimals.",
+)
+```
+
+[The estimate for the regular start falls with the length of the run and ends
+near zero, and the estimate for the chaotic start is positive and
+steady]{.claim type="numerically-verified" scope="the two starts, one hundred
+seconds, classical Runge-Kutta method, separation one hundred-millionth"
+evidence="lyapunov-table"}: the regular estimate went from
+`{python} f"{rows[0][1]:.3f}"` to `{python} f"{rows[0][3]:.3f}"` per second, the
+chaotic one from `{python} f"{rows[1][1]:.2f}"` to
+`{python} f"{rows[1][3]:.2f}"`. So a lone number is not the evidence, the
+behaviour with the length of the run is. The chaotic value corresponds to a
+factor of $e$ in the separation every `{python} f"{1.0 / rate:.2f}"` s.
+
+The estimator itself has to be checked on a case where the answer is known. A
+particle at a hyperbolic point, with $\ddot x = \lambda^2 x$, has the exponent
+$\lambda$ exactly, and the same code estimates it:
+
+```{python}
+#| label: known-exponent
+known = 1.3  # 1/s
+check = lyapunov_exponent(
+    State(t=0.0, x=[0.0], v=[0.0]),
+    lambda t, x, v: known**2 * x,
+    dt=0.01,
+    n_steps=3000,
+    separation=1e-6,
+)
+table(
+    [(known, check.exponent, abs(check.exponent / known - 1.0))],
+    columns=[("exponent", "1/s", ".3f"), ("estimate", "1/s", ".4f"), ("relative difference", "", ".1e")],
+    caption="The estimator on the hyperbolic point, whose exponent is known, to the precision shown.",
+)
+```
+
+[The estimator recovers the known exponent to a fraction of a per cent]{.claim
+type="numerically-verified" scope="the linear hyperbolic point, thirty
+seconds" evidence="known-exponent"}; the small remainder is the first
+interval, before the second start has lined up with the growing direction.
+
+### What a finer step changes
+
+A chaotic trajectory amplifies the error of every step, so a run with half the
+step is a different trajectory after a while. The cell compares the two
+trajectories of the chaotic start and the estimates of the exponent from them.
+
+```{python}
+#| label: step-halved
+fine = 0.005  # s
+coarse_run = chaotic_run
+fine_run = simulate(chaotic_start, pendulum, fine, round(50.0 / fine), step=rk4_step)
+gap = np.linalg.norm(
+    np.hstack([coarse_run.x - fine_run.x[::2], coarse_run.v - fine_run.v[::2]]), axis=1
+)
+diverged = coarse_run.t[np.argmax(gap > 1e-3)]
+fine_estimate = lyapunov_exponent(chaotic_start, pendulum, fine, round(100.0 / fine), rescale_every=20)
+
+table(
+    [
+        ("step of the first run", dt, estimates["chaotic"].exponent),
+        ("half the step", fine, fine_estimate.exponent),
+    ],
+    columns=[("run", "", ""), ("step", "s", ".3f"), ("estimate after 100 s", "1/s", ".3f")],
+    caption="The estimate of the exponent of the chaotic start at two steps, to three decimals.",
+)
+```
+
+The trajectories agree until `{python} f"{diverged:.0f}"` s and then differ by more
+than a thousandth: after that time the position of the pendulum depends on
+the step, and no change of method restores it. The exponent is the same to
+within `{python} f"{abs(fine_estimate.exponent / estimates['chaotic'].exponent - 1.0):.0%}"`, because it is a property of the motion
+as a whole that the step does not change. This is what a chaotic simulation can
+claim: the first seconds as a trajectory, and the exponent as a statistic.
+
+## Limits {#limits}
+
+- The double pendulum is one system at one energy. The exponent of a start
+  depends on where it begins, as the first exercise shows: the motion changes
+  from regular to chaotic with the energy, and there is no single exponent for
+  the pendulum.
+- The estimate is finite-time and finite-separation. For the chaotic start
+  the estimate settles to a few per cent between runs of different length and
+  between steps, not to the digits shown, and no confidence interval is
+  computed here.
+- The estimator follows one direction of the separation, the largest. A
+  system has one exponent per direction, and their sum says how a volume of
+  starts contracts or expands; the lesson on phase space returns to it.
+- A Lyapunov exponent is not proof of chaos. A positive finite-time estimate
+  can come from an unstable motion that leaves for infinity, or from a
+  rescaling too coarse for the motion; the check here is that the estimate is
+  positive, steady with the length of the run, and absent in the regular start.
+- The accuracy of a single chaotic trajectory is not claimed beyond the time
+  after which the finer step disagrees with the coarser one.
+- The equations are checked through the linear modes and the energy. A mistake
+  in a nonlinear term that leaves both unchanged would pass; the next lesson
+  compares the equations with an independent derivation.
+
+::: {.exercise .self-check}
+A colleague reports a positive Lyapunov estimate of one per second for a
+pendulum and says that the simulated trajectory of one minute is therefore
+unreliable and the whole simulation is worthless. What do you answer, and what
+would you compute to find out what the simulation can be used for?
+
+::: {.solution}
+The sign says that errors grow exponentially, not that the simulation is
+wrong. An error is multiplied by a factor of $e$ every second, so the
+trajectory is reliable for the horizon $t_h \approx \ln(\Delta/d_0)$ seconds,
+the logarithm of the tolerated error over the error of the start, and
+unreliable beyond it. The simulation is still good for what does not depend
+on the single path: the exponent itself, the energy, the region the motion
+fills. To find out, repeat the run with a finer step, as the last worked
+example does, and take the time at which the two runs part as the horizon of
+this simulation; check the energy drift. A trajectory-by-trajectory use needs
+the horizon, a statistical use does not.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**How long can it be predicted?** The start of the chaotic pendulum is known
+to [one millionth of a radian]{.given}. Using the exponent of the chaotic start,
+estimate how long a prediction stays within a phase-space distance of
+[a hundredth]{.given} (radians and radians per second, equal weight) of the true motion, then measure it by a simulation of the start and of the
+start moved by the error.
+
+::: {.hint}
+The horizon is the logarithm of the tolerated error over the error of the
+start, divided by the exponent.
+:::
+
+::: {.hint}
+Measure the time at which the distance between the runs first exceeds the
+tolerance, and expect it to be of the order of the formula, not equal to it.
+:::
+
+::: {.solution}
+```{python}
+d0, tolerance = 1e-6, 1e-2
+horizon = np.log(tolerance / d0) / rate
+other = run(State(0.0, chaotic_start.x + np.array([d0, 0.0]), chaotic_start.v), 50.0)
+gap_curve = separation(chaotic_run, other)
+measured = chaotic_run.t[np.argmax(gap_curve > tolerance)]
+
+table(
+    [(horizon, measured)],
+    columns=[("from the exponent", "s", ".1f"), ("measured", "s", ".1f")],
+    caption="The time to lose a phase-space distance of a hundredth from a start known to a millionth of a radian, to one decimal.",
+)
+```
+
+The two agree to the factor that the fluctuation of the growth rate along the
+path allows, `{python} f"{measured / horizon:.2f}"`. A hundred times better
+knowledge of the start, an error of $d_0/100$, adds
+`{python} f"{np.log(100.0) / rate:.1f}"` s: the logarithm that the formula
+promises.
+:::
+:::
+
+::: {.exercise}
+**Where does the chaos begin?** Release the pendulum at rest with both rods at
+the same angle, for the angles [0.5, 1.0, 1.5, 2.0, and 2.5 radians]{.given},
+and estimate the exponent over [fifty seconds]{.given} for each. At which of
+these angles does the sign of the behaviour change?
+
+::: {.hint}
+Read each estimate at twenty-five and at fifty seconds. A regular start has
+an estimate that falls; a chaotic one holds.
+:::
+
+::: {.solution}
+```{python}
+rows = []
+for angle in (0.5, 1.0, 1.5, 2.0, 2.5):
+    estimate = lyapunov_exponent(released(angle, angle), pendulum, dt, round(50.0 / dt))
+    middle = estimate.running[np.searchsorted(estimate.t, 25.0) - 1]
+    rows.append((angle, middle, estimate.exponent))
+
+table(
+    rows,
+    columns=[("both angles", "rad", ".1f"), ("estimate after 25 s", "1/s", ".3f"), ("estimate after 50 s", "1/s", ".3f")],
+    caption="The estimate of the exponent for five starts of increasing energy, to three decimals.",
+)
+```
+
+The estimate falls between twenty-five and fifty seconds by
+`{python} f"{1.0 - rows[0][2] / rows[0][1]:.0%}"` and
+`{python} f"{1.0 - rows[1][2] / rows[1][1]:.0%}"` at the two smallest angles, and
+is a factor of `{python} f"{rows[2][1] / rows[1][1]:.0f}"` larger, and nearly steady
+(`{python} f"{abs(1.0 - rows[2][2] / rows[2][1]):.0%}"` change), at
+`{python} f"{rows[2][0]:.1f}"` rad. Within these five starts the change from
+regular to chaotic is between the second and the third. The line is not sharp:
+the double pendulum has regular and chaotic starts at the same energy near the
+transition, a single estimate of fifty seconds can mistake a long regular
+episode for chaos, and a single pair of angles does not draw the boundary.
+:::
+:::
+
+## Reproduce this
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/mechanics/dynamics.py",
+        "src/pbc/mechanics/integrators.py",
+        "src/pbc/mechanics/chaos.py",
+    ],
+    tests=[
+        "tests/unit/test_dynamics.py",
+        "tests/unit/test_integrators.py",
+        "tests/unit/test_chaos.py",
+    ],
+)
+```
