@@ -14,6 +14,19 @@ decision 8 require before a check runs less often. Decision 11 amends ADR
 shards whose results one assembly turns into the one built site. ADR 005
 is unchanged.
 
+**Acceptance, by the owner on 2026-10-15: decisions 1 to 10 are accepted.**
+They are implemented by F61 (Issue #147; pull requests #152, #158, #159,
+#160, #164, #166, and the fixes #177 and #178). **Decision 11 (the lesson
+shards and the assembly, F113) is not accepted:** it is paused (requirements
+decision 35), its implementation was closed unmerged (pull request #175,
+Issue #150 open, branch preserved for reference), and it stays unaccepted
+and unimplemented; [ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md),
+proposed, would supersede it if the owner accepts it. Decision 7's budget
+of 12 minutes is amended by ADR 015, and its timeout of a full run by the
+interim full-run gate recorded below. The criterion of F61 that asks for
+this acceptance is its criterion 8; the other criteria of F61 are decided
+on Issue #147.
+
 Implementation of F61 (Issue #147) in stages: the input digest, the check
 identity, the selection, the store, the regenerated context, and the page
 checks by selection (decisions 1, 3, 5, 6, 9, 10) were merged with pull
