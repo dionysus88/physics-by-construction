@@ -20,6 +20,18 @@ guarded `scripts/` as a whole, which made `scripts/verify.conf` a guarded
 file: nearly every feature adds a check there, so the self-tests still ran in
 most local runs.
 
+[ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md)
+decision 7, proposed by the change cycle
+`pbc-planning-change-four-workstreams` (2026-10-15) and not accepted,
+would amend decision 3 and the restatement of ADR 003 decision 1 in
+decision 5 if the owner accepts it on F118's evidence: for an ordinary
+change, the finish and review evidence of the agent workflow would be a
+recorded targeted run that performs the checks that need no site build
+and the per-lesson checks of the selected lessons, while a run without
+options still runs every product check and CI runs every check on every
+pull request and push. Until that acceptance, decisions 3 and 5 stand as
+written. F119 records the amendment here on acceptance.
+
 Date: 2026-10-06
 
 ## Context

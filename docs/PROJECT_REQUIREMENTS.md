@@ -1,16 +1,17 @@
 # Project Requirements
 
 Status: Approved
-Approved at: 2026-10-12T20:32:35Z
+Approved at: 2026-10-15T06:18:02Z
 
 Project Grill owns the Draft content. `scripts/start-planning.sh` records human
 approval before project architecture and roadmap planning begins.
 
 Source: `docs/PROJECT_DESCRIPTION.md` (human-supplied, authoritative), the
 change requests `docs/changes/physics-next-phase.md` (human-supplied,
-2026-10-09) and `docs/changes/final-curriculum.md` (human-supplied,
-2026-10-10, revision 3), plus the decisions recorded in "Major product
-decisions" below.
+2026-10-09), `docs/changes/final-curriculum.md` (human-supplied,
+2026-10-10, revision 3), and
+`docs/changes/pbc-planning-change-four-workstreams.md` (human-supplied,
+2026-10-14), plus the decisions recorded in "Major product decisions" below.
 
 ## Project goal
 
@@ -103,9 +104,13 @@ There are no administrator or signed-in learner roles.
    (`mechanics`, `agents-llm`, `agents-abm`, `lean`) and published URLs stay
    until an approved migration plan exists; new courses receive stable
    identifiers and route rules through an approved architecture decision.
-2. **Reproduce a lesson locally.** A learner clones the repository, installs
-   the pinned toolchain, and re-runs any lesson's code (and Lean proof) with
-   identical results to those shown on the site.
+2. **Run a lesson's experiment locally.** A learner clones the repository,
+   installs the pinned Python environment, and re-runs any lesson's
+   experiment with the exact commands the lesson gives, regenerating its
+   numerical results and figures with identical results to those shown on
+   the site; optionally, with the Lean toolchain, the learner checks the
+   lesson's proofs. Neither activity requires rendering, rebuilding, or
+   previewing the website (decision 33).
 3. **Run an agent-driven experiment.** In the agents strand, a learner runs a
    provided LLM agent locally with their own API key; the agent proposes
    hypotheses, runs the lesson's simulation code, and reports results. A
@@ -197,15 +202,28 @@ Later phases (in scope for the project, out of scope for the MVP):
   reasoning and conservation-law discovery lessons of revision 2.
 - The Learning Path page redesign of decision 29, as its own feature before
   the bulk of the new lessons.
-- Verification that scales with the curriculum (decision 30), after the
-  parallel verification jobs and before the first block of new lessons.
+- Verification that scales with the curriculum (decision 30, delivered for
+  pull requests as F61; its budget is the 20 minutes of decision 34).
 - Clarity and usability of the published site: honest homepage narrative,
   a generated prerequisite graph, learning-path cards with a difficulty
   scale, a reusable lesson template, course navigation from one source of
-  truth, a unified tested local-setup guide, a glossary, self-hosted search.
+  truth, a unified tested local-setup guide organised around running
+  experiments, a glossary, self-hosted search.
 - The research-backed editorial standard below, applied first as a pilot on
   the numerical-integrators lesson and one introductory mechanics lesson,
   then as lesson-by-lesson editorial and figure passes.
+- The editorial voice of decision 32: an editorial style guide with
+  before-and-after examples, a pilot on mechanics lessons 01 to 05 that a
+  human approves before the voice reaches the rest of the curriculum, and
+  the integration of the approved principles into the authoring guide, the
+  lesson template, and a qualitative editorial review rubric.
+- Learner instructions without a website build (decision 33): the public
+  setup page, lesson footers, README, and the authoring templates that
+  generate them give experiment-execution instructions, with a runnable
+  entry point for every published lesson.
+- The simplification of scientific verification, CI, and the agents' build
+  obligations of decision 35, planned and critically reviewed before any
+  change to what a push to `main` executes.
 - Trustworthy scientific coding: agent-assisted simulation development,
   independent code verification and review, a counterexample-hunting agent,
   further Lean proofs and local Lean exercises.
@@ -278,6 +296,24 @@ Later phases (in scope for the project, out of scope for the MVP):
 - No decorative, stock, hand-copied, or externally hosted images on the
   learning path or in lessons; every preview derives from a verified
   generated figure or a repository-generated conceptual fallback.
+- No editorial voice imposed as a uniform register: no rewrite of the
+  whole curriculum in one feature, no conversational or informal tone
+  forced on every lesson, no artificially added jokes or anecdotes, no
+  identical narrative structure for every lesson, no rigid narrative
+  template, no mandatory additional editorial agent, no relaxation of
+  scientific standards, and no optimisation against AI-content detectors.
+  The editorial voice replaces no part of the verification pipeline.
+- No instruction to a learner, contributor, author, or developer in
+  maintained documentation to rebuild or preview the website locally, and
+  no relocation of such instructions to contributor documentation.
+  Technical references to internal build behaviour, script names,
+  architecture, and verification evidence may remain.
+- No automatic scheduled full verification audit (nightly, weekly, or
+  rotating), no new sharding mechanism, and no substantial verification
+  infrastructure without separate evidence and explicit owner approval.
+- No removal of the internal CI site build, the deployment of the verified
+  artifact, provenance, accessibility, scientific checks, or the ability
+  to run complete verification, under any verification simplification.
 
 ## UX expectations
 
@@ -317,8 +353,41 @@ Later phases (in scope for the project, out of scope for the MVP):
   link, bookmark, and graph node address valid. All of it is generated from
   the validated lesson front matter; no second hand-maintained catalogue.
 - Consistent lesson structure: explanation, assumptions, worked examples, code,
-  exercises/visualizations, and a "reproduce this" section pointing at the
-  exact files and commands.
+  exercises/visualizations, and a "Run this experiment" section (or an
+  equivalently clear label) pointing at the exact files, source revision,
+  and commands that regenerate the lesson's numerical results and figures
+  without generating HTML. Where a lesson's runnable experiment exists only
+  in the cells of its page, the lesson provides a runnable entry point, a
+  script or notebook that calls the authoritative lesson implementation,
+  without duplicating scientific logic.
+- Learner setup around experiments: the public setup page describes the
+  repository clone or download, the pinned Python environment, and the
+  experiment commands; the optional Lean setup for checking proofs and
+  exercises is clearly separated from the Python-only path; replaying a
+  recorded agent experiment is distinguished from a live provider call,
+  which requires explicitly documented credentials and dependencies, so
+  that ordinary reproduction never calls a paid model. A Python learner
+  needs no elan, Mathlib, browser-test installation, workflow tooling, or
+  LLM credential unless the activity they chose needs it. The full
+  verification pipeline, Quarto rendering, and the website preview are
+  not presented as learner setup.
+- Editorial voice: a recognisable authorial voice that combines the
+  curiosity and accessibility of a personal technical blog, the
+  mathematical rigour of a university-level textbook, and the
+  reproducibility and verification standards of this project. The style
+  guide gives principles for lesson openings, intuition, derivations,
+  computational experiments, the interpretation of results, transitions,
+  and conclusions, with before-and-after examples drawn from existing
+  lessons and from the author's earlier articles at ataspinar.com, and
+  names the recurring faults to remove: boilerplate introductions,
+  repetition, needlessly defensive wording, monotonous sentence structure,
+  and conclusions that do not interpret the significance of a result.
+  Lessons keep structures and narratives appropriate to their subject.
+  Editorial review is qualitative, naming specific weaknesses with
+  evidence and actionable feedback, never only a score. No scientific
+  claim, result, formula, or verified artifact changes for a stylistic
+  reason; the required section identifiers, lesson contracts, and
+  verification guarantees stay.
 - Progressive depth, self-contained: for each major concept a lesson gives the
   physical question and why it matters, the core explanation on the site
   (intuition, definitions, assumptions, essential derivation steps, units,
@@ -500,15 +569,49 @@ Later phases (in scope for the project, out of scope for the MVP):
   `./scripts/verify.sh`, so a local run and CI select the same lessons; a
   local run without options still verifies everything; the published site
   is still the site that was verified. The Lean build keeps running in full
-  on every pull request (unresolved question 8). The budget of 12 minutes
-  for a typical pull request holds at 110 lessons.
+  on every pull request (unresolved question 8). The budget of 20 minutes
+  for a typical pull request with warm caches holds at 110 lessons
+  (decision 34); 15 minutes is a non-blocking optimisation target, and a
+  run above 15 but within 20 minutes meets the budget; every measurement
+  records the actual duration and whether the target was met. The
+  25-minute budget for cold caches and the 45-minute timeout per job are
+  unchanged by that decision. The full run at 110 lessons and the retrieval
+  of the base by a pull request from a fork are unmeasured and stay
+  outstanding; no budget statement rests on an estimate.
+- Verification simplification under review (decision 35): the rule that
+  every push to `main` executes and checks every lesson stands until the
+  decision record of decision 35 is accepted. That record may let a push
+  to `main` inherit content-addressed scientific results from a previous
+  successfully verified `main` base, only with proof of their validity for
+  the current commit (lesson inputs, shared dependencies, verification
+  logic, and the relevant execution environment accounted for), failing
+  closed or running complete verification whenever reuse cannot be
+  established, always rebuilding the publishable site and verifying its
+  actual output, and always deploying exactly the artifact CI verified.
+  A directly invocable complete verification path is preserved. The
+  guarantee of inherited results is weaker than, and different from,
+  executing everything on the current commit; the owner approves that
+  difference and its minimum mitigations explicitly before `main` becomes
+  incremental, after the staged evidence of decision 35.
+- Agents' local verification before a pull request is proportional to the
+  change: targeted tests, the execution and rendering of the lessons the
+  change affects, Lean checks for affected proofs, and a local page or
+  site render only for the change types that the decision record of
+  decision 35 lists (rendering, templates, navigation, site
+  configuration). CI owns the validation of the publishable site and
+  remains the publication gate; `./scripts/verify.sh` without options
+  still runs everything.
 - CI cost and time: Mathlib builds are heavy; the pipeline must use the
   Mathlib cache (or equivalent) and dependency caching so a typical pull
   request verifies in minutes, not hours. The planner must set a concrete
   budget.
 - Reproducibility: pinned Python, Lean, and Mathlib versions; a single
   documented command reproduces the whole site and all lesson outputs locally
-  on macOS and Linux.
+  on macOS and Linux, for maintainers, agents, and CI. A learner regenerates
+  a lesson's results and figures with the lesson's experiment commands and
+  is never instructed to build the site (decision 33); the new experiment
+  commands are exercised by verification that they regenerate the intended
+  results and figures.
 - Availability: best effort, as provided by GitHub Pages; no SLA, no on-call.
 - Domain: the GitHub Pages default URL. No custom domain for the first
   release; a custom domain is revisited only as its own decision.
@@ -795,11 +898,13 @@ Decided during the change cycle `final-curriculum` (2026-10-12), from
     planned schema for an optional thumbnail reference only if required.
 30. **Verification scales with the curriculum.** The rule under "Runtime and
     deployment constraints": a pull request verifies what it changes and
-    what depends on it, `main` always verifies everything, no check is
-    dropped, the selection lives in `./scripts/verify.sh`, and the
-    12-minute budget holds at 110 lessons. This changes what ADR 002 and
-    ADR 003 decided and needs a new decision record that settles what
-    "unchanged" means, where the earlier result comes from, what stays
+    what depends on it, `main` always verifies everything (under review by
+    decision 35), no check is dropped, the selection lives in
+    `./scripts/verify.sh`, and the budget for a typical pull request,
+    20 minutes since decision 34, holds at 110 lessons. This changes what
+    ADR 002 and ADR 003 decided and needs a new decision record that
+    settles what "unchanged" means, where the earlier result comes from,
+    what stays
     unconditional, and how the three executions per lesson reduce; it
     follows F58 and precedes the first block of new lessons.
 31. **Delivery and quality.** The planner produces a dependency-ordered
@@ -826,10 +931,130 @@ than placeholder lesson pages; capstone and FEM lessons use small meshes and
 bounded tests in ordinary CI, with heavier reruns outside pull-request
 checks.
 
+Decided during the change cycle `pbc-planning-change-four-workstreams`
+(2026-10-15), from `docs/changes/pbc-planning-change-four-workstreams.md`
+(human-supplied, 2026-10-14). The four changes are independently
+reviewable workstreams of one planning request; existing features are
+amended where they exist, and new features are proposed only where
+necessary.
+
+32. **Editorial voice and pedagogical storytelling** (change 1). The
+    project develops the recognisable editorial voice of "UX expectations"
+    in three steps that keep decision 17 and extend it: an editorial style
+    guide with concrete before-and-after examples; a pilot on mechanics
+    lessons 01 to 05, with targeted editorial changes rather than
+    regeneration, reviewed individually and as a connected sequence, with
+    the successful changes, the unsuccessful ones, and the adjustments to
+    the guide documented, and expanded beyond the pilot only after
+    explicit human review and approval; and the integration of the
+    approved principles into the authoring guide, the lesson template, and
+    reviews through a qualitative editorial rubric, so that future lessons
+    inherit the voice through the normal authoring workflow. Technical
+    content, lesson contracts, section identifiers, and every existing
+    verification requirement are preserved; nothing scientific changes
+    silently for style. The objective is better teaching, not optimisation
+    against AI-content detectors. The labels F1 to F3 of the proposal are
+    local labels, not repository feature identifiers.
+33. **Learner instructions without a website build** (change 2). Every
+    instruction to rebuild or preview the website locally is removed from
+    maintained documentation (the public setup page, lesson footers,
+    README, development and contributor documentation, authoring guidance,
+    and the templates that generate such instructions) and not relocated.
+    Readers read lessons, run and modify Python experiments, and
+    optionally check Lean proofs, none of which requires rebuilding the
+    website; the setup page is rewritten around running experiments and
+    the "Reproduce this" footers become "Run this experiment"
+    instructions, as "UX expectations" specifies. The existing contracts
+    that tie learner instructions to regenerating a page (ADR 002's and
+    ADR 014's reproduce contracts, the setup-page tests, the footer
+    generation, the authoring templates, the reproduction tests) are
+    identified and explicitly superseded through the ADR process, with
+    verification that the new experiment commands reproduce the intended
+    numerical results and figures. Internal website generation,
+    publishing, Lean verification, scientific tests, provenance, and
+    accessibility stay operational; internal tests may still render pages
+    and compare website artifacts. Historical decision records and
+    completed feature records remain history: superseded decisions are
+    marked, obsolete walkthroughs are removed from current guides, and
+    past acceptance evidence is not falsified.
+34. **The budget of a typical pull request is 20 minutes** (change 3,
+    owner decision of 2026-10-14). The wall-clock budget of a typical pull
+    request with warm caches is 20 minutes in place of 12, with 15
+    minutes retained as a non-blocking optimisation target, as "Runtime
+    and deployment constraints" states; the F61 acceptance criterion
+    becomes three consecutive one-lesson pull requests within 20 minutes
+    with recorded evidence. The basis is the measurement of F61 recorded
+    in `docs/release-readiness.md` on 2026-10-14 (three one-lesson pull
+    requests at twenty-two lessons in 13 min 50 s to 14 min 43 s, against
+    22 min 56 s and 25 min 00 s without a base), which stays exactly as
+    measured; the remaining fixed costs (runner preparation in each job,
+    the full Lean build, the checks that are not per lesson) stay
+    eligible for later optimisation, and a later owner decision may lower
+    the budget again; the 20 minutes have no automatic expiry. Only the
+    budget number and its current statements change: in these
+    requirements, the roadmap, the architecture, and ADR 003 decision 5
+    and ADR 014 decision 7 through a status line that references this
+    decision and keeps the older wording as history. No check is dropped,
+    no guarantee changes, and the cold-cache budget and the job timeout
+    are not touched by this decision. The published-lesson inventory is
+    reconciled with `main`: F70 delivered T0 to T3 on 2026-10-14 (the
+    `agents-abm/01-particles-in-a-box` row now carries `slot: T0` and
+    `course: thermodynamics`), and `main` publishes 32 lessons at this
+    cycle (the change request's count of 25 predates the merged mechanics
+    M9 to M12 and waves W1 to W3 lessons); the planner reconciles against
+    `main` rather than replacing numbers.
+35. **Simpler scientific verification, CI, and agent build obligations**
+    (change 4). F113 (Issue #150, the closed pull request #175, and its
+    branch) is paused and is not merged as designed; its work stays
+    inspectable until a replacement decision is accepted, and its Issue
+    and pull request are closed or superseded through the normal process,
+    non-destructively, never restarted or duplicated. The planner plans
+    and critically reviews, without implementing or declaring equivalence
+    proven, a simpler F61-based architecture in which every published
+    version has a complete, traceable verification basis without
+    executing every unchanged lesson on every merge, under the conditions
+    of "Runtime and deployment constraints": trusted-base retrieval and
+    selection extended to pushes on `main` with a chain of incremental
+    bases whose per-result provenance, validity, retention, expiry,
+    supersession, and failure recovery are defined, inherited scientific
+    results distinguished from checks executed on the new commit, the
+    execution environment part of the reuse decision, fail-closed
+    behaviour, the site rebuilt and its output verified, and exactly the
+    verified artifact deployed; a directly invocable exceptional full
+    verification without default sharding, with a single job under a
+    measured and explicitly approved timeout, sharding only if
+    measurements demonstrably justify it, and no scheduled audit unless
+    its precise defect, cost, and residual risk are shown and the owner
+    approves; and the removal of redundant verification and local build
+    obligations after an audit of the verification call graph (the second
+    preview render against `check-determinism.sh`, the check identity's
+    validity domains, the integration job's critical path, the agents'
+    blanket full-site build demands), with coverage evidence before any
+    check is removed and no independent scientific check removed. The
+    staged evidence of the change request (equivalence of full and
+    selective verification on the same commit, fail-closed demonstrations,
+    chained-base provenance, one production build, redundancy by coverage,
+    the inventory of replaced local build obligations, cost measurements
+    at warm caches and a defensible full-run fallback at larger lesson
+    counts, explicit updates of decision 30, ADR 003, ADR 014, roadmap F61
+    and F113, and the agent-workflow instructions, and a short decision
+    record that states the weaker guarantee for owner approval) gates each
+    step; all 110- and 125-lesson durations are projections until
+    measured. A risky CI redesign is never combined with the editorial
+    pilot in one feature.
+
+Recommended defaults adopted in this change cycle (reversible during
+planning): the planner names the style guide and the editorial pilot as
+amendments of or successors to the existing editorial features rather than
+new strands; the budget and documentation work does not wait for the
+approval that expands the editorial pilot; the planner chooses the form of
+the budget amendment (a short ADR or status-line amendments of ADR 003 and
+ADR 014) by the repository convention.
+
 ## Unresolved questions
 
 Questions 1 to 4 and 6 are settled. They keep their numbers, because other
-documents refer to them; questions 5, 7, and 8 are open.
+documents refer to them; questions 5, 7, 8, and 9 to 12 are open.
 
 1. **Default LLM provider for agent lessons.** Settled in F09: OpenAI is the
    default live provider, as an optional dependency behind the thin provider
@@ -859,4 +1084,24 @@ documents refer to them; questions 5, 7, and 8 are open.
    and manifest as inputs, but not the Lean build itself. Until the decision
    record of decision 30 says otherwise, every pull request keeps building
    all Lean sources, as ADR 003 decided; whether the Lean build may follow
-   the same selection is for the human to decide with that record.
+   the same selection is for the human to decide with that record. The
+   decision record of decision 35 is the next such record.
+9. **Incremental `main`.** Whether the owner accepts the weaker guarantee
+   of inherited scientific results in place of executing every lesson on
+   the current commit, and with which minimum mitigations, is decided on
+   the decision record that decision 35 requires, after the staged
+   evidence exists. Until then every push to `main` executes and checks
+   every lesson.
+10. **Timeout of an exceptional full run.** The per-job timeout and the
+    budget of a complete verification at representative larger lesson
+    counts are set from measurements under decision 35, not from the
+    45-minute timeout alone and not from projections; the owner approves
+    the value.
+11. **Scheduled full audits.** Not authorised. If the planner recommends
+    one, it names the precise defect it detects, why event-driven checks
+    cannot detect it, its cost, and the residual risk, and the owner
+    decides.
+12. **Closing F113.** Pull request #175 is closed and Issue #150 is open
+    with its branch preserved; the planner proposes how the Issue is
+    closed or superseded, non-destructively, once the replacement decision
+    of question 9 is taken.

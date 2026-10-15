@@ -1,11 +1,11 @@
 # Planning Approval
 
 Status: Approved
-Approved at: 2026-10-13T04:47:03Z
-Planning branch: planning/final-curriculum
-Change request: docs/changes/final-curriculum.md
-Final review: round 9, PASS, by claude (sonnet)
-Planning fingerprint: 0b00c7bbf1ff0bf55156c2549c2932a074be647a
+Approved at: 2026-10-15T12:29:51Z
+Planning branch: planning/pbc-planning-change-four-workstreams
+Change request: docs/changes/pbc-planning-change-four-workstreams.md
+Final review: round 10, PASS, by claude (sonnet)
+Planning fingerprint: 60a0c5055926ab52be02110741fbc5f4bdf6f90c
 
 Recorded by `scripts/finish-planning.sh`. The approval covers these planning
 documents. A change to the description, the requirements, a change request, or the
@@ -47,25 +47,32 @@ under its own review. This approval covers the documents including them.
 - 42397f5 Run verification in parallel CI jobs behind one required check (F58, step 3) (Issue #130; review: round 4 (changes since round 3 only), PASS, by codex (gpt-6-astra); triage published on #130)
 - d77d976 Record the measured run times of the parallel jobs (F58, step 4) (Issue #130)
 - 8968711 Make the timeout and the measured state consistent across the records
+- 7ae72f2 F62 — Eight courses and the reference curriculum (Issue #148; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #148)
+- fd47641 F63 — Verified lesson previews (Issue #153; review: round 2 (changes since round 1 only), PASS, by codex (gpt-6-luna); triage published on #153)
+- d9a2d9f CI workflow with a verified base artifact, and documentation (F61, steps 7 and 8 of 9, partial) (Issue #147; review: no independent review (low risk: partial delivery, steps 7 and 8 of 9, approved by the owner on 2026-10-14; independent review round 1 found only M1 (AC1, AC2, AC9 need the measurements of step 9) and M2 (AC4 and AC8 need the merged workflow and live evidence), both open by design, and no finding on the workflow itself; the complete feature gets the full independent review at the end))
+- abef2a3 F70 — Thermodynamics and statistical physics: random walks, kinetic theory, entropy (T1, T2, T3) (Issue #169; review: round 5, PASS, by codex (gpt-6-luna); triage published on #169)
+- 3121b52 F68 — Advanced mechanics: chaos, Lagrangian and Hamiltonian mechanics, resonance (M9 to M12) (Issue #168; review: round 6, PASS, by codex (gpt-6-luna); triage published on #168)
+- 3743037 F64 — Learning Path redesign: course-first, compact, accessible (partial: criteria 6 and 8 are manual verifications) (Issue #167; review: no independent review (low risk: partial delivery of F64 (variant B of the owner, 2026-10-14): an independent review was run and its only open findings M1 (criterion 6, screen reader pass) and M2 (criterion 8, visual review) are the manual verifications the owner decided to keep open; M3 (what the reader builds) was fixed; the Issue stays open until both verifications are recorded on it))
 
 ## Review rounds
 
-- Round 1: CHANGES REQUIRED, 5 finding(s), by codex (gpt-6-astra)
-- Round 2: CHANGES REQUIRED, 3 finding(s), by codex (gpt-6-astra)
-- Round 3: CHANGES REQUIRED, 8 finding(s), by claude (fable)
-- Round 4: CHANGES REQUIRED, 10 finding(s), by claude (fable)
-- Round 5: PASS WITH MINOR FINDINGS, 5 finding(s), by claude (fable)
-- Round 6: PASS WITH MINOR FINDINGS, 4 finding(s), by claude (fable)
-- Round 7: PASS WITH MINOR FINDINGS, 1 finding(s), by claude (sonnet)
-- Round 8: PASS WITH MINOR FINDINGS, 1 finding(s), by claude (sonnet)
-- Round 9: PASS, 0 finding(s), by claude (sonnet)
+- Round 1: CHANGES REQUIRED, 4 finding(s), by codex (gpt-6-astra)
+- Round 2: CHANGES REQUIRED, 7 finding(s), by claude (fable)
+- Round 3: PASS WITH MINOR FINDINGS, 2 finding(s), by claude (fable)
+- Round 4: PASS WITH MINOR FINDINGS, 5 finding(s), by claude (fable)
+- Round 5: PASS WITH MINOR FINDINGS, 3 finding(s), by claude (fable)
+- Round 6: PASS WITH MINOR FINDINGS, 2 finding(s), by claude (fable)
+- Round 7: PASS WITH MINOR FINDINGS, 3 finding(s), by claude (fable)
+- Round 8: PASS WITH MINOR FINDINGS, 5 finding(s), by claude (fable)
+- Round 9: PASS WITH MINOR FINDINGS, 2 finding(s), by claude (sonnet)
+- Round 10: PASS, 0 finding(s), by claude (sonnet)
 
 ## Escalations confirmed as resolved
 
-- Round 4: MIN4 Concerns the approved requirements: 'no feature equals one slot' contradicts decision 31 and the roadmap's many one-slot features
-- Round 5: S1 Concerns the approved requirements: the 'no feature equals one slot' sentence remains in the approved text; the owner's ruling is recorded only in the roadmap
+- Round 7: MIN2 The approved requirements' decision 33 names "ADR 003's and ADR 014's reproduce checks" as the contracts to supersede, but the learner-facing reproduction contract lives in ADR 002, which is what ADR 016 supersedes
+- Round 8: MIN1 Still open in the approved requirements (escalated in review 07): decision 33 names "ADR 003's and ADR 014's reproduce checks" as the contracts to supersede, but the learner-facing reproduction contract is ADR 002's consequence, which ADR 016 supersedes
 
 ## Findings that were not adopted
 
-- Round 4, ESCALATE: MIN4 [minor] Concerns the approved requirements: 'no feature equals one slot' contradicts decision 31 and the roadmap's many one-slot features. Confirmed: docs/PROJECT_REQUIREMENTS.md line 193 ('no feature equals one slot') and decision 31 at line 806 ('no rule that a slot is a feature') disagree, and the change request (section 2, point 10: 'No rule that each curriculum slot must equal one feature') shows decision 31 is the intended meaning. The roadmap already follows decision 31 and the change request: F74, F80, F82 to F88, F97, F100, F102 to F108, F110, and F111 each deliver one slot, and the roadmap's definition-of-done block cites decision 31. Resolving the disagreement requires correcting the later-phases sentence of the approved requirements, which the planner may not edit, so the human must decide: either amend line 193 to 'no rule that a feature equals one slot' through the requirements process, or confirm that decision 31 governs and the roadmap's one-slot features stand. A note in the roadmap alone would not remove the contradiction inside the approved requirements, which is why this is escalated rather than adopted; once the human rules, the planner adds the roadmap note citing decision 31 if asked.
-- Round 5, ESCALATE: S1 [suggestion] Concerns the approved requirements: the 'no feature equals one slot' sentence remains in the approved text; the owner's ruling is recorded only in the roadmap. The finding is correct that the approved requirements still read 'no feature equals one slot' at line 193 against decision 31 at line 806, and that the owner's ruling of 2026-10-13 is recorded only in the roadmap's Phase 4 preamble (lines 3181 to 3188). The reviewer asks for no planning change, and none is needed: the planning follows decision 31 with a traceable note. The only remaining action is to replace the line-193 sentence with the wording of decision 31, which is a change to the approved requirements that the planner may not make. This is the same item the owner already settled as MIN4 of round 4; no new decision is requested, only the requirements edit at the next Project Grill cycle, which the roadmap note already schedules.
+- Round 7, ESCALATE: MIN2 [minor] The approved requirements' decision 33 names "ADR 003's and ADR 014's reproduce checks" as the contracts to supersede, but the learner-facing reproduction contract lives in ADR 002, which is what ADR 016 supersedes. The finding is correct: PROJECT_REQUIREMENTS.md decision 33 (line 968) names "ADR 003's and ADR 014's reproduce checks", but ADR 003 holds no reproduction contract; the learner-facing "Reproduce this" contract is ADR 002's consequence and ADR 014 decision 9, which is what ADR 016's status supersedes and amends. The planning already points at the right records, so no architecture, roadmap, or ADR change resolves this. The misnaming is in the approved requirements, which the planner may not edit; the owner should amend decision 33 to read "ADR 002's and ADR 014's reproduce contracts" (or name ADR 002's consequence, the F39 setup-page rule, and ADR 014 decision 9) at the next requirements edit.
+- Round 8, ESCALATE: MIN1 [minor] Still open in the approved requirements (escalated in review 07): decision 33 names "ADR 003's and ADR 014's reproduce checks" as the contracts to supersede, but the learner-facing reproduction contract is ADR 002's consequence, which ADR 016 supersedes. Confirmed unchanged: docs/PROJECT_REQUIREMENTS.md decision 33 (lines 967 to 971) still names "ADR 003's and ADR 014's reproduce checks", while ADR 003's decisions hold no learner reproduction contract; the contract ADR 016 supersedes is ADR 002's consequence, the F39 setup-page rule, and ADR 014 decision 9. The planning already supersedes the right records, so there is nothing for the planner to change, and the misnaming lives in the approved requirements, which the planner may not edit. The round-07 revision record already escalated this; it stays escalated for the owner to correct at the next requirements edit (suggested wording: "the reproduce contract of ADR 002, the F39 setup-page rule, and ADR 014 decision 9").
