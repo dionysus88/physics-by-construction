@@ -68,7 +68,10 @@ jobs:
   # main the deploy job publishes exactly this artifact.
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # The interim full-run gate (ADR 014, status; the owner's decision of
+    # 2026-10-15): 60 minutes for the one job of a full run, approved for up
+    # to 45 lessons. Every other job keeps 45 minutes.
+    timeout-minutes: 60
     # The one added scope: reading the runs and artifacts of earlier runs, to
     # find the verified base of a pull request (ADR 014 decision 2).
     permissions:

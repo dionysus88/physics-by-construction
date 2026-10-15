@@ -48,6 +48,24 @@ Change cycle `pbc-planning-change-four-workstreams` (2026-10-15):
   experiment" (or "Replay this experiment", "Check this proof") section,
   which keeps the identifier `reproduce-this`.
 
+- **Interim full-run gate, decided by the owner on 2026-10-15**
+  (requirements, unresolved question 10; the proposal and its evidence are
+  on Issue #180 and in `docs/verification-audit.md` and `docs/release-readiness.md`,
+  "The full run and the one-lesson pull request, decomposed (F118)"): the
+  timeout of the one `build` job of a full run is **60 minutes**, with a
+  planning budget of 50 minutes, and the gate is approved for up to **45
+  lessons** (the arithmetic limit at the slowest measured runner is 47).
+  The lesson features of Phase 4 may take the lesson count past 32 up to
+  45 under this gate; past 45 lessons the gate needs a further decision of
+  the owner, or the acceptance of ADR 017. The 45-minute timeout and the
+  35-minute planning budget of the rest of this ADR stay as recorded for
+  the other jobs; the value is applied by the pull request that records
+  this decision: the job `build` of `.github/workflows/ci.yml` has
+  `timeout-minutes: 60`, the test that pins the timeouts and the
+  architecture say so, and every other job keeps 45 minutes. Measured at
+  32 lessons, a full run's `build` job takes 21 to 31 minutes, so no run
+  needs the new value yet; the growth is 32 to 46 seconds per lesson.
+
 Date: 2026-10-12
 
 ## Context
