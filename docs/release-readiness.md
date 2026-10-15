@@ -435,6 +435,158 @@ F61 (none is applied):**
 4. Accept the budget as 15 minutes for a pull request until the fixed cost is
    reduced: this is a change of ADR 003 decision 5 and the owner's decision.
 
+### The full run and the one-lesson pull request, decomposed (F118), measured 2026-10-15
+
+F118 reads the jobs of the runs the roadmap names ("State at the change
+cycle `pbc-planning-change-four-workstreams`") and the three one-lesson pull
+requests of F61 from the Actions API and from their logs, and separates the
+cost of a lesson from the cost of the runner. The call graph behind the
+numbers, the verdict on the third build, the validity domains of the check
+identity, the division of `integration`, the inventory of local build
+obligations, and the proposal for the owner are in
+`docs/verification-audit.md`. Times are job start to job end unless a column
+says otherwise; "group build" is the step "Verify the group build" of the job
+`build`, from the log; "prepare" is the step "Run ./.github/actions/prepare".
+
+**The `build` job of a full run, with the cache state read from each log.**
+Every full run below is a run on `main` without a base: the step that
+verifies against a base did not run, so every lesson executed and the Quarto
+store started empty. The four caches of the runner preparation are the uv
+cache, the elan toolchain, the Lean packages with the Mathlib build products,
+and the Playwright browser build.
+
+| Run (build job) | Lessons | Job | Prepare | Group build | Lean build | `site-build` | `determinism` | Reproduction tests (count) | Caches of the preparation |
+|---|---|---|---|---|---|---|---|---|---|
+| 38545077253 (115789003862) | 22 | 15 min 42 s | 1 min 52 s | 13 min 36 s | 13 s | 2 min 43 s | 2 min 30 s | 8 min 02 s (23) | all four hit |
+| 38527223459 (115730318530) | 22 | 23 min 05 s | 1 min 06 s | 21 min 49 s | 16 s | 4 min 13 s | 3 min 57 s | 13 min 11 s (23) | all four hit |
+| 38607388478 (116001653330) | 28 | 26 min 57 s | 1 min 49 s | 24 min 57 s | 20 s | 4 min 55 s | 4 min 33 s | 14 min 58 s (29) | all four hit |
+| 38621916706 (116051313541) | 32 | 31 min 15 s | 1 min 28 s | 29 min 32 s | 16 s | 5 min 49 s | 5 min 31 s | 17 min 47 s (33) | all four hit |
+| 38639021950 (116109491079) | 32 | 30 min 32 s | 1 min 05 s | 29 min 18 s | 18 s | 5 min 41 s | 5 min 29 s | 17 min 39 s (33) | all four hit |
+| 38659296393 (116176479806) | 32 | 21 min 07 s | 1 min 57 s | 18 min 59 s | 12 s | 3 min 51 s | 3 min 37 s | 11 min 12 s (33) | all four hit |
+| 38687330455 (116265066825) | 32 | 27 min 58 s | 2 min 06 s | 25 min 31 s | 15 s | 5 min 00 s | 4 min 42 s | 15 min 22 s (33) | uv cache and Playwright build missed (`uv.lock` changed by the dependency bump #173); elan and lake hit |
+
+- **The label "cold caches" of run 38527223459 does not hold.** All four
+  caches of the runner preparation hit in that run, as in the warm run
+  38545077253 of the same day; the only difference between the two is the
+  speed of the runner (13 min 36 s against 21 min 49 s for the same work,
+  22 lessons, the same commit family). The same holds for the runs at 28 and
+  32 lessons: a cache miss cost at most about a minute (the preparation took 2 min 06 s
+  in the one run that missed two caches, against 1 min 05 s to 1 min 57 s in
+  the runs that hit all four), and the spread of 10 minutes between runs of equal
+  size is the runner, not a cache.
+- **The Quarto store is empty in a full run by design** (ADR 014 decision
+  3), so the lessons execute in all four places of the call graph
+  (`docs/verification-audit.md`, "Call graph"): the first build, the
+  determinism build, the third build of
+  `test_a_second_build_gives_byte_identical_previews`, and the reproduction of
+  the lesson. A lesson executes **four times** in a full run, not the three of
+  ADR 014 decision 11.
+- **The reproduction tests are most of the group**: 8 min 02 s to 17 min 47 s,
+  that is 59 to 60 percent of the group build in every run. They include the
+  third build, which costs about as much as `determinism` (the same build from
+  a fresh copy): 2 min 30 s to 5 min 31 s, or 18 to 19 percent of the group
+  build. The per-test duration of a reproduction is not in the logs; the
+  figure below is the group's reproduction time minus the `determinism` time,
+  divided by the number of lessons (an estimate).
+
+**Cost per lesson and growth, from the same runs.**
+
+| Run | Lessons | Group build per lesson | `site-build` per lesson | `determinism` per lesson | Reproduction per lesson (estimate) |
+|---|---|---|---|---|---|
+| 38545077253 | 22 | 37.1 s | 7.4 s | 6.8 s | 15.1 s |
+| 38527223459 | 22 | 59.5 s | 11.5 s | 10.8 s | 25.2 s |
+| 38607388478 | 28 | 53.5 s | 10.5 s | 9.8 s | 22.3 s |
+| 38621916706 | 32 | 55.4 s | 10.9 s | 10.3 s | 23.0 s |
+| 38639021950 | 32 | 54.9 s | 10.7 s | 10.3 s | 22.8 s |
+| 38659296393 | 32 | 35.6 s | 7.2 s | 6.8 s | 14.2 s |
+| 38687330455 | 32 | 47.8 s | 9.4 s | 8.8 s | 20.0 s |
+
+- **The cost of a lesson in one job is 36 to 60 seconds, and it does not
+  grow with the lesson count.** The runners fall in two classes: a fast one
+  (37.1 s per lesson at 22 and 35.6 s at 32) and a slow one (59.5 s at 22,
+  53.5 s at 28, 54.9 to 55.4 s at 32). Within a class the cost per lesson is
+  flat from 22 to 32 lessons, so the group build is linear in the lesson
+  count, with a fixed part of 1.8 to 4.4 minutes and a marginal cost of 32 to
+  46 s per lesson: the cost per lesson of the bounds below (36 and 60 s)
+  therefore overstates the marginal cost, which is the safe direction. A line through the two fast runs has a slope
+  of 32 s per lesson and an intercept of 105 s, one through the four slow runs
+  a slope of 46 s per lesson and an intercept of 266 s. **Uncertainty:** the
+  fits rest on two and four points; the 1.7 fold difference between the
+  classes is larger than any trend between 22 and 32 lessons, and a third
+  class slower than the slowest measured is not excluded. The projections
+  below therefore use the bounds, not the fits.
+- The page times in the build logs say the same: the executed lesson pages
+  took 5.1 to 8.2 s on average in the first build (the two fast runs 5.1 s,
+  the slow runs 7.5 to 8.2 s, the run that missed two caches 6.8 s) and no
+  more than 21.4 s for the slowest lesson, against the budget of 30 s for one page.
+
+**Projections, not measurements.** One `build` job of a full run in seconds is
+prepare (up to 126 s, the slowest measured) plus the lesson count times a
+cost per lesson of 36 s (fast bound) to 60 s (slow bound, 59.5 s measured);
+the fixed part of the group is inside the 60 s at these counts.
+
+| Lessons | Fast bound | Slow bound | Against the 45-minute timeout |
+|---|---|---|---|
+| 32 (measured: 21 to 31 min, above) | 21 min | 34 min | within |
+| 40 | 26 min | 42 min | within by 3 min at the slow bound |
+| 47 | 30 min | 49 min | beyond at the slow bound; within a 60-minute timeout |
+| 64 | 41 min | 66 min | beyond at the slow bound |
+| 110 (the curriculum, 119 with the reference slots) | 68 min | 112 min | beyond at both bounds |
+
+The 35-minute planning budget of ADR 014 decision 7 holds 32 to 33 lessons at
+the slow bound (the ADR assumed about 40 at 41 s per lesson: the slowest
+measured runner costs 59.5 s per lesson, 45 percent more, so the derivation
+of S = 32 holds with no margin at that bound, not the 8 minutes it states).
+Removing the third
+build would take about a fifth off these figures (the per-lesson cost 36 to
+60 s drops to about 29 to 49 s); that is F119's change and is not applied.
+
+**One-lesson pull requests of F61, decomposed.** The three runs of 2026-10-14
+(`mechanics/04`, `lean/01`, `agents-llm/01`; 22 lessons; each "selective run
+against base 2e0bd620566f: 1 of 22 lessons executed, 21 restored"; all caches
+of the preparation hit). Wall clock is the run from creation to end.
+
+| Run (build, integration jobs) | Wall clock | `build` job: prepare, then group build | Group build: Lean, `site-build`, `determinism`, reproduction tests (2) | `integration` job: prepare, then tests | Slowest `e2e` job |
+|---|---|---|---|---|---|
+| 38547877605 (#161; 115798328928, 115798329152) | 14 min 01 s | 7 min 57 s: 1 min 41 s, then 6 min 00 s | 14 s, 1 min 46 s, 1 min 33 s, 2 min 06 s | 11 min 55 s: 1 min 43 s, then 10 min 06 s | 5 min 49 s (`other`) |
+| 38547877332 (#162; 115798328326, 115798327987) | 13 min 50 s | 7 min 31 s: 1 min 08 s, then 6 min 12 s | 15 s, 1 min 44 s, 1 min 29 s, 2 min 21 s | 10 min 48 s: 1 min 39 s, then 9 min 03 s | 6 min 03 s (`other`) |
+| 38547883087 (#163; 115798347207, 115798347900) | 14 min 43 s | 7 min 35 s: 1 min 20 s, then 5 min 59 s | 14 s, 1 min 46 s, 1 min 33 s, 2 min 04 s | 14 min 29 s: 1 min 29 s, then 12 min 52 s | 5 min 49 s (`other`) |
+
+- **Runner preparation** is 65 to 126 s in the `build` job of a full run and
+  68 to 103 s in the jobs of these three runs, about 100 s in each of the
+  eight jobs of a run: 13 minutes of runner time that do not depend on the
+  change.
+- **Lesson-dependent time in `build`** is small: the executed lesson's page
+  took at most 4.3 to 8.4 s in the first build (the slowest page of the
+  build), executed four times, plus the render of its reproduction: about
+  40 to 60 s of the 6 minutes. The other 21 lessons are restored and cost
+  1.2 to 1.4 s each to render, three times (first build, determinism build,
+  third build): about 4 s per additional unchanged lesson in the job. The
+  rest of `build` is fixed: the Lean build (14 to 15 s), the render of the 9
+  pages that are not lessons, the Quarto start of three builds.
+- **`integration` is the longest job in one of three runs** (14 min 29 s in
+  #163) and is fixed cost: it executes no lesson, and its duration in full
+  runs (12 min 08 s to 16 min 08 s at 22 to 32 lessons) shows no trend with
+  the lesson count against the spread of the runners.
+- **The critical path** of the two quicker runs is `build` then the slowest
+  `e2e` job (13 min 46 s and 13 min 34 s), of the third `integration` (14 min
+  29 s) plus the aggregate job.
+
+**Judged against ADR 015.** A typical pull request (one lesson, an accepted
+base) took 13 min 50 s, 14 min 01 s, and 14 min 43 s: **the budget of 20
+minutes is met by 5 min 17 s at the least, and the 15-minute target is met
+in all three** (by 17 s in the slowest). The three ran at the same time, so
+the record of three consecutive runs that F61 owes is still not made. The growth per lesson of such a pull request is about 4 s of `build` for each
+unchanged lesson, on the critical path of two of three runs: the slowest of
+them (13 min 46 s of `build` and `e2e`) has 74 s to the target, which about 18
+more lessons use, so the target is likely to be lost at about 40 lessons if
+nothing else changes, and the budget of 20 minutes not before several times
+that. A **full run** has no budget in
+ADR 015; its wall clock is 21 min 59 s to 40 min 48 s at 22 to 32 lessons
+(the table under "State at the change cycle" of `docs/roadmap.md`), and the
+proposal for its timeout is in `docs/verification-audit.md`, "Proposal for
+the owner".
+
 ## Release (human)
 
 After the items above: tag the merge commit (`git tag -a mvp-v1.0.0`) and

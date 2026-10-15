@@ -109,6 +109,7 @@ the website describes the current template.
 | `docs/evaluation.md` | Review criteria, finding severities, and the testing principle | Template |
 | `docs/deployment.md`, `docs/operations.md` | Deployment and operations of the project | You |
 | `docs/release-readiness.md` | The record of the MVP release checks that CI cannot make | You |
+| `docs/verification-audit.md` | The audit of what verification executes and compares, the check identity, `integration`, and local build obligations, with the proposal for the full-run timeout | You |
 
 ## Workflow scripts
 
