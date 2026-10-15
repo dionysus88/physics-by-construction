@@ -21,6 +21,25 @@ changed, by content and failing safe; a run on `main` runs everything, in
 same-machine shards that keep every job within the timeout at 110 lessons
 (ADR 014 decisions 7 and 11).
 
+The typical-pull-request row of decision 5 is amended by
+[ADR 015](015-typical-pull-request-budget-of-twenty-minutes.md)
+(2026-10-15, requirements decision 34): 20 minutes with warm caches, with
+15 minutes as a non-blocking target; the 12 minutes below are the budget
+of the day this record was written. The other rows stand. The consequence
+below on the prerequisites of local verification describes the
+maintainers' and agents' setup; the learner's setup is separate since
+[ADR 016](016-learners-run-experiments-not-the-site-build.md). Decision 4
+of ADR 014 (a run on `main` executes every lesson) is under review by
+[ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md),
+proposed and not accepted; this record's decisions 3 and 6 are not
+changed by it. ADR 017 decision 7, if the owner accepts it on F118's
+evidence, amends decision 1 as ADR 005 decision 5 restates it ("every
+product check runs locally on every run"): a recorded targeted run, a
+partial run that builds no site, would be the finish and review evidence
+of an ordinary change, while a run without options still runs every
+product check and CI runs every check. Until that acceptance, decision 1
+stands as written. F119 records the amendment here on acceptance.
+
 Date: 2026-10-06
 
 ## Context

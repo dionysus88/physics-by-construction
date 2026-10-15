@@ -9,7 +9,12 @@ regenerate; the decisions below are unchanged. Amended by
 [ADR 014](014-verification-proportional-to-the-change.md) (2026-10-12): an
 execution cache is still never committed, and may be restored from the
 verified artifact of a run on `main` so that a pull request executes only
-the lessons whose inputs changed.
+the lessons whose inputs changed. The consequence below that the
+"Reproduce this" commands run the same files the build ran is superseded
+by [ADR 016](016-learners-run-experiments-not-the-site-build.md)
+(2026-10-15): the learner runs the lesson's experiment entry point, which
+calls the same files the build ran, and is never instructed to render the
+page; the decisions of this record are unchanged.
 
 Date: 2026-10-06
 

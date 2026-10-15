@@ -2,10 +2,11 @@
 
 Project direction for Physics by Construction, derived from the approved
 `docs/PROJECT_REQUIREMENTS.md` (approved 2026-10-06, re-approved on
-2026-10-09 with the change request `docs/changes/physics-next-phase.md`
-and on 2026-10-12 with the change request
-`docs/changes/final-curriculum.md`) and consistent with
-`docs/architecture.md` and ADRs 001 to 014.
+2026-10-09 with the change request `docs/changes/physics-next-phase.md`,
+on 2026-10-12 with the change request
+`docs/changes/final-curriculum.md`, and on 2026-10-15 with the change
+request `docs/changes/pbc-planning-change-four-workstreams.md`) and
+consistent with `docs/architecture.md` and ADRs 001 to 017.
 
 Keep this high-level. GitHub Issues are the actionable backlog and the source
 of truth for a feature once its Issue exists. Each feature below has a stable
@@ -87,7 +88,7 @@ are Lean lessons beyond the one Lean slot of the baseline.
 | `agents-llm/02-a-counterexample-hunter` | `counterexample-hunter` | agents-llm 2 | simulation, llm-agents | F16 | AI3 |
 | `agents-llm/03-three-reviewers` | `scientific-review` | agents-llm 3 | simulation, llm-agents | F18 | AI4 |
 | `agents-llm/04-an-experimental-design-agent` | `experimental-design-agent` | agents-llm 4 | simulation, llm-agents | F20 | D9 (law discovery path) |
-| `agents-abm/01-particles-in-a-box` | `particles-in-a-box` | agents-abm 1 | simulation, abm | F11 | T0; no `slot` until F70 sets `slot: T0` and `course: thermodynamics` together (ADR 013 decision 6); address unchanged |
+| `agents-abm/01-particles-in-a-box` | `particles-in-a-box` | agents-abm 1 | simulation, abm | F11 | T0; at `0580b3a` no `slot` until F70 sets `slot: T0` and `course: thermodynamics` together (ADR 013 decision 6). Delivered: since F70 (pull request #171, 2026-10-14) the front matter carries `slot: T0` and `course: thermodynamics`, confirmed on `main` at `0c958c8`; address unchanged |
 | `lean/01-proving-what-the-simulation-showed` | `proving-what-the-simulation-showed` | lean 1 | lean | F08 | L1 |
 | `lean/02-momentum-in-a-collision-proved` | `collision-momentum-proved` | lean 2 | lean | F17 | none: beyond the baseline |
 | `lean/03-what-symplectic-euler-conserves` | `symplectic-euler-conserved-energy` | lean 3 | lean | F17 | none: beyond the baseline |
@@ -190,13 +191,176 @@ No accepted ADR conflicts with the re-approved requirements; ADR 008's
 single-additional-course rule is the one decision the requirements asked
 to supersede, and ADR 013 does it.
 
+## State at the change cycle `pbc-planning-change-four-workstreams`
+
+Checked on 2026-10-15 at the base commit `0c958c8` of the planning branch
+`planning/pbc-planning-change-four-workstreams`, against the repository,
+`gh issue list --state all`, `gh pr list --state all`, and the runs of
+`.github/workflows/ci.yml` on `main` read from the Actions API. This is the
+reconciliation that change 3 of
+`docs/changes/pbc-planning-change-four-workstreams.md` asks for
+("reconcile with current main rather than blindly replacing numbers"); the
+files are the truth, this section is their summary at that commit.
+
+### Published lessons
+
+Thirty-two lessons are published in six strands: the twenty-two of the
+table under "State at the change cycle `final-curriculum`" and the ten
+below, merged on 2026-10-14. The change request's count of 25 counted the
+three thermodynamics lessons of F70 and predates the merges of F68 and
+F71 on the same day.
+
+| Lesson directory under `site/lessons/` | `id` | Strand, order | Course | Slot | Feature, pull request |
+|---|---|---|---|---|---|
+| `mechanics/13-double-pendulum-chaos` | `double-pendulum-chaos` | mechanics 13 | mechanics | M9 | F68, #174 |
+| `mechanics/14-lagrangian-mechanics` | `lagrangian-mechanics` | mechanics 14 | mechanics | M10 | F68, #174 |
+| `mechanics/15-hamiltonian-mechanics` | `hamiltonian-mechanics` | mechanics 15 | mechanics | M11 | F68, #174 |
+| `mechanics/16-resonance` | `resonance` | mechanics 16 | mechanics | M12 | F68, #174 |
+| `thermodynamics/01-random-walks-and-diffusion` | `random-walks-and-diffusion` | thermodynamics 1 | thermodynamics | T1 | F70, #171 |
+| `thermodynamics/02-kinetic-theory-of-gases` | `kinetic-theory-of-gases` | thermodynamics 2 | thermodynamics | T2 | F70, #171 |
+| `thermodynamics/03-entropy-from-ensembles` | `entropy-from-ensembles` | thermodynamics 3 | thermodynamics | T3 | F70, #171 |
+| `waves/01-the-wave-equation` | `wave-equation` | waves 1 | waves | W1 | F71, #172 |
+| `waves/02-interference-and-resonance` | `interference-and-resonance` | waves 2 | waves | W2 | F71, #172 |
+| `waves/03-sound-and-the-doppler-effect` | `sound-and-the-doppler-effect` | waves 3 | waves | W9 | F71, #172 |
+
+The gas lesson `agents-abm/01-particles-in-a-box` carries `course:
+thermodynamics` and `slot: T0` since F70 (confirmed in its front matter at
+`0c958c8`); its address is unchanged, and the row of the
+`final-curriculum` table above records the delivery. By course the
+thirty-two lessons are: mechanics 25 (the `mechanics`, `agents-llm`, and
+`lean` strands), thermodynamics 4 (T0 to T3), waves 3. Twenty-eight fill
+a slot of the reference curriculum (the eighteen of `final-curriculum`,
+T0 now with its `slot`, and the ten above); four are Lean lessons beyond
+the baseline. Slots to fill: 87 of 115 (97 at `0580b3a`, minus the ten
+above). The lesson count when the reference curriculum is complete stays
+119. Three lessons (`counterexample-hunter`, `scientific-review`,
+`experimental-design-agent`) and `verifying-scientific-code` still declare
+no `format`; not a concern of this change.
+
+### Features of Phase 4: state
+
+| Feature, Issue | State at `0c958c8` | Note |
+|---|---|---|
+| F61, #147 | Open; delivered in steps (pull requests #152, #158, #159, #160, #164, #166) and measured on 2026-10-14 | Criterion 1 was not met at 12 minutes (13 min 50 s to 14 min 43 s); it is judged against 20 minutes since ADR 015, and the record of three consecutive runs is still owed (the three ran at the same time). Criterion 9's projection of the full run was handed to F113 and is not recorded; F118 records the measured full run at the current count (criterion 9 carries a note dated 2026-10-15). The Issue decides what closes it; the Phase 5 features that list F61 as a dependency depend on its delivered selection, base, and regenerated context (pull requests #152 to #166), not on the closure of Issue #147. |
+| F62, #148; F63, #153; F65, #154 | Delivered | The curriculum file, the slots, the previews, the discovery foundation. |
+| F64, #167 | Open; pull request #176 merged on 2026-10-15 as partial (criteria 6 and 8 are manual verifications) | The human's manual passes remain. |
+| F68, #168; F70, #169; F71, #170 | Delivered (pull requests #174, #171, #172, 2026-10-14) | The ten lessons above; the first lessons of the thermodynamics and waves courses created their strands and packages. |
+| F113, #150 | **Paused** (requirements decision 35): pull request #175 closed on 2026-10-15 without a merge; the branch `feature/150-bounded-full-verification-same` is preserved; the Issue stays open | Not restarted, not duplicated, not merged before the owner's decision on ADR 017 (proposed). Its block below is kept as approved, with a banner. |
+| F112, #151 | Open as a status report | Declares no completion while slots are outstanding. |
+| The lesson features F66, F67, F69, F72 to F111 and the Phase 3 features without an Issue | Not started | Every one that takes the lesson count past 32 waits for the amended full-run gate (below). |
+
+Issue #165 ("Select agent models by feature risk") concerns the agent
+workflow's configuration and is no roadmap feature. The deferred review
+findings #8, #34, #66, and #138 stay open.
+
+### The full run on `main` at the current lesson count
+
+ADR 014 decision 7 budgets 35 minutes for one job of a full run and the
+roadmap's full-run gate lets the one `build` job carry at most 32 lessons
+before F113. The measured full runs, read from the Actions API on
+2026-10-15 (job start to job end; the cache state of each run was not read
+from its log, which F118 does):
+
+| Run on `main` | Lessons | Wall clock | `build` | `integration` | Slowest `e2e` |
+|---|---|---|---|---|---|
+| 38545077253, 2026-10-14 (`docs/release-readiness.md`, warm caches) | 22 | 21 min 59 s | 15 min 42 s | 13 min 58 s | 5 min 25 s |
+| 38527223459, 2026-10-14 (`docs/release-readiness.md`, cold caches) | 22 | 29 min 46 s | 23 min 05 s | 13 min 41 s | 6 min 05 s |
+| 38607388478, 2026-10-14, after F71 | 28 | 34 min 01 s | 26 min 57 s | 13 min 33 s | 6 min 32 s |
+| 38621916706, 2026-10-14, after F68 | 32 | 40 min 48 s (`deploy` 1 min 43 s) | 31 min 15 s | 16 min 08 s | 7 min 30 s |
+| 38639021950, 2026-10-14 | 32 | 37 min 27 s | 30 min 32 s | 15 min 28 s | 6 min 26 s |
+| 38659296393, 2026-10-15, after F64 | 32 | 27 min 20 s | 21 min 07 s | 12 min 08 s | 5 min 48 s |
+| 38687330455, 2026-10-15, after the dependency bump #173 | 32 | 35 min 08 s | 27 min 58 s | 15 min 52 s | 6 min 44 s |
+
+At 32 lessons the `build` job of a full run takes 21 to 31 minutes: within
+the 35-minute planning budget by 4 to 14 minutes, and within the
+45-minute timeout by 14 to 24 minutes, on the runners of these runs. The
+variation between runs of the same size (10 minutes) is larger than the
+growth from 28 to 32 lessons, so a cost per lesson is not read off these
+runs here; F118 separates it from the cache state and the runner. The
+consequence for the roadmap is immediate: the full-run gate of Phase 4
+("no lesson feature takes the count past 32 before F113") is reached, and
+F113 is paused. **Until the owner decides the interim gate (requirements,
+unresolved question 10: an approved timeout for the one `build` job of a
+full run, from F118's record, with the lesson count it covers), or ADR
+017 is accepted and F121 delivered, or F113 is resumed, no lesson feature
+starts.** The dependency tables keep "F113" and "F113 by the lesson-shard
+rule"; the amended gate under "Phase 4" says how to read them. F118 is
+therefore the first feature of the verification workstream, and its
+measurement record is short work: the runs above exist.
+
+### Architecture decisions of this change cycle
+
+- **ADR 015** records the owner's decision of 2026-10-14: the budget of a
+  typical pull request with warm caches is 20 minutes, 15 minutes is a
+  non-blocking target, every measurement records both; it amends the
+  budget row of ADR 003 decision 5, ADR 012 decision 8, and ADR 014
+  decision 7 and changes nothing else. F61's criterion 1 is amended
+  accordingly (above).
+- **ADR 016** (accepted when this planning is approved) makes the learner
+  run a lesson's experiment through a declared, tested entry point and
+  removes every instruction to rebuild or preview the website from
+  maintained documentation without relocating it; the footer keeps its
+  anchor and names the activity; the setup page is organised by activity;
+  the page reproduction and the setup-page equality with CI are
+  superseded as learner-facing contracts. F117 delivers it.
+- **ADR 017** is **proposed and not accepted** by this planning: the
+  critical review of an F61-based incremental `main` that the owner asked
+  for, with the weaker guarantee stated for the owner's decision after
+  the evidence of F118 and F120. ADR 014 decision 11 (F113) is paused;
+  decisions 7 and 8 of ADR 017 (proportional local verification, removals
+  by coverage) do not depend on incremental `main` and may be accepted
+  separately on F118's evidence, which ADR 017's status provides for: a
+  partial acceptance is a dated status line naming the accepted decisions
+  and the evidence. ADR 017 decision 7 names what it amends on
+  acceptance: ADR 012 decision 1, ADR 005 decision 3, and ADR 003
+  decision 1 as ADR 005 decision 5 restates it (a recorded targeted run
+  is the finish and review evidence of an ordinary change; only a run
+  without options is a verification of the content; CI stays the
+  publication gate).
+- The statuses of ADR 002, ADR 003, ADR 005, ADR 012, and ADR 014 name
+  these records; no decision of theirs is rewritten.
+
+### Reconciliation notes
+
+- The change request's F1 to F3 are local labels of the editorial proposal
+  and are F114 to F116 here, as successors of the delivered editorial
+  features F28 to F31, which keep their blocks.
+- The change request's line numbers for the 12-minute statements had
+  moved; every current statement of the typical-pull-request budget in
+  this roadmap, the architecture, and the ADR statuses was found by search
+  and says 20 minutes. The acceptance criteria of the delivered features
+  F01 (criterion 10) and F58 (criterion 1) quote 12 minutes as the budget
+  of their day; they are records and carry a bracketed note instead of a
+  rewrite. The paused block of F113 (the measurement item of "In scope"
+  and acceptance criterion 5) carries the same bracketed note, and its
+  banner says so.
+- The delivered blocks that quote the learner-facing contracts ADR 016
+  supersedes carry a bracketed note in the same way and are not rewritten:
+  the Phase 4 inherited rule "The definition of done of a lesson"
+  (requirements decision 31; the tested "Reproduce this" path), F02's
+  user-visible outcome and in-scope item (the "Reproduce this" section
+  whose commands regenerate the lesson's results), F39 criterion 2 (the
+  equality of the setup page's commands with `ci.yml`), and F40's
+  in-scope line (the built-site check of the footer's render commands);
+  the "Local execution" row of "Verification strategy for the next
+  phase" carries the same note and points at the row of F117.
+- The request's "25-minute cold-cache budget", the "45-minute timeout",
+  and the per-check budgets are untouched by change 3; change 4 revisits
+  the timeout of an exceptional full run through question 10.
+- No conflict with the approved requirements was found. Requirements
+  decision 30's rule that `main` verifies everything stands until the
+  owner accepts ADR 017; decisions 32 to 35 are covered by F114 to F121
+  and ADR 015 to ADR 017.
+
 ## Overview
 
 Phases: Phase 1 is the MVP; Phase 2 is the work the requirements placed
 after the MVP; Phase 3 is the change cycle `physics-next-phase`, ordered in
 waves R0 to R5 by dependency; Phase 4 is the change cycle
-`final-curriculum`, ordered in waves C0 to C4 (see "Execution order"). A
-wave is a suggested grouping, not a gate: a feature may start when its
+`final-curriculum`, ordered in waves C0 to C4; Phase 5 is the change cycle
+`pbc-planning-change-four-workstreams`, the four workstreams F114 to F121
+(see "Execution order"). A wave is a suggested grouping, not a gate: a
+feature may start when its
 dependencies are done. The gates of Phase 4 (F61 and F62 before every
 lesson feature of the phase, F64 before the lesson features of waves C2 to
 C4) are dependencies, listed in the table and in each block.
@@ -272,7 +436,7 @@ mapping is under "Slot mapping".
 | ID | Feature | Wave | Slots | Depends on | Risk |
 |---|---|---|---|---|---|
 | F61 | Verification proportional to the change | C0 | none | F58 | High |
-| F113 | Bounded full verification: same-machine lesson shards of the build | C0 | none | F61, F58 | High |
+| F113 | Bounded full verification: same-machine lesson shards of the build (paused by `pbc-planning-change-four-workstreams`, requirements decision 35; superseded or resumed by the owner's decision on ADR 017) | C0 | none | F61, F58 | High |
 | F62 | Eight courses and the reference curriculum | C0 | none (migrates 17 published lessons; T0 by F70) | F03, F37, F26, F27, F25 | Medium |
 | F63 | Verified lesson previews | C0 | none | F62, F28, F44 | Medium |
 | F64 | Learning Path redesign: course-first, compact, accessible | C0 | none | F62, F63, F26, F27, F37, F41, F44, F13, F14 | Medium |
@@ -333,6 +497,26 @@ them publishes a lesson in this phase and therefore starts after F61 and
 F62, and after F113 under the full-run gate, like every lesson feature of
 the phase (the gates under "Phase 4"); their blocks are not rewritten, the
 gate is this rule. F15 is dropped.
+
+Phase 5, the change cycle `pbc-planning-change-four-workstreams`
+(2026-10-15): four independently reviewable workstreams (requirements
+decisions 32 to 35). The risky verification work is never combined with
+the editorial pilot in one feature.
+
+| ID | Feature | Workstream | Depends on | Risk |
+|---|---|---|---|---|
+| F114 | Editorial voice: the style guide with before-and-after examples | Editorial (change 1) | F28, F29, F30, F31 | Low |
+| F115 | Editorial pilot on mechanics lessons 01 to 05, with the human approval gate | Editorial (change 1) | F114, F29, F30, F32 | Medium |
+| F116 | Editorial principles in the authoring guide, the lesson template, and the review rubric | Editorial (change 1) | F115 (the pilot approved) | Low |
+| F117 | "Run this experiment": learner instructions without a website build | Learner instructions (change 2) | F39, F40, F61 (the switch: F118's record under question 10, or F119) | Medium |
+| F118 | Verification audit and the record of the full run | Verification (change 4) | F61 | Low |
+| F119 | Remove redundant verification and blanket local build obligations | Verification (change 4) | F118, the owner's acceptance of ADR 017 decisions 7 and 8 | High |
+| F120 | Incremental `main`: the staged evidence and the decision record | Verification (change 4) | F61, F118 | Medium |
+| F121 | Incremental `main` and the exceptional full run, if ADR 017 is accepted | Verification (change 4) | F120, F119, the owner's acceptance of ADR 017 | High |
+
+The budget of change 3 (ADR 015) is no feature: it changes the statements
+of the typical-pull-request budget in this roadmap, the architecture, and
+the requirements, and the acceptance criterion 1 of F61.
 
 Risk levels follow `.agents/policies/autonomy.md`. Every feature that adds a
 lesson is at least Medium, because physics and proof content needs independent
@@ -486,7 +670,8 @@ display on pages, agent code, a custom domain.
    Pages URL, and the base URL is one configuration value.
 10. A warm-cache pull request run finishes within 12 minutes and Mathlib is
     not compiled from source. Measured times per check are recorded in the
-    pull request.
+    pull request. (The 12 minutes are the budget of ADR 003 at delivery;
+    20 minutes since ADR 015, 2026-10-15.)
 11. Licence files exist; the README and site footer state MIT for code and
     CC BY 4.0 for content. No template placeholder text remains in the
     README, CONTRIBUTING, CODEOWNERS, or `.env.example`.
@@ -510,8 +695,10 @@ write one, and prove it with the first published lesson.
 **User-visible outcome.** A learner can read lesson M1, "Kinematics as a
 program", with explanation, explicit assumptions, worked examples, executed
 code and figures, exercises with solutions, and a "Reproduce this" section
-whose commands regenerate the lesson's results from a clone. An author can
-create a new lesson from a template and a guide.
+whose commands regenerate the lesson's results from a clone (the contract
+of ADR 002 at delivery; since ADR 016 and F117, 2026-10-15, the section
+names the lesson's experiment entry point and never a render command). An
+author can create a new lesson from a template and a guide.
 
 **In scope.**
 
@@ -524,7 +711,8 @@ create a new lesson from a template and a guide.
   dimensions, deterministic rendering.
 - Exercise and solution pattern that works without JavaScript.
 - "Reproduce this" section naming exact files, commands, and the built
-  commit.
+  commit (since ADR 016 and F117, 2026-10-15, the commands end at the
+  lesson's experiment entry point and never render the site).
 - Lesson source checks: schema, required sections, unmarked non-executed
   code, committed generated artifacts. The last check rejects tracked
   figures, outputs, execution caches, and rendered pages. Its one exemption
@@ -1267,7 +1455,9 @@ without a new ADR). Changing any check's content. Self-hosted runners.
 
 1. A warm-cache pull request run finishes within 12 minutes wall clock,
    measured on three consecutive pull requests and recorded in the pull
-   request and in `docs/release-readiness.md`'s table.
+   request and in `docs/release-readiness.md`'s table. (Revised to a
+   measured and recorded run time by the owner on 2026-10-12, ADR 012
+   decision 8; the budget itself is 20 minutes since ADR 015, 2026-10-15.)
 2. Every check of `verify.conf` and `verify-workflow.conf` runs in exactly
    one group; a test fails when a check is in no group or in two.
 3. `./scripts/verify.sh` without arguments runs every product check locally
@@ -2197,7 +2387,9 @@ Windows support.
    Linux run that F10 could not complete is completed or its blocker
    recorded.
 2. The required commands on the page equal the commands of `ci.yml` and of
-   the Reproduce page, shown by a test.
+   the Reproduce page, shown by a test. (The equality with `ci.yml` is the
+   contract of ADR 003 at delivery; superseded by ADR 016 decision 5 and
+   F117 since 2026-10-15, which test the page by performing its commands.)
 3. Every optional command is marked "not verified" and names the account or
    credential it needs and where the key goes (environment variable).
 4. `./scripts/check-links.sh` reports a dead link and a missing anchor on
@@ -2413,9 +2605,13 @@ every page while making the hashes and commands unobtrusive: a short
 listing (files, tests, Lean record, commands) in a closed `details`.
 
 **In scope.** `reproduce_this()` renders the summary and the details; the
-built-site check that the commands still regenerate the page is unchanged;
-the Lean evidence box gets the same treatment; a "copy" affordance only if
-it needs no JavaScript to read.
+built-site check that the commands still regenerate the page is unchanged
+(the contract of ADR 002 at delivery; since ADR 016 and F117, 2026-10-15,
+the footer lists the experiment entry point's commands and no render
+command, and the experiment check of ADR 016 decision 4 verifies them;
+the page reproduction stays an internal check); the Lean evidence box gets
+the same treatment; a "copy" affordance only if it needs no JavaScript to
+read.
 
 **Dependencies.** F28.
 
@@ -3164,6 +3360,18 @@ block:
   by the lesson-shard rule" and names F113 outright from wave C2 on; F61
   records the measured count at which the one job leaves the budget, and
   if that count is below 32 no lesson feature starts before F113.
+  **Since the change cycle `pbc-planning-change-four-workstreams`
+  (2026-10-15):** the site publishes thirty-two lessons, so the room is
+  used up, and F113 is paused (requirements decision 35). Wherever a
+  dependency table says "F113" or "F113 by the lesson-shard rule", read:
+  the owner's decision on the full-run gate under unresolved question 10
+  of the requirements, recorded by F118 from the measured full runs at
+  the current lesson count (an approved timeout for the one `build` job
+  of a full run, with the lesson count it is approved for), or F121 once
+  ADR 017 is accepted and delivered, or F113 resumed by the owner. No
+  lesson feature that takes the count past 32 starts before one of
+  these exists; see "State at the change cycle
+  `pbc-planning-change-four-workstreams`".
 - **The invariants and the lesson model** of `docs/architecture.md`,
   including the reference curriculum and the slot (ADR 013), the
   verification selection (ADR 014), and the format-2 lesson checks of
@@ -3176,7 +3384,9 @@ block:
   epistemic, and empirical limitations; typed claims with evidence; unique
   identifier, course, slot, methods, difficulty, validated prerequisites,
   outcomes, and related links; exercises, a self-check, accessible labels,
-  and a tested "Reproduce this" path; references from the register; focused
+  and a tested "Reproduce this" path (since ADR 016 and F117, a tested
+  "Run this experiment" path with a runnable entry point); references from
+  the register; focused
   tests for the code it adds; applicable checks passing within the budgets;
   and an independent scientific review before merge. No live LLM or API
   call is a required check.
@@ -3243,7 +3453,9 @@ every new lesson would add about 45 seconds of runner time to every pull
 request, and until F62 lands a lesson cannot carry a validated `slot`.
 F113 precedes every lesson feature that would take the lesson count past
 32 (the full-run gate), and F64 precedes the lesson features of waves C2
-to C4 (requirements decision 29).
+to C4 (requirements decision 29). Since 2026-10-15 F113 is paused and the
+full-run gate reads as the amended gate under "Phase 4" says (F118's
+record and the owner's decision, F121, or F113 resumed).
 
 ### F61 — Verification proportional to the change
 
@@ -3269,7 +3481,10 @@ is reused only from a base the same check implementation produced;
 `./scripts/verify.sh`.
 
 **User-visible outcome.** A contributor who changes one lesson sees the
-`verify` check finish within 12 minutes; a contributor who changes shared
+`verify` check finish within 12 minutes (the budget when this block was
+written; 20 minutes with a 15-minute target since ADR 015, requirements
+decision 34, change cycle `pbc-planning-change-four-workstreams`); a
+contributor who changes shared
 code, the checks themselves, or a lesson whose inputs cannot be followed
 sees a full run, as before. Locally, `./scripts/verify.sh` without
 options is unchanged; with the base option it runs the same selection CI
@@ -3410,7 +3625,13 @@ checksums the comparison with the base reuses).
 **Acceptance criteria.**
 
 1. Three consecutive warm-cache pull requests that each change one lesson
-   finish within 12 minutes wall clock; the times, the number of lessons,
+   finish within 20 minutes wall clock, each recorded with its duration
+   and whether the 15-minute target was met (amended from 12 minutes by
+   the owner's decision of 2026-10-14, ADR 015, requirements decision 34,
+   change cycle `pbc-planning-change-four-workstreams`; the three runs
+   measured on 2026-10-14, 13 min 50 s to 14 min 43 s, ran at the same
+   time rather than consecutively, and stay recorded as measured); the
+   times, the number of lessons,
    the per-page render cost without execution, and the projection to 110
    lessons are recorded in `docs/release-readiness.md`.
 2. A pull request that changes one lesson executes that lesson in the
@@ -3466,7 +3687,12 @@ checksums the comparison with the base reuses).
    `docs/release-readiness.md`. That count is at least the lesson-shard
    size of 32 lessons (ADR 014 decision 11), which the measured cost
    confirms or lowers and never raises; if it is lower, F113 reduces the
-   lesson-shard size accordingly and no lesson feature starts before F113.
+   lesson-shard size accordingly and no lesson feature starts before F113
+   (since 2026-10-15, change cycle `pbc-planning-change-four-workstreams`:
+   the measured full run and its projection are recorded by F118 under
+   unresolved question 10, not by this feature, and the F113 clause is
+   paused with F113 by requirements decision 35; the Phase 4 state table
+   records this, and the Issue decides what closes the feature).
 
 **Risk.** High. The feature changes the CI workflow, a workflow
 permission, and the merge gate's meaning on pull requests, which need
@@ -3478,6 +3704,22 @@ and reports rather than hides.
 **Detailed implementation plan expected.** Yes.
 
 ### F113 — Bounded full verification: same-machine lesson shards of the build
+
+**Paused by the change cycle `pbc-planning-change-four-workstreams`
+(requirements decision 35, 2026-10-15).** The pull request #175 of this
+feature was closed on 2026-10-15 without a merge, by the owner's decision
+not to merge it as designed; Issue #150 stays open and the branch
+`feature/150-bounded-full-verification-same` is preserved so that the
+work stays inspectable. The feature is not restarted, not duplicated, and
+not merged before the owner decides on ADR 017 (proposed by that cycle):
+if ADR 017 is accepted, F121 supersedes this feature and Issue #150 is
+closed non-destructively with a comment naming the record; if ADR 017 is
+rejected, the owner chooses between resuming this feature and the raised
+full-run timeout of unresolved question 10. The block below is the record
+of the feature as approved on 2026-10-12 and is not rewritten, except
+that where it quotes the 12-minute budget of its day (the measurement item
+of "In scope" and acceptance criterion 5) it carries the bracketed note
+"20 minutes since ADR 015", as the blocks of F01 and F58 do.
 
 **Source.** ADR 014 decisions 7 and 11; ADR 012 decisions 2, 3, 4, 6, and
 9; requirements, "Runtime and deployment constraints" (every push to
@@ -3580,7 +3822,8 @@ the published site is still one site verified in full. Locally,
   the sharded workflow: their wall clock, the assembly's time, and the
   projection to 110 lessons, recorded in `docs/release-readiness.md`,
   because the assembly is a second step on the longest path of every
-  pull request and the 12-minute budget of requirements decision 30 must
+  pull request and the 12-minute budget of requirements decision 30 (20
+  minutes since ADR 015) must
   be established on the workflow shape that persists.
 - `docs/architecture.md` ("CI pipeline and time budget", "Inside one
   verification run"), `docs/deployment.md`, and `docs/development.md`
@@ -3618,7 +3861,8 @@ and the base, which the shards and the assembly reuse), F58.
 5. A pull request with a base runs the same jobs; a shard with nothing
    to execute finishes in its fixed cost; three consecutive warm-cache
    pull requests that each change one lesson, measured as F61 criterion
-   1 measures them, finish within 12 minutes wall clock on the sharded
+   1 measures them, finish within 12 minutes wall clock (20 minutes since
+   ADR 015) on the sharded
    workflow, with their times, the assembly's time, and the projection
    to 110 lessons recorded in `docs/release-readiness.md`.
 6. `./scripts/verify.sh` without options runs every check in one process
@@ -3963,7 +4207,9 @@ features and the only feature of the wave that may start before the
 gates, because it publishes no lesson; every lesson feature of the wave
 after F61 and F62, and after F113 once the lesson count would pass 32
 (the full-run gate: the wave adds twenty-six lessons to twenty-two, so
-F113 lands within this wave, after about the first ten); then F66 and
+F113 lands within this wave, after about the first ten; since 2026-10-15
+the first ten are published, F113 is paused, and the gate is the amended
+gate under "Phase 4"); then F66 and
 F67; the first lesson features of the
 courses (F68, F70, F71, F72, F73) are independent of each other and of
 F65 and may run in parallel worktrees; F69 after F68; F74 after F71 and
@@ -5054,6 +5300,1123 @@ byte-identical at displayed precision; the manual passes recorded.
 
 **Risk.** Low. **Detailed implementation plan expected.** No.
 
+## Phase 5 — Four workstreams (change cycle `pbc-planning-change-four-workstreams`)
+
+Every feature in this phase comes from
+`docs/changes/pbc-planning-change-four-workstreams.md` (2026-10-14) and
+the requirements re-approved with it on 2026-10-15 (decisions 32 to 35).
+The four changes are independent workstreams, with one stated
+exception: the switch of F117 that adds the experiment check to the
+full-run `build` job waits for the owner's interim full-run timeout
+(unresolved question 10, on F118's record) or for F119's consolidation,
+because that job is the one the full-run gate of Phase 4 protects. Each
+block names its change. What they inherit from Phase 4 without repeating it: the
+invariants of `docs/architecture.md`, the definition of done of a lesson
+(for the editorial pilot, with the technical content fixed), the risk
+levels of `.agents/policies/autonomy.md`, and the rule that a feature that
+changes CI, workflow permissions, a protected script, or the merge gate is
+High and needs the owner's explicit approval. Change 3 (the 20-minute
+budget, ADR 015) is no feature; its amendments are in the blocks of F61
+and F113, the wave tables, and the architecture.
+
+Two coordination rules of this phase:
+
+- **No verification feature shares a pull request or a worktree with the
+  editorial pilot** (change request, "Non-goals and guardrails").
+- **F117 and F115 touch the same five lesson pages** (the footer cell and
+  the prose of mechanics 01 to 05). Their plans sequence the lessons or
+  rebase; neither changes a scientific claim, a computed number, a figure,
+  or a verified artifact, and the checks prove it on every pull request.
+
+### Workstream 1 — Editorial voice (change 1, requirements decision 32)
+
+Order: F114, then F115 lesson by lesson with the human's approval of the
+pilot recorded on its Issue, then F116. Expansion of the voice beyond the
+five pilot lessons is not a feature of this roadmap: it needs the human's
+explicit review and approval after F115, and is then planned as its own
+feature or features.
+
+### F114 — Editorial voice: the style guide with before-and-after examples
+
+**Source.** Change 1, proposal F1 and acceptance criteria 1, 2, and 7;
+requirements decision 32 and "UX expectations" (editorial voice);
+non-goals ("No editorial voice imposed as a uniform register").
+
+**Problem.** The editorial standard of Phase 3 (F28 to F31) gave every
+lesson depth, typed claims, interpreted figures, computed numbers, limits,
+a self-check, and curated references, and the lessons are correct and
+reproducible. They still read like specifications: openings that state
+the technique instead of the question, repeated framing sentences,
+defensive wording around every result, sentence after sentence of the
+same shape, and conclusions that report a number without saying what it
+means. The project has no document that says what its prose should sound
+like, and nothing to measure a draft against except the structural
+checks.
+
+**Goal.** A documented, reusable editorial style guide that combines the
+curiosity and accessibility of a personal technical blog, the rigour of a
+university textbook, and this project's verification standards, with
+concrete before-and-after examples, and that changes nothing of what a
+lesson claims or verifies.
+
+**User-visible outcome.** None on the site in this feature. A lesson
+author, a reviewer, and an agent drafting a lesson have one guide that
+shows, with examples, how a lesson opens, builds intuition, derives,
+experiments, interprets, moves between parts, and concludes, and what to
+remove.
+
+**In scope.**
+
+- One guide in the docs directory, named by the feature (this roadmap
+  calls it the editorial voice guide), with: the objective and the
+  non-goals of requirements decision 32; principles for lesson openings,
+  intuition, mathematical derivations, computational experiments, the
+  interpretation of results, transitions, and conclusions; for each, at
+  least two before-and-after examples drawn from existing lessons (the
+  lesson and section named, the "after" written for the example only and
+  not applied to the lesson) and examples of the intended register from at
+  least three of the author's earlier articles at ataspinar.com, each
+  named, quoted or paraphrased within fair use, and chosen for a quality
+  the lesson lacks; the recurring faults with a way to spot each
+  (boilerplate introductions, repetition, needlessly defensive wording,
+  monotonous sentence structure, conclusions that do not interpret);
+  what stays fixed (the format-2 sections and identifiers, claim types
+  and evidence, figure status, computed numbers, the reference register,
+  every check of `docs/authoring.md`); and the statement that structures
+  and narratives vary by subject and that no identical template is
+  imposed.
+- A draft editorial review checklist in the guide for F115's reviews:
+  specific weaknesses with their evidence and an actionable change, never
+  a score alone; F116 makes it the rubric.
+- A short audit, in the guide, of the openings and conclusions of the
+  five pilot lessons and of one lesson of each other strand, as the
+  evidence the principles answer.
+- One link from `docs/authoring.md` to the guide; the integration proper
+  is F116.
+
+**Out of scope.** Editing any lesson (F115); the template and the rubric
+in the review workflow (F116); an additional agent or a mandatory
+narrative template; any optimisation against AI-content detectors; jokes
+or anecdotes as a rule.
+
+**Dependencies.** F28, F29, F30, F31 (the editorial standard the voice
+builds on; their lessons supply the examples).
+
+**Acceptance criteria.**
+
+1. The guide exists, is reachable from `docs/authoring.md`, and covers
+   the seven parts of a lesson named above with principles for each.
+2. Each part has at least two before-and-after examples from existing
+   lessons, each naming the lesson and section, and the guide names at
+   least three earlier articles with what each demonstrates.
+3. The recurring faults are named, each with a way to detect it in a
+   draft, and the guide states what never changes for style (identifiers,
+   claims, numbers, figures, references, checks) and the non-goals of
+   decision 32.
+4. The draft review checklist asks for named weaknesses, evidence, and an
+   action, and has no numerical score as its result.
+5. `./scripts/verify.sh` passes (the documentation checks read the new
+   file); no lesson, template, or check changed.
+6. An independent editorial review of the guide by a reviewer who did not
+   write it is recorded on the pull request, with the findings resolved
+   or recorded.
+
+**Risk.** Low.
+
+**Detailed implementation plan expected.** No; the block is the plan. The
+feature records which articles and lessons it used.
+
+### F115 — Editorial pilot on mechanics lessons 01 to 05, with the human approval gate
+
+**Source.** Change 1, proposal F2 and acceptance criteria 3 to 7 and 9;
+requirements decision 32 ("a pilot on mechanics lessons 01 to 05 ...
+expanded beyond the pilot only after explicit human review and
+approval").
+
+**Problem.** A style guide is a claim until it has been applied; the five
+introductory mechanics lessons (M1 to M5, migrated to format 2 by F28,
+F29, and F30 and the first thing a learner reads) are where it is proven
+or corrected, before any other lesson is touched.
+
+**Goal.** Apply the guide of F114 to mechanics lessons 01 to 05 by
+targeted editorial changes to their prose, review each lesson on its own
+and the five as a connected sequence, record what worked, what did not,
+and what the guide must change, and stop at the human's approval gate.
+
+**User-visible outcome.** The five lessons read as one curious, rigorous
+author wrote them: each opens with its question, interprets its results,
+and leads into the next; every number, figure, claim, code excerpt, and
+command on them is exactly what it was.
+
+**In scope.**
+
+- Per lesson, one reviewed pull request (or one per pair, the human's
+  choice on the Issue): edits to prose cells, captions, alt text, and
+  exercise wording under the guide; no change to executed code, inline
+  expressions, front matter, claims and their evidence, figure status,
+  references, or the footer. The pull request's evidence shows the diff
+  is prose only: the executed cells and the front matter are
+  byte-identical before and after (a diff over the cells, recorded), and
+  every check passes, including the reproduction of the page byte for
+  byte, so the figures and numbers are unchanged.
+- The review of each lesson by a reviewer who did not edit it, with the
+  checklist of F114: named weaknesses, evidence, action, and the physics
+  reviewer's confirmation that no scientific statement changed in meaning
+  (independent scientific review, as every lesson feature).
+- The sequence review: the five lessons read in order once all are
+  edited, for the transitions between lessons, the repetition across
+  them, and the distinct structure each keeps for its subject; recorded.
+- The pilot record, as a section of the guide or a file beside it: the
+  changes that worked, the ones that did not and were reverted, and the
+  adjustments made to the guide; the guide is amended in this feature.
+- The approval gate: the human's explicit approval of the pilot recorded
+  on the Issue of F115 before any lesson outside the five is edited under
+  the guide. The feature creates no expansion feature and edits no sixth
+  lesson.
+
+**Out of scope.** Any lesson other than mechanics 01 to 05; wholesale
+regeneration; changes to code, numbers, figures, claims, references, or
+section identifiers; diagrams (F32 delivered them; their alt text may be
+edited as prose); the expansion of the voice to the curriculum.
+
+**Dependencies.** F114; F29 and F30 (the five lessons in format 2); F32
+(their diagrams).
+
+**Acceptance criteria.**
+
+1. Mechanics lessons 01 to 05 are edited by targeted changes; for each,
+   the recorded diff touches prose, captions, alt text, and exercise
+   wording only, and the executed cells and front matter are
+   byte-identical before and after.
+2. Every existing check passes on each pull request, and the page
+   reproduction (or, after F117, the experiment check) shows the figures
+   and numbers unchanged; no scientific claim, result, formula, or
+   verified artifact changed.
+3. Each lesson has an independent editorial review with named
+   weaknesses, evidence, and actions, and an independent scientific
+   confirmation, recorded on its pull request.
+4. The sequence review of the five is recorded, and it shows that the
+   lessons keep structures and narratives appropriate to their subjects
+   rather than one pattern.
+5. The pilot record lists successful changes, unsuccessful changes, and
+   the adjustments made to the guide, and the guide carries them.
+6. The human's approval of the pilot is recorded on the Issue; until it
+   is, no other lesson is edited under the guide, and the feature creates
+   no expansion work.
+
+**Risk.** Medium: prose of published scientific lessons, with independent
+editorial and scientific review per lesson.
+
+**Detailed implementation plan expected.** Yes: the per-lesson protocol,
+the diff evidence, and the order relative to F117 on the same files.
+
+### F116 — Editorial principles in the authoring guide, the lesson template, and the review rubric
+
+**Source.** Change 1, proposal F3 and acceptance criteria 7 and 8;
+requirements decision 32 ("future lessons inherit the voice through the
+normal authoring workflow").
+
+**Problem.** After the pilot the principles live in a guide that nothing
+requires a lesson author, an agent, or a reviewer to read. The template
+still shows the register of format 2 alone, and a lesson review has no
+editorial part.
+
+**Goal.** The approved principles, as adjusted by the pilot, become part
+of `docs/authoring.md`, of the prose placeholders of
+`docs/lesson-template.qmd`, and of the lesson review as a qualitative
+rubric, without a rigid narrative template and without a new agent.
+
+**User-visible outcome.** None directly; the next lesson a feature
+publishes opens, interprets, and concludes in the project's voice because
+its author and reviewer followed the normal workflow.
+
+**In scope.**
+
+- `docs/authoring.md`: an editorial section with the essentials of the
+  guide, a link to it, and the editorial step in "Check it" (read the
+  draft against the faults list) beside the structural checks.
+- `docs/lesson-template.qmd`: prose placeholders and comments that show
+  the voice at the opening, the interpretation of a result, the
+  transitions, and the conclusion, while the section identifiers, cells,
+  and checks of the template stay as they are (the template test still
+  passes); the placeholders say that structure varies by subject.
+- The editorial review rubric: the checklist of F114 as adjusted by F115,
+  in the lesson review guidance of `docs/authoring.md` and named where
+  the review workflow describes a lesson review, requiring named
+  weaknesses with evidence and an action and giving no score as a
+  verdict; the record format of a review.
+- The next lesson feature's review record is the first use; the feature
+  may demonstrate the rubric on a lesson drafted from the template in a
+  dry run that is not merged.
+
+**Out of scope.** Editing published lessons; expanding the pilot; a
+mandatory additional agent; a narrative template that every lesson must
+follow; changes to checks, identifiers, or verification.
+
+**Dependencies.** F115 (the pilot approved by the human).
+
+**Acceptance criteria.**
+
+1. `docs/authoring.md` carries the principles and links the guide; the
+   authoring checks of a lesson include the editorial step.
+2. `docs/lesson-template.qmd` reflects the voice in its prose placeholders,
+   keeps every section identifier and cell, and a lesson made from it
+   passes the lesson checks (the template test).
+3. The rubric exists, is required by the lesson review guidance, asks for
+   weaknesses, evidence, and actions, and produces no numerical score as
+   its result.
+4. The guide and the rubric say that structures vary by subject, and no
+   new agent, workflow step that calls a model, or mandatory narrative
+   template was added.
+5. `./scripts/verify.sh` passes; no check, identifier, or verification
+   guarantee changed.
+
+**Risk.** Low.
+
+**Detailed implementation plan expected.** No.
+
+### Workstream 2 — Learner instructions without a website build (change 2, requirements decision 33, ADR 016)
+
+### F117 — "Run this experiment": learner instructions without a website build
+
+**Source.** Change 2 (all of it); requirements decision 33, "UX
+expectations" ("Run this experiment" section and learner setup), "Runtime
+and deployment constraints" (reproducibility), non-goals (no instruction
+to rebuild or preview, no relocation); ADR 016, proposed with this
+planning and accepted when it is approved.
+
+**Problem.** Every published instruction to a reader ends in rendering the
+site: the setup page's required setup is CI's setup, the footer of every
+lesson ends with `quarto render`, the README's one command is
+`./scripts/verify.sh`, and the development and authoring guides say
+"preview the site". No lesson has a runnable experiment outside its page,
+because every figure and table is computed in the page's cells. A reader
+who wants to run and modify an experiment is told to install Lean, jq, a
+browser, and Quarto.
+
+**Goal.** Implement ADR 016: every lesson declares a tested experiment
+entry point that regenerates its results and figures without HTML; the
+footer names the activity and lists its commands; the setup page is
+organised by activity with the Python-only path first and the Lean and
+agent paths separate; the experiment commands are verified; every
+instruction to rebuild or preview the website leaves the maintained
+documentation and is not relocated; everything internal keeps running.
+
+**User-visible outcome.** A reader clones the repository, runs
+`uv sync --locked --no-dev`, and runs the one experiment command of a
+lesson; the figures and numbers of the page appear in a directory of
+their choosing, and they can change the code and run it again. The
+environment they installed holds the project's dependencies and nothing
+of the site toolchain. A Lean reader additionally installs elan and
+checks the proofs. Nobody is told to install a browser, jq, or Quarto, or
+to build the site.
+
+**In scope.**
+
+- **The entry-point contract** (ADR 016 decision 2), fixed once: where an
+  entry point lives (the entry point and the figure-writing functions
+  below are modules of the lesson's course package under `src/pbc`,
+  imported by the page's cells; the lesson directory holds at most a thin
+  runner that imports them and holds no scientific logic). This is the
+  one location the digest as implemented follows: ADR 014 decision 1 and
+  `src/pbc/authoring/digest.py` follow the imports of the page's cells
+  transitively through `pbc` modules only, and a module in the lesson
+  directory is hashed as content without its own imports being followed,
+  so a `src/pbc` module imported only by such a module would be outside
+  the digest and a change to it would not select the lesson. If F117
+  prefers the lesson directory for the entry point itself, it first
+  extends the digest to follow the imports of a module in the lesson
+  directory, with a test that a changed `pbc` module imported only by the
+  entry point changes the lesson's digest, before any lesson is migrated.
+  The contract also fixes how the entry point is
+  run (one command, `uv run --locked --no-dev`, an output directory
+  argument), what it writes (the figure files of the page and a results
+  file with the numbers the page shows, at displayed precision), and how
+  the page's cells call the same functions so that no scientific logic
+  exists twice. **One figure-writing function per figure** (ADR 016
+  decision 2): today every lesson figure is emitted by `plt.show()` in a
+  cell and captured by the Jupyter inline backend into
+  `index_files/figure-html`, and no helper writes a figure file, so a
+  `savefig` in an entry point and the backend's capture need not agree
+  byte for byte (bounding box, dpi, metadata). The contract gives every
+  figure one function in the lesson's course-package module under
+  `src/pbc` (the location fixed above), with fixed Matplotlib
+  settings and no metadata, that the entry point calls to write the file
+  into the output directory and that the page's cell calls at build time
+  to write the same file and show it as the cell's output, so that the
+  figure file of the built page holds the writer's bytes; the display
+  form of ADR 002 (a figure is produced by an executed cell during the
+  build, no image file is committed) and the preview lookup of F63 are
+  kept. The contract names the fallback for a figure kind that cannot
+  reach byte identity across the two paths: an image comparison at the
+  page's rendered size plus the numbers at displayed precision, recorded
+  as a documented difference per figure kind in the feature's record;
+  the first migrated lesson of each figure kind verifies which applies.
+  The learner's environment is the project's dependencies
+  alone: `uv sync --locked --no-dev` installs them and nothing of the
+  `dev` group (Quarto, the Jupyter kernel, Playwright, the accessibility
+  scan, pytest, ruff), as ADR 016 decision 2 decides; a lesson kind that
+  needs more than the project's dependencies gets a declared learner
+  dependency group or extra, named by its footer, as the `openai` extra
+  serves the live agent run, decided once in this contract. The
+  contract also fixes the environment of the experiment check (ADR 016
+  decision 4): one learner environment per verification run, created
+  with `uv sync --locked --no-dev` in the fresh clone outside the
+  per-lesson budget, against which every selected lesson's entry point
+  runs without a further sync (`uv run --no-sync` or the equivalent),
+  and never the checkout's environment, which `uv run --no-dev` would
+  strip of the `dev` group (Quarto, pytest, Playwright) while the
+  verification runs; the assertion that the learner's environment holds
+  nothing of the `dev` group belongs to the setup-page test, not to the
+  experiment check. The lesson
+  source checks require an entry point once the switch below is made; a
+  unit test per entry point. **The Lean kind** is the one exception to
+  the location rule, fixed in this contract as ADR 016 decision 2 fixes
+  it: for a lesson whose methods are Lean only, the entry point is the
+  proof check (`./scripts/check-lean.sh`, or `lake build` of the lesson's
+  modules), a shell script and not a `src/pbc` module; its digest inputs
+  are the displayed Lean modules (`lean-modules`), the toolchain, and the
+  manifest that ADR 014 decision 1 and `src/pbc/authoring/digest.py`
+  already follow; its test is the Lean build together with the exercise
+  pairing check of ADR 011 decision 3, and no separate unit test is
+  written for it; the lesson source check accepts that declaration for
+  such a lesson. A Lean lesson that also computes a figure additionally
+  declares the figure-writing function under `src/pbc`, with its unit
+  test, as every other kind does.
+- **The entry points of the thirty-two published lessons**, in reviewed
+  steps per strand, behind the unchanged footer: the figure and table
+  code moves from the cells into the entry point's functions, the cells
+  call them, and the page's text and numbers stay identical (the
+  determinism and reproduction checks pass on every step); a figure that
+  moves from the inline backend's capture to its figure-writing function
+  is re-encoded once by the writer, which changes the bytes of its file
+  and not its content, and the pull request of that step shows the figure
+  unchanged by an image comparison at the page's rendered size. For an
+  agent lesson the
+  entry point replays the recorded run without credentials; the live run
+  is a separate documented command behind the optional dependency and
+  the credential. For a Lean lesson the entry point is the proof check
+  (`./scripts/check-lean.sh`, or `lake build` of the lesson's modules),
+  under the Lean rule of the contract above, and, where the page computes
+  a figure, the figure's function under `src/pbc`.
+- **The switch**: the footer's heading and content by lesson kind ("Run
+  this experiment", "Replay this experiment", "Check this proof"), the
+  identifier `reproduce-this` kept, the commands from the clone to the
+  entry point with the commit, the files, and what is regenerated, and no
+  render or preview command; `reproduce_this()` (or its successor, the
+  name is the feature's) builds it through the post-render step of ADR
+  014 decision 9 as today.
+- **The experiment check** (ADR 016 decision 4): in a fresh clone, in
+  the one learner environment per run of the contract above, the entry
+  point's command regenerates the figure files byte for byte (the one
+  figure-writing function of the contract produces both sides; a figure
+  kind the feature's record documents as unable to reach byte identity
+  is compared as an image at the page's rendered size) and the
+  numbers at displayed precision, within the 30-second budget of the
+  lesson; a failing or missing entry point fails `verify`. It follows
+  the selection rule of the page reproduction (ADR 014 decision 3,
+  invariant I26): every lesson on a full run and on a run without
+  options, the lessons the run executed on a selective run, read from
+  the selection file `./scripts/verify.sh` writes, as the check
+  `site-checks-reproduction` reads it. It joins the group `build` of
+  `scripts/verify.conf`, the same-machine group of ADR 012 decision 4,
+  as tests marked `same_machine` inside the existing check
+  `site-checks-reproduction` (the one route: that check holds exactly
+  the tests marked `same_machine` under `tests/e2e`, and
+  `tests/integration/test_site_check_division.py` requires every test of
+  `tests/e2e` to be run by exactly one `site-checks-*` check and admits
+  no new check name, so a second check of the group would run the tests
+  twice or fail the division test), and declares no new group and no new
+  check (every group is run by exactly one job, ADR 012 decision 2; the
+  check of the group `build` holds exactly the tests marked
+  `same_machine`, ADR 012 decision 4), so that every comparison
+  is against figures and numbers this run computed on the machine of
+  the comparison and never against a result of the base; the entry
+  point is in the lesson's digest, so a changed entry point selects its
+  lesson. The page reproduction and every other internal check stay in
+  `scripts/verify.conf`; the feature removes no check and leaves the
+  check identity's inputs as they are, apart from the tests it changes.
+- **The cost of the check on the full-run `build` job, and the gate of
+  the switch** (ADR 016, "Consequences"). On a full run the check is a
+  fifth execution of every lesson's science in the `build` job, beside
+  the site build, the determinism build, the preview test's build, and
+  the page reproduction, all of which stay until F118 rules. Expected
+  cost, derived and not measured: the page reproduction of thirty-two
+  lessons took about 11 min 13 s in one fast full run (change request),
+  execution and render together; the check repeats the execution and
+  not the render, so it adds at most that much to a `build` job measured
+  at 21 min 07 s to 31 min 15 s with thirty-two lessons ("The full run
+  on `main` at the current lesson count"), against the 35-minute
+  planning budget of ADR 014 decision 7 and the 45-minute timeout; on
+  the slower measured runs the sum can exceed the planning budget, and
+  a `build` job that exceeds the timeout publishes nothing (invariant
+  I26). The entry points, their unit tests, the setup page, and the
+  documents are delivered first, behind the unchanged footer; the switch
+  (the footer's heading and content, the lesson source check that
+  requires an entry point, and the entry of the experiment check in
+  `scripts/verify.conf`) is made only after the owner's interim full-run
+  timeout is recorded (unresolved question 10, from F118's record, as a
+  status line of ADR 014) or after F119's consolidation has removed
+  what F118 showed redundant, whichever comes first, and the first full
+  run on `main` after the switch is measured against the approved
+  timeout. Whether the check replaces the render step of the page
+  reproduction is F118's coverage question, not this feature's.
+- **The setup page** (`site/reproduce.qmd`, kept at its address or
+  redirected, with every existing link valid): three activities, with the
+  Python-only required setup (Git and uv), the experiment commands and
+  their pattern, the optional Lean setup and proof checking clearly
+  separate, the agent replay distinguished from a live call that names
+  its credential and dependency, and a troubleshooting table for those
+  paths; the test of the page performs the Python-only commands from the
+  page's text in a fresh clone, asserts that the environment they
+  produced holds no package of the `dev` group, runs at least one
+  experiment of each non-Lean lesson kind in that environment to
+  completion, and keeps the optional commands marked; the equality with
+  `ci.yml` is dropped (ADR 016 decision 5).
+- **The documents**: `README.md` ("Build and verify" becomes "Run an
+  experiment" with a reference to the setup page, and the verification
+  command named as what CI runs), the project part of `CONTRIBUTING.md`,
+  `docs/development.md` (the preview walkthrough removed; the
+  verification section kept as the technical reference of what
+  `./scripts/verify.sh` verifies and CI runs, phrased as the maintainers'
+  and agents' contract and not as a way to read the site), `docs/authoring.md`
+  ("Check it" lists the unit tests, the lesson checks, and the lesson's
+  experiment; how to write the entry point; the footer section rewritten),
+  `docs/lesson-template.qmd` (the footer cell), `site/contribute.qmd`,
+  `site/index.qmd` (the "Source and licence" sentence, which sends every
+  visitor to "rebuild everything on your own machine", reworded around
+  running an experiment with the reference to the setup page kept), the
+  instructor packs under `docs/instructor-packs/` (the F59 pack's "Pathway
+  without AI" names the lesson's "Reproduce this" section, a heading the
+  switch renames; the sentence is in the hand-written part of the pack,
+  outside the block `pbc.authoring.educators` writes, so the pack is
+  edited and any later pack follows the new heading), and
+  `docs/project-map.md` for any new file; a test over the maintained
+  guides, the home page, the instructor packs, and the generated footers
+  that their instructional command blocks and imperative setup and footer
+  sections (the setup page's command blocks, the README's run section,
+  the generated footers, the instructor pack's pathway, the place of the
+  removed preview walkthrough) contain no render or preview command and
+  that none names the superseded footer heading; a technical reference
+  that names in prose what `scripts/build-site.sh` or CI runs (the
+  verification section of `docs/development.md`, requirements decision
+  33) is not an instruction and is not what the test forbids. Historical records (ADRs,
+  completion records, `docs/release-readiness.md`, plans) are not
+  rewritten; ADR 002's superseded consequence is marked in its status by
+  this planning.
+- `docs/architecture.md` ("Learner runs an experiment", "Inside one
+  verification run" step 7) updated; the status of ADR 016 records the
+  delivery.
+
+**Out of scope.** Changing any scientific logic, result, figure, or claim
+(the checks prove it); removing or consolidating an internal check (F118,
+F119); the agents' local verification obligations (F119); the editorial
+voice (F114 to F116); Windows; notebooks as sources.
+
+**Dependencies.** F39 (the setup page and its test), F40 (the footer), F61
+(the post-render context and the digest the entry point joins: the
+selection, base, and regenerated context delivered by pull requests #152
+to #166, not the closure of Issue #147); for the
+switch only, the owner's interim full-run timeout under unresolved
+question 10 (recorded from F118's record) or F119's consolidation,
+whichever comes first.
+
+**Acceptance criteria.**
+
+1. No maintained user, contributor, development, or authoring guide, the
+   home page, no instructor pack, and no generated footer instructs a
+   reader to rebuild or preview the website locally, and none names the
+   superseded footer heading; a test over the named files (the guides,
+   `site/index.qmd`, `docs/instructor-packs/`, and the generated footers)
+   shows it; the instructions were removed, not relocated (reviewed). The test asserts
+   that the instructional command blocks and the imperative setup and
+   footer sections (the setup page's command blocks, the README's run
+   section, the generated footers, the instructor pack's pathway, and the
+   place of the removed preview walkthrough in `docs/development.md`)
+   contain no render or preview command (`quarto preview`,
+   `quarto render`, `./scripts/build-site.sh`, or an imperative sentence
+   that tells the reader to render or preview the site); a technical
+   reference that names such a command in prose as what
+   `./scripts/verify.sh` or CI runs (the verification section of
+   `docs/development.md`, requirements decision 33) is permitted and the
+   test does not forbid it; the full `./scripts/verify.sh` run that ADR 017
+   decision 7 and F119 require of an agent or developer for the listed
+   change types is the local site render the requirements' runtime
+   constraints permit and is not such an instruction (ADR 016 decision
+   1).
+2. Every published lesson's footer gives its experiment commands with no
+   render command, under the heading of its kind, with the identifier
+   `reproduce-this` kept; every lesson declares an entry point with a
+   unit test (for a lesson whose methods are Lean only, the proof check
+   is the entry point and the Lean build with the exercise pairing check
+   of ADR 011 is its test, as the contract fixes); a lesson without one
+   fails the lesson checks.
+3. The Python-only path needs Git, uv, and the project's locked
+   dependencies and nothing else: the setup page's install command and
+   every footer's commands carry `--no-dev` (or the learner group the
+   contract declares) and reference no elan, Mathlib, browser, jq,
+   workflow tool, or LLM credential; a test performs the page's
+   Python-only commands in a fresh clone, asserts that the installed
+   environment holds no Quarto, Jupyter kernel, browser, accessibility,
+   workflow, or quality package, and runs one experiment of each
+   non-Lean lesson kind to completion in it.
+4. A Lean reader checks proofs and works on the exercises of
+   `lean/04-lean-exercises-on-your-machine` with the Lean setup the page
+   gives, without a website build; the Lean block is marked optional and
+   separate.
+5. The experiment check runs a lesson's entry point in a fresh clone with
+   the learner's commands and compares its figure files byte for byte
+   (through the one figure-writing function per figure of the contract;
+   for a figure kind the feature's record documents as unable to reach
+   byte identity, as an image at the page's rendered size) and its
+   numbers at displayed precision, against what this run computed on the
+   same machine, within 30 seconds: for every lesson on a full run and on
+   a run without options, and for the selected lessons only on a
+   selective run (a test that a run with a base checks the experiments of
+   the lessons it executed and of no other); a changed result, a changed
+   entry point, and a missing entry point each fail `verify`, a test per
+   case.
+6. No entry left `scripts/verify.conf`; the site build, the determinism
+   check, the page reproduction, the deployment of the verified artifact,
+   the provenance region, the accessibility scan, and the dataset and
+   lesson checks pass unchanged; ADR 016's status records the delivery.
+7. `README.md`, the setup page, the footer generator, the template, the
+   guides, and the tests say the same thing; a reviewer who did not write
+   the page follows it on a clean machine for one simulation lesson, one
+   agent lesson (replay), and one Lean lesson, recorded on the pull
+   request.
+8. The switch was made only after the owner's interim full-run timeout
+   was recorded or F119's consolidation was merged, and the pull request
+   of the switch names which; one full run on `main` after the switch is
+   measured against the approved timeout (its `build` job, with the run
+   identifier and cache state) and recorded in
+   `docs/release-readiness.md`, together with the executions per lesson
+   in a full run before and after the switch.
+
+**Risk.** Medium: every lesson page's cells move code into an entry point,
+and the proof that nothing scientific changed is the unchanged text and
+numbers of the page on every step with the determinism and reproduction
+checks passing, and an image comparison at the rendered size for a figure
+the step re-encodes; whether every figure kind reaches byte identity
+between the entry point and the page is verified on the first migrated
+lesson of each kind, with the documented image comparison as the fallback
+(ADR 016 decision 2); the changed tests make every pull request of the feature a
+full run; the switch adds an execution of every lesson to the full-run
+`build` job, which is why it is gated on the approved timeout or on
+F119's consolidation (criterion 8); independent review per step.
+
+**Detailed implementation plan expected.** Yes: the contract, the order
+of the strands, and the sequencing with F115 on mechanics 01 to 05.
+
+### Workstream 3 — Verification simplification (change 4, requirements decision 35, ADR 017 proposed)
+
+Order: F118 first; F119 and F120 after it in parallel worktrees; F121 only
+if the owner accepts ADR 017. F118 is also what the amended full-run gate
+of Phase 4 waits for: its measurement record is the basis of the owner's
+interim decision under unresolved question 10. None of these features is
+combined with the editorial pilot. Issue #150 (F113) is not touched by
+F118, F119, or F120; F121 closes it non-destructively on acceptance, and
+the owner decides on rejection.
+
+### F118 — Verification audit and the record of the full run
+
+**Source.** Change 4, "C" and "B", "Required evidence and staged
+acceptance" items 5, 6, and 7, and "Why this is necessary"; requirements
+decision 35 and unresolved question 10; ADR 017 (context, and decisions 7
+and 8 as the proposals it tests).
+
+**Problem.** Before a check is removed, a job divided, or an agent's
+obligation lifted, the facts have to be on the table: what a full run
+executes and compares and how often, whether the preview test's third
+build duplicates the determinism build, which inputs of the check
+identity affect what, where the `integration` job's time goes, which
+local full-site builds the agent workflow demands, and what a full run
+costs at the current lesson count with the cache state known. Today those
+facts are spread over scripts, tests, prompts, and Actions logs, and the
+roadmap's full-run gate is reached without the projection F61 and F113
+were to record.
+
+**Goal.** One audit record with coverage evidence per candidate removal,
+the measured full run and one-lesson pull request decomposed into fixed
+and lesson-dependent cost, and the proposal for the owner's interim
+full-run gate; no change to CI, checks, or scripts.
+
+**User-visible outcome.** None on the site. The owner receives a short,
+evidenced proposal for the full-run timeout and the lesson count it
+covers; F119 and F120 receive their evidence.
+
+**In scope.**
+
+- **The call graph of verification**, per check of the group `build` and
+  of the `e2e` groups, in a full run and in a selective run: which build
+  it performs, which lessons it executes, which bytes it compares with
+  which, from `scripts/verify.conf`, `scripts/build-site.sh`,
+  `scripts/check-determinism.sh`, `tests/support/second_build.py`, and
+  the tests of `tests/e2e`; with the measured duration of each step from
+  the logs of the runs named under "State at the change cycle
+  `pbc-planning-change-four-workstreams`".
+- **The redundancy verdict** on `test_a_second_build_gives_byte_identical_previews`
+  against `scripts/check-determinism.sh`: the state each build starts
+  from, the selection each honours, the files each compares, and the
+  failure modes each catches; the verdict "duplicate with identical
+  coverage" or "covers X that determinism does not", and in the first
+  case the regression test F119 must add (a differing preview still fails
+  `verify`).
+- **The validity domains of the check identity**: each input of
+  `check_identity` (the digest module of the authoring package) classified
+  by what it affects (scientific execution, rendered output, the
+  verification rule, the browser tooling), which domains could be split
+  with a complete-input test and which cannot; the rule that an
+  unclassified input belongs to every domain (ADR 014 decision 10).
+- **The `integration` critical path**: the tests of `tests/integration`
+  by duration and by what they need (the Lean packages, the browser, a
+  Quarto build), a division into independent parts that runs every test
+  exactly once, and what it would shorten; whether lesson reproductions
+  could run in parallel is assessed from per-lesson execution budgets and
+  resource contention, and `pytest-xdist` is not assumed.
+- **The inventory of local build obligations** in `AGENTS.md`'s definition
+  of done, `.agents/prompts/implementer.md`, the other prompts and
+  policies, `scripts/finish-feature.sh` and `scripts/review-feature.sh`,
+  the plans, the skills, and `docs/development.md`: each blanket demand
+  to run everything, the targeted checks that would replace it, and the
+  change types that still need a local page or site render (ADR 017
+  decision 7); CI stays the publication gate.
+- **The measurements**, recorded in `docs/release-readiness.md` with run
+  identifiers: the `build` job of the full runs at 28 and 32 lessons with
+  their cache state read from the logs; the one-lesson pull requests of
+  F61 decomposed into runner preparation, `integration`, and
+  lesson-dependent time; the growth per lesson between 22, 28, and 32
+  lessons with its uncertainty; the full-run fallback at representative
+  larger counts, labelled as projections; every number against the
+  20-minute budget and the 15-minute target of ADR 015.
+- **The proposal for the owner** (unresolved question 10): the timeout of
+  the one `build` job of a full run and the lesson count it is approved
+  for, with the growth per lesson stated, as the fallback of ADR 014
+  decision 11 requires; posted on the Issue; the owner's decision is
+  recorded as a status line of ADR 014 (an ADR change needs the owner's
+  merge approval) and restates the full-run gate of Phase 4 for the
+  lesson features.
+
+**Out of scope.** Removing, dividing, or changing any check, job, script,
+or prompt (F119); the same-commit comparison and the chain design (F120);
+changing the timeout (the owner's decision, applied by whichever feature
+the owner names); a scheduled audit.
+
+**Dependencies.** F61 (the selection and the base the audit reads: the
+delivered selection, base, and regenerated context of pull requests #152
+to #166, not the closure of Issue #147, whose criterion 9 is recorded by
+this feature).
+
+**Acceptance criteria.**
+
+1. The call-graph record names, per check, the builds, the executions per
+   lesson, and the bytes compared, with measured durations from named
+   runs; the number of executions of a lesson in a full run is stated.
+2. The redundancy verdict on the preview test is given with the evidence
+   from the code and, if it is a duplicate, the regression test F119 adds;
+   if not, what it covers that the determinism check does not.
+3. Every input of the check identity is classified; the inputs that cannot
+   be classified are named as belonging to every domain; the splittable
+   domains, if any, come with the completeness test they need.
+4. The `integration` division is proposed with per-test durations and
+   dependencies and a test that every test runs once; the parallel
+   reproduction question is answered from budgets and contention, not
+   assumed.
+5. The inventory of local full-site build obligations is a table with the
+   replacing targeted checks and the change types that keep a local
+   render.
+6. The full-run and pull-request measurements are recorded in
+   `docs/release-readiness.md` with run identifiers and cache state,
+   decomposed as above, projections labelled, and judged against ADR 015;
+   the proposal of the timeout and the covered lesson count is on the
+   Issue for the owner.
+
+**Risk.** Low: documents, measurements, and tests that assert the audit's
+facts; no CI change.
+
+**Detailed implementation plan expected.** Yes, short.
+
+### F119 — Remove redundant verification and blanket local build obligations
+
+**Source.** Change 4, "C", "Required evidence and staged acceptance" items
+5 and 6; requirements decision 35 and "Runtime and deployment
+constraints" (agents' local verification proportional to the change);
+ADR 017 decisions 7 and 8, which do not depend on incremental `main` and
+which the owner may accept on F118's evidence.
+
+**Problem.** The `build` job executes every lesson more often than its
+guarantee needs if F118 confirms the duplicate, the `integration` job is
+the longest fixed job on the longest path of a one-lesson pull request,
+a change to any integration test turns every pull request into a full
+run, and every agent finishes a feature by rebuilding the whole site
+locally before CI rebuilds it.
+
+**Goal.** Apply what F118 justified, each with regression evidence: the
+consolidation of the duplicate build, the division of `integration`, the
+split of the check identity where safe, and the replacement of the blanket
+local full-site builds in the agent workflow by targeted checks and the
+selection CI will make, with a local full run for the listed change types.
+
+**User-visible outcome.** None on the site. A one-lesson pull request
+spends less time on its longest path (measured), a pull request that
+changes an unrelated integration test no longer executes every lesson
+where F118 showed it safe, and an agent that changed one lesson verifies
+that lesson and the selection, without building the site, before CI
+builds and validates it.
+
+**In scope.**
+
+- The removals and consolidations F118's verdicts justify, each in its
+  own reviewed step with the regression test that the violation the
+  removed check caught still fails `verify`; `scripts/verify.conf`,
+  `.github/workflows/ci.yml`, and the tests change only as justified; no
+  independent scientific check is removed; the executions per lesson in
+  a full run are listed before and after.
+- The division of the `integration` job into parts that run every test
+  exactly once (as `tests/e2e/shards.json` does for the built-site tests),
+  if F118 showed it shortens the critical path; the F58 tests of the
+  division extended.
+- The split of the check identity into validity domains only for the
+  domains F118 showed complete, with a completeness test per domain and
+  the rule that an unclassified input belongs to every domain; no change
+  lets older check logic certify a reused result.
+- **The proportional local run** (ADR 017 decision 7): `scripts/fetch-base.sh`
+  usable on a developer's machine with a read-only `gh` login to retrieve
+  the latest base of `main` under the same provenance rule as CI (no
+  base, no login, or a rejected base is reported as "CI will run
+  everything", never as a wrong selection); **the targeted run**, a new
+  option of `./scripts/verify.sh` (the feature names it), as the agents'
+  and maintainers' pre-pull-request run for an ordinary change: it
+  computes the selection CI will make and reports it, runs the checks
+  that need no site build (lint, format, unit tests, lesson source
+  checks, dataset checks), the experiment check and the single-page
+  render of the selected lessons, and the Lean build for changed proofs,
+  and performs no site build, no determinism build, and no built-site
+  check; `./scripts/verify.sh --base` for a change that alters what other
+  pages display of a lesson (the front-matter fields of the path and the
+  headers, a new lesson); the full `./scripts/verify.sh` whenever the
+  selection names a full run (the shared inputs of ADR 014 decision 4 and
+  the files of the check identity, which is the listed change types:
+  verification scripts and configuration, templates, filters, assets,
+  shared site files, site configuration, the curriculum file, the shared
+  authoring code, the Python pins); `./scripts/verify.sh` without options
+  unchanged; a test per tier that the run performs exactly the checks of
+  its tier and that the targeted run builds no site.
+- The agent workflow: `AGENTS.md`'s definition of done, the prompts, the
+  policies, `scripts/finish-feature.sh` and `scripts/review-feature.sh`,
+  and `docs/development.md` express the three tiers where the workflow
+  enforces them: the finish and the review of a feature run the tier the
+  change type requires and record which one, its pass, and, with a base,
+  the base and the selection; for an ordinary change that is the
+  targeted run and no step of the finish or the review builds the site.
+  Template-synced files are changed in the smallest way or through the
+  configuration the template offers, and the change is recorded for the
+  next template sync.
+- The measurement after the change: three consecutive one-lesson pull
+  requests against the 20-minute budget with the 15-minute target (ADR
+  015), and one full run on `main`, recorded in
+  `docs/release-readiness.md`.
+- `docs/architecture.md` ("Inside one verification run", "CI pipeline and
+  time budget") and `docs/development.md` updated; the statuses of ADR 014
+  and ADR 017 record what was applied.
+
+**Out of scope.** Incremental `main` (F120, F121); dropping or weakening
+any scientific check; a scheduled audit; raising the job timeout (the
+owner's decision under question 10, recorded by F118); selecting the Lean
+build (question 8); self-hosted runners.
+
+**Dependencies.** F118; the owner's acceptance of ADR 017 decisions 7 and
+8 on F118's evidence (they are separable from incremental `main`, and the
+acceptance is a dated line of ADR 017's status naming the decisions and
+the evidence, as that status provides).
+
+**Acceptance criteria.**
+
+1. Every removed or consolidated check has the regression test F118
+   named, and `verify` still fails on the violation it caught; the
+   executions per lesson in a full run, before and after, are recorded.
+2. No independent scientific check left `scripts/verify.conf`; the site
+   build, the determinism comparison of every byte, the reproduction or
+   experiment check in a fresh clone, the page checks, and the deployment
+   of the verified artifact are unchanged in meaning (the F58 and F61
+   tests pass).
+3. If `integration` is divided, every test runs exactly once (a test) and
+   the measured critical path of a one-lesson pull request is shorter
+   than F118 recorded.
+4. If the check identity is split, each domain has a completeness test, a
+   change to an unclassified input invalidates every domain (a test), and
+   no reused result is certified by older check logic (a test per
+   domain).
+5. No blanket demand to rebuild the whole site locally remains in the
+   agent prompts, policies, workflow scripts, or guides except for the
+   listed change types, whose full `./scripts/verify.sh` run is the
+   local site render the requirements' runtime constraints permit and
+   not the instructional rebuild or preview walkthrough the non-goal
+   removes (ADR 016 decision 1, ADR 017 decision 7, F117 criterion 1);
+   the targeted run exists, builds no site (a
+   test), reports "CI will run everything" without an acceptable base
+   instead of selecting, and is documented with the two tiers above it;
+   a feature finish and a review on a one-lesson change ran the targeted
+   run and nothing that builds the site, shown by their recorded pass
+   naming the tier, the base, and the selection.
+6. CI remains the publication gate with unchanged permissions (the
+   workflow tests pass); three consecutive one-lesson pull requests and
+   one full run are measured after the change and recorded with their
+   durations and whether the 15-minute target was met.
+7. The architecture, the development guide, and the ADR statuses record
+   what was applied; the statuses of ADR 003, ADR 005, and ADR 012 record
+   that ADR 017 decision 7 amended ADR 003 decision 1 (as ADR 005
+   decision 5 restates it), ADR 005 decision 3, and ADR 012 decision 1 on
+   acceptance, and the status of ADR 017 carries the dated line of the
+   partial acceptance of decisions 7 and 8 with its evidence.
+
+**Risk.** High: it changes the CI workflow, a protected script, and the
+meaning of a feature's local verification, which need the owner's
+explicit approval and security-focused review.
+
+**Detailed implementation plan expected.** Yes.
+
+### F120 — Incremental `main`: the staged evidence and the decision record
+
+**Source.** Change 4, "A", "B", and "Required evidence and staged
+acceptance" items 1 to 4, 7, 9, and 10; requirements decision 35 and
+unresolved questions 9, 10, 11, and 12; ADR 017 (proposed).
+
+**Problem.** The owner asked for a critical review of an F61-based
+incremental `main`, not for its implementation, and will accept or reject
+the weaker guarantee only on evidence: that a selective verification
+publishes the site a full verification would publish on the same commit,
+that every way reuse can go wrong fails closed, that a chain of bases
+keeps per-result provenance, that deployment stays one build, what the
+execution environment of the hosted runners varies, and what the costs
+and the fallback are. None of that exists today, and ADR 017 says so.
+
+**Goal.** Produce that evidence without changing what `main` executes,
+complete ADR 017 with it (the residual risks quantified, the mitigations
+with values), present it to the owner, and record the decision and the
+next step.
+
+**User-visible outcome.** None on the site. The owner decides question 9
+on a record whose every claim has evidence behind it, and knows what is
+not shown.
+
+**In scope.**
+
+- **The same-commit comparison** (evidence item 1): on one commit, a full
+  verification and a selective verification against an accepted base,
+  each producing the publishable site; the comparison of HTML, figures,
+  executed outputs, site metadata, the search index, the provenance
+  region, and the checksums; every difference listed and classified as a
+  documented provenance-specific difference or not; the cross-runner
+  uncertainty reported, not resolved by assumption. A targeted comparison
+  (local runs plus the artifacts of CI, or one measurement pull request)
+  is preferred to broad CI experiments; a temporary workflow change, if
+  unavoidable, lives on a measurement branch and is never merged.
+- **The fail-closed demonstrations** (item 2): a base that is missing,
+  expired, invalid (a digest that does not match), stale (an older
+  format), or incompatible (a differing check identity or environment
+  identity); a changed shared input; a changed check implementation; each
+  shown to execute by a test (the F61 suites extended where a case is not
+  covered) or a recorded run; the full-run fallback shown to finish under
+  the timeout the owner approved on F118's record.
+- **The chain's provenance** (item 3): the base format extended with the
+  origin of every lesson's results (run, commit, environment identity,
+  depth), the derivation link to the previous base, and the provenance
+  record of the published site; prototyped with tests that a pull request
+  artifact, an unverified run, and a base of another format are rejected
+  and that an inherited result keeps its origin through a chain of at
+  least three bases.
+- **The environment identity** (ADR 017 decision 3): what the hosted
+  runners varied across the named runs (image version, CPU model and
+  flags, locale, time zone, as read from logs); which of it the pins fix;
+  a byte comparison of identical inputs executed on different runners;
+  the classification into enforceable, recorded, and residual. The
+  comparison needs runs in which the same lesson inputs were executed,
+  not restored, on different runners: the measurement pull requests of
+  F61 do not offer that (each was a selective run that executed one
+  changed lesson and restored the other twenty-one from the base, whose
+  bytes are the base's on every runner, as `docs/release-readiness.md`
+  records), so the sources are the executed results of successive full
+  runs on `main` whose bases hold lessons with equal digests (the base
+  artifacts are retained 30 days) or a measurement pull request that
+  forces the execution of a fixed set of lessons on several runners; the
+  byte comparison rests on these two. The full run of pull request #161
+  (run 38534115654, 2026-10-14, which executed every lesson after its
+  base was rejected) serves only the "what varied" part: a pull request
+  run publishes no base, and its built site and `built-site-record` are
+  retained 7 days (`ci.yml`), so its bytes are gone by about 2026-10-21,
+  before F120 can start, while its logs (image version, CPU model,
+  locale) remain readable against the run on `main` that preceded it.
+- **One production build** (item 4): the evidence restated with the names
+  of the F58 and F61 tests that `deploy` publishes the verified artifact
+  and builds nothing.
+- **Costs** (item 7): the one-lesson pull request and the one-lesson
+  merge under incremental `main` estimated from F61's and F118's
+  measurements, with fixed and lesson-dependent cost separated and every
+  estimate labelled; the full-run fallback at representative larger
+  lesson counts from F118.
+- **The decision record** (items 9 and 10): ADR 017 completed with the
+  evidence, the residual risks quantified, the mitigations proposed with
+  values (the scope of the environment identity, the chain's maximum age
+  and depth, provenance on the page or in the record, the trigger and
+  timeout of the exceptional full run), and the explicit statement of
+  what is not shown; presented to the owner on the Issue; the owner's
+  decision (accepted with mitigations, or rejected) recorded in the
+  status of ADR 017 and ADR 014, with the next step named (F121; or F113
+  resumed; or the raised timeout as the standing gate). The analysis of a
+  scheduled audit is presented as ADR 017 states it, without a
+  recommendation, for question 11. The closure or supersession of Issue
+  #150 is proposed on that Issue for question 12.
+
+**Out of scope.** Changing `.github/workflows/ci.yml` for runs on `main`
+(F121); any inherited result on `main`; lesson shards; a scheduled audit;
+the Lean build selection (question 8); the removals of F119.
+
+**Dependencies.** F61 (the delivered selection, base, and regenerated
+context of pull requests #152 to #166, not the closure of Issue #147),
+F118.
+
+**Acceptance criteria.**
+
+1. The same-commit comparison is recorded with the commit, both runs or
+   builds, every differing file with its classification, and the
+   statement that it shows the selective site equals the full site when
+   the inherited results are valid, not that they are valid.
+2. Each fail-closed case is demonstrated by a named test or a recorded
+   run, including a changed shared input, a changed check, and a changed
+   environment identity; the full-run fallback finished under the
+   approved timeout in a recorded run.
+3. The chain's provenance format is specified and prototyped with the
+   tests named above; no pull request artifact or unverified run is
+   accepted as a base (tests).
+4. The one-production-build evidence names the tests.
+5. The environment identity record lists what varied across the named
+   runs, the byte comparison across runners for identical inputs with its
+   result, and the classification into enforceable, recorded, and
+   residual.
+6. The costs are recorded with measurements and labelled projections,
+   against the 20-minute budget and the 15-minute target.
+7. ADR 017 carries the evidence and the mitigations with values and was
+   presented to the owner; the owner's decision is recorded in its status
+   and in ADR 014's, with the next step named; the proposal for Issue
+   #150 is on that Issue.
+
+**Risk.** Medium: evidence and tests, no change to what `main` does; High
+if a measurement needs a workflow change, which then lives on a
+measurement branch only and is reviewed as such.
+
+**Detailed implementation plan expected.** Yes.
+
+### F121 — Incremental `main` and the exceptional full run, if ADR 017 is accepted
+
+**Conditional.** This feature starts only when the status of ADR 017 says
+the owner accepted it, with the mitigations the owner required. If ADR
+017 is rejected, this feature is dropped by that decision (its ID is never
+reused), and the owner decides between F113 resumed and the raised timeout
+of question 10.
+
+**Source.** ADR 017 as accepted; requirements decision 35, "Runtime and
+deployment constraints" (verification simplification under review),
+unresolved questions 9, 10, and 12; change 4, "A", "B", and evidence items
+2, 3, 4, 8, and 10.
+
+**Goal.** Implement ADR 017 decisions 1 to 6 and 9 as accepted: a push to
+`main` retrieves the previous verified base of `main` under the same
+provenance rule as a pull request, inherits a lesson's results only under
+the conditions of decision 1 including the environment identity, records
+per-result origins and the derivation of the chain, publishes the
+provenance record beside the checksums, rebuilds and verifies the whole
+site, deploys exactly the verified artifact, executes everything on the
+listed events and on request in one job under the approved timeout, and
+supersedes F113 non-destructively.
+
+**User-visible outcome.** None on the pages; the site's provenance record
+tells an auditor, per lesson, on which commit and run its results were
+executed. A push to `main` that merges a one-lesson pull request finishes
+in about the time the pull request took.
+
+**In scope.**
+
+- The workflow: the `build` job of a `push` run on `main` fetches the
+  latest accepted base (the same `scripts/fetch-base.sh` rule: a `push`
+  run on `refs/heads/main` whose `verify` succeeded, by the run's record;
+  `actions: read` on that job for pushes; no other permission); the
+  selection with the environment identity; the record of the run says it
+  verified `main` against a chain and names the base; the base candidate
+  carries the origins and the derivation link; the provenance record is
+  part of the site artifact.
+- The forced complete execution by event: a changed shared input, a
+  changed check identity, a changed environment identity (pins, image
+  label), a chain older than the approved maximum age or deeper than the
+  approved depth, a missing or rejected base; and on request through a
+  manual dispatch of the workflow that passes no base; one `build` job
+  under the approved timeout, restated as the lesson count grows.
+- `./scripts/verify.sh`: a run on `main` with a base is a verification of
+  `main` against a chain; a run without options is unchanged and verifies
+  everything; the store, the digests, and the identities as in F61,
+  extended by the environment identity and the origins.
+- Tests per decision: the conditions of decision 1 (a test per
+  condition), the provenance and rejection cases of decision 2, the
+  environment identity of decision 3, what always executes (decision 4),
+  the expiry and the chain limits (decision 5), the dispatch and the
+  automatic full run (decision 6), the permissions, and that `deploy`
+  publishes the verified artifact and builds nothing.
+- The same-commit comparison of F120 repeated once on the delivered
+  workflow and recorded; the one-lesson merge and the full run measured
+  with warm caches and recorded against the budgets.
+- `docs/architecture.md` ("Inside one verification run", "CI pipeline and
+  time budget", the invariants that name "`main` verifies everything"),
+  `docs/deployment.md`, `docs/development.md`; the statuses of ADR 014
+  and ADR 017 record the delivery; Issue #150 closed with a comment that
+  names ADR 017 and this feature, the branch and the closed pull request
+  #175 kept; the requirements' statement that every push to `main`
+  executes every lesson is amended through the owner's acceptance
+  recorded in ADR 017, as the requirements provide, and any further
+  wording change of the requirements is a change cycle, not this feature.
+
+**Out of scope.** Lesson shards or any assembly; a scheduled audit;
+changing what any check checks; selecting the Lean build (question 8);
+self-hosted runners; a tolerance in any comparison of bytes.
+
+**Dependencies.** F120 (the evidence and the accepted record), F119 (the
+proportional local run the agents use alongside), and the owner's
+acceptance of ADR 017.
+
+**Acceptance criteria.**
+
+1. A push to `main` that changes one lesson executes that lesson and
+   inherits the others only when every condition of ADR 017 decision 1
+   holds, shown by the run's record and a test per condition; any
+   condition that fails executes the lesson, and the listed cases execute
+   every lesson.
+2. Each fail-closed case of F120 holds on the delivered workflow (tests
+   and one recorded run per kind), including the environment identity and
+   the chain's age and depth.
+3. The provenance record of the published site names, per lesson, the
+   run and commit that executed its results; the base carries origins and
+   its derivation; no pull request artifact or unverified run becomes a
+   base (tests); an inherited result keeps its origin through the chain.
+4. `deploy` publishes the artifact CI verified and builds nothing (the
+   F58 tests still pass); no second production build exists.
+5. The exceptional full run is invocable by dispatch and automatic on the
+   listed events, is one job, and finished under the approved timeout at
+   the lesson count of the day in a recorded run.
+6. The same-commit comparison repeated on the delivered workflow shows the
+   documented provenance-specific differences only.
+7. Workflow permissions are unchanged except `actions: read` where the
+   base is read; the F58, F61, and new workflow tests pass;
+   `./scripts/verify.sh` without options verifies everything (a test).
+8. The one-lesson merge and the full run are measured and recorded; the
+   architecture, the deployment and development guides, and the ADR
+   statuses record the delivery; Issue #150 is closed non-destructively
+   with the branch and pull request #175 preserved.
+
+**Risk.** High: it changes the CI workflow, a permission, the meaning of a
+run on `main`, and the publication guarantee, which need the owner's
+explicit approval and security-focused review.
+
+**Detailed implementation plan expected.** Yes.
+
 ## Candidate mapping
 
 Every candidate of the change request and its outcome. "Kept" means a
@@ -5370,6 +6733,13 @@ address:
   SciPy's adaptive solver; the passes must keep it so when sources are
   added.
 
+The change cycle `pbc-planning-change-four-workstreams` (requirements
+decision 32) adds the editorial voice on top of this standard: F114 (the
+style guide), F115 (the pilot on mechanics 01 to 05, human-approved
+before expansion), and F116 (the principles in the authoring workflow),
+under "Phase 5" below. They change how a lesson reads, never what it
+claims.
+
 Candidate sources for M5 (Section 11.3) enter the F30 research as inputs
 with documented fitness to check, not as links to insert: each is reopened,
 compared with at least one alternative, and recorded in the register only
@@ -5430,11 +6800,32 @@ gates under "Phase 4"); there is no cost exception.
 
 | Wave | Order within the wave | Outcome |
 |---|---|---|
-| C0 | F61 and F62 in parallel worktrees; F113 after F61; then F63; then F64 | Verification proportional to a change within 12 minutes; a full run that fits the timeout at 110 lessons; eight courses, the reference curriculum, and the slots; verified previews; the course-first Learning Path, before the bulk of the lessons |
+| C0 | F61 and F62 in parallel worktrees; F113 after F61 (paused since 2026-10-15); then F63; then F64 | Verification proportional to a change within the typical-pull-request budget (12 minutes when planned, 20 minutes since ADR 015); a full run that fits the timeout at 110 lessons (open: F113 paused, ADR 017 proposed, the interim gate under question 10); eight courses, the reference curriculum, and the slots; verified previews; the course-first Learning Path, before the bulk of the lessons |
 | C1 | F65 (may start during C0); after F61 and F62, and after F113 once the lesson count would pass 32: F66 and F67; F68, F70, F71, F72, F73 in parallel worktrees; F69 after F68; F74 after F71; F52, F53, F54, F45, F55 as their dependencies are met | The discovery foundation and its first lessons; the first lessons of thermodynamics, waves, electromagnetism, and fluids; advanced mechanics; the second measured-data lab (W8, go decision in hand) and the already planned labs as their courses exist |
 | C2 | After F64 and F113: F75, F76 after F70; F77 after F71; F78 after F72; F79 after F73; F80 after F78; F81, F82 after the discovery lessons; F83 to F86 through their gates | Core subject expansion, the finite-difference to finite-element bridge, conservative fluid methods, the phased-array capstone, the first benchmarks, invariant discovery, and gated labs |
 | C3 | After F64 and F113: F87 after F76; F88 after F73; F89 to F95 by dependency; F96, F97, F98, F99, F100, F101; F102 to F108 through their gates | The thermal and tsunami capstones (the tsunami comparison only after its gate), quantum, astrophysics with relativity, materials, the remaining reasoning, discovery, and benchmarking lessons, and gated labs |
 | C4 | After F64 and F113: F109, F110, F111; F49 and F22 as their dependencies are met; F112 after every lesson feature of the phase | The research capstone, the last path lessons, and the completion audit, which declares completion only when no core slot is outstanding |
+
+Phase 5, the change cycle `pbc-planning-change-four-workstreams`
+(2026-10-15), as four workstreams that run beside each other in separate
+worktrees. The budget and documentation work does not wait for the
+approval that expands the editorial pilot; the verification work never
+shares a feature with the editorial pilot. Where F117, F118, and F120
+depend on F61, "F61" means its delivered selection, base, and regenerated
+context (pull requests #152 to #166), not the closure of Issue #147: F61's
+criterion 9 is recorded by F118 under unresolved question 10 and its F113
+clause is paused, so the rule that a feature starts when its dependencies
+are done is met for them by the delivered pull requests.
+
+| Workstream | Order within it | Outcome |
+|---|---|---|
+| Editorial (change 1) | F114; then F115 (one pull request per lesson or per pair, the human's choice), reviewed individually and as a sequence; the human's approval of the pilot recorded on F115's Issue; then F116 | A documented, reusable editorial voice, proven on mechanics 01 to 05, inherited by future lessons through the authoring workflow; expansion beyond the pilot is a later decision, not a feature of this roadmap |
+| Learner instructions (change 2) | F117 in reviewed steps: the entry-point contract and the setup page, the entry points of the published lessons behind the unchanged footer, then the switch of the footer and the check | Every published lesson runs its experiment from a clone with Git and uv alone; no maintained document instructs anyone to rebuild or preview the website |
+| Verification (change 4) | F118 first and quickly (its record of the measured full run at the current lesson count is what the owner's interim full-run gate rests on); then F119 and F120 in parallel worktrees; F121 only after the owner accepts ADR 017 | The audit with coverage evidence, the measured full run and the interim gate, the removals with regression evidence, the staged evidence and the decision record; incremental `main` only if accepted |
+
+Every lesson feature of waves C1 to C4 that takes the count past 32
+waits for the interim gate F118 records and the owner approves, for
+F121, or for F113 resumed (the amended full-run gate under "Phase 4").
 
 Features F13 (#89) and F14 (#94) are delivered with their approved scope;
 F64 keeps their progress marks and recommendations on the redesigned path.
@@ -5473,7 +6864,7 @@ violating input shown by a test; the one deliberate exception is named.
 | Harness lessons | Replay without credentials; the ADR 004 boundary tests on every allowlist | F16, F18, F20 |
 | Identity text | Built-site check that the canonical text is where it must be and nowhere else; `CITATION.cff` schema | F57 |
 | CI structure | Every check in exactly one group; one aggregate required check; permissions | F58 |
-| Local execution | `./scripts/verify.sh` unchanged in meaning; the setup page's required commands equal CI's; optional workflows "not verified" | F39 |
+| Local execution | `./scripts/verify.sh` unchanged in meaning; the setup page's required commands equal CI's (superseded by ADR 016 decision 5 and F117 on 2026-10-15: the page's Python-only commands are performed from its text in a fresh clone and the equality with `ci.yml` is dropped; see the row "The experiment entry point of a lesson" under the change cycle `pbc-planning-change-four-workstreams` below); optional workflows "not verified" | F39 |
 
 Added by the change cycle `final-curriculum`:
 
@@ -5493,11 +6884,25 @@ Added by the change cycle `final-curriculum`:
 | Generated motion clips | Reproduced by the build, labelled generated, within the on-demand budget, loaded after a user action | F97 |
 | Curriculum completion | Every slot classified as filled, gated, removed by a recorded decision, or outstanding, adding up to 115; "complete" only with no outstanding slot; gated labs listed apart with their dossiers; sampled reproductions from a fresh clone; the manual passes recorded | F112 |
 
+Added by the change cycle `pbc-planning-change-four-workstreams`:
+
+| Artifact | Check | Feature |
+|---|---|---|
+| The editorial style guide and the rubric | Reviewed documents, not checks: the guide's examples name their source lessons and articles; the rubric names a weakness with evidence and an action, never only a score; the existing lesson source checks, claim and figure checks, and reproduction checks pass unchanged on every piloted lesson, and no scientific claim, result, formula, or verified artifact changed for style (independent review per lesson) | F114, F115, F116 |
+| The experiment entry point of a lesson | Every lesson declares one; it is an input of the lesson's digest and has a unit test; run in a fresh clone with the learner's `--no-dev` commands, it regenerates the lesson's figure files byte for byte (one figure-writing function per figure serves the entry point and the page's cell, which shows the written file; a figure kind documented as unable to reach byte identity is compared as an image at the page's rendered size) and its numbers at displayed precision within 30 seconds, against what the run computed on the same machine, for every lesson on a full run and for the selected lessons on a selective run; the footer lists its commands and no render or preview command; the setup page's Python-only commands run from the page's text, produce an environment without the `dev` group, and run one experiment of each non-Lean lesson kind; no maintained document instructs a reader to rebuild or preview the site (a test over the maintained guides, the home page, the instructor packs, and the generated footers) | F117 |
+| The verification call graph and its removals | Each removed or consolidated check has a coverage argument and a regression test that the violation it caught still fails `verify`; the check identity is split only with a test per domain that its inputs are complete; the `integration` division runs every test exactly once; the targeted run builds no site and reports the selection CI will make (a test); the agent workflow's local obligation per change type is tested where a script enforces it | F118, F119 |
+| The full run and the interim gate | The measured `build` job of a full run at the lesson count of the day, recorded with the run identifiers and the cache state, and the lesson count the approved timeout covers; a projection is labelled as one | F118 |
+| Inherited results on `main` (only if ADR 017 is accepted) | A full and a selective verification of the same commit produce the same publishable site except the documented provenance fields; a missing, expired, invalid, stale, or incompatible base, a changed shared input, a changed check, and a changed environment identity each fail closed to execution, a test per case; every inherited result carries its origin and no pull request artifact or unverified run is accepted as a base; `deploy` publishes the verified artifact and builds nothing; the exceptional full run is invocable and finishes under its approved timeout | F120 (evidence), F121 (delivery) |
+
 Manual gates that stay manual: independent physics and pedagogy reviews per
 lesson (through the existing review workflow); the human's approval of
 identity copy, of the sandbox profile, of any CI or ruleset change, of
 every go decision on a dataset, of each course's lesson list in its
-Issues, and of the curriculum file; a screen-reader pass per release.
+Issues, and of the curriculum file; a screen-reader pass per release;
+since `pbc-planning-change-four-workstreams`, also the human's approval of
+the editorial pilot before the voice reaches another lesson, the owner's
+decision on the interim full-run gate (unresolved question 10), and the
+owner's acceptance or rejection of ADR 017 (question 9).
 
 ## Not on the roadmap
 
@@ -5519,5 +6924,15 @@ geophysics and climate expansions; a capstone presented as a calibrated
 digital twin, a fabricated or validated device, or an operational
 forecast, and any capstone beyond T11, EM9, and FL10; a heavyweight
 solver as a mandatory build or CI dependency; and decorative, stock,
-hand-copied, or externally hosted images. Adding any of them is a
+hand-copied, or externally hosted images. Since the change cycle
+`pbc-planning-change-four-workstreams`, also: a uniform editorial register
+forced on every lesson, a rewrite of the whole curriculum in one feature,
+a mandatory editorial agent, optimisation against AI-content detectors;
+any instruction in maintained documentation to rebuild or preview the
+website locally, relocated or not; an automatic scheduled full
+verification audit, a new sharding mechanism, or substantial verification
+infrastructure without separate evidence and the owner's approval; and the
+removal of the internal CI site build, the deployment of the verified
+artifact, provenance, accessibility, scientific checks, or the ability to
+run complete verification. Adding any of them is a
 requirements change that returns to Project Grill.

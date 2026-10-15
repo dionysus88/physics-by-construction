@@ -24,6 +24,30 @@ read` on the jobs `build` and `e2e`) are in the pull request that adds
 workflow has run on `main`. The status of this ADR changes with the human's
 merge decision, not with this note.
 
+Change cycle `pbc-planning-change-four-workstreams` (2026-10-15):
+
+- Decision 7's budget of 12 minutes for a typical pull request is amended
+  by [ADR 015](015-typical-pull-request-budget-of-twenty-minutes.md) to
+  20 minutes with warm caches, with 15 minutes as a non-blocking target
+  (requirements decision 34); the 35-minute planning budget for one job
+  of a full run, the 45-minute timeout, and the 25-minute cold-cache
+  budget are unchanged by that amendment.
+- Decision 11 (the lesson shards and the assembly, F113) is **paused** by
+  requirements decision 35: pull request #175 was closed on 2026-10-15
+  without a merge, Issue #150 stays open, and the branch is preserved. A
+  full run is the one `build` job of ADR 012 until the owner decides.
+  [ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md),
+  proposed and not accepted by the planning, would supersede decision 11
+  and amend decisions 2, 4, 7, and 10 if the owner accepts it on the
+  staged evidence of F118 and F120; the interim full-run gate is the
+  owner's decision on the timeout of the one `build` job (requirements,
+  unresolved question 10), from the measurements F118 records.
+- Decision 9 is amended in name only by
+  [ADR 016](016-learners-run-experiments-not-the-site-build.md): the
+  provenance region regenerated on every build is the "Run this
+  experiment" (or "Replay this experiment", "Check this proof") section,
+  which keeps the identifier `reproduce-this`.
+
 Date: 2026-10-12
 
 ## Context

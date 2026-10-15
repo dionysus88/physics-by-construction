@@ -20,6 +20,24 @@ group in decision 2. The lesson shards are not the division of
 `tests/e2e/shards.json`, which splits the built-site tests between the
 `e2e-pages` jobs of this ADR and stands.
 
+The budget restated in decision 8 is amended by
+[ADR 015](015-typical-pull-request-budget-of-twenty-minutes.md)
+(2026-10-15): 20 minutes for a typical pull request with warm caches, 15
+minutes as a non-blocking target; the 12 minutes below are history. The
+amendment of decisions 2, 3, and 6 by ADR 014 decision 11 is paused with
+F113 (requirements decision 35, change cycle
+`pbc-planning-change-four-workstreams`): the group `build` runs in one
+job, as this record decided, until the owner decides on
+[ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md)
+(proposed, not accepted) or resumes F113. ADR 017 decision 7, proposed,
+would amend decision 1 of this record if the owner accepts it on F118's
+evidence: a recorded targeted run of `./scripts/verify.sh` (a partial run
+that builds no site, with its tier, base, and selection) would be the
+finish and review evidence of an ordinary change, while only a run
+without options stays a verification of the content and CI runs every
+check; until that acceptance, decision 1 stands as written. F119 records
+the amendment here on acceptance.
+
 Date: 2026-10-12
 
 ## Context
