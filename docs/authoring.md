@@ -11,6 +11,10 @@ or checked.** Code is executed or read from the tested package, numbers and
 figures are the output of that code, and anything else is visibly marked "not
 verified".
 
+For how the prose of a lesson should read (openings, intuition, derivations,
+experiments, interpretation, transitions, conclusions), see the editorial
+voice guide, `docs/editorial-voice.md`. It changes none of the rules below.
+
 ## Create a lesson
 
 1. Pick the course, the strand, the slot, and the position of the lesson.
