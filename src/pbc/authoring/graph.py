@@ -262,27 +262,42 @@ class PrerequisiteGraph:
         out = x1 + COLUMN_GAP // 2
         return f"M{x1},{y1} C{out},{y1} {out},{y2} {x1},{y2}"
 
-    def svg(self, href: Callable[[Lesson], str], summary: str) -> str:
+    def svg(self, href: Callable[[Lesson], str], summary: str, scope: str = "") -> str:
         """The graph as inline SVG; ``href`` gives the link of a lesson from
-        the page the graph is on, ``summary`` is its description."""
+        the page the graph is on, ``summary`` is its description.
+
+        A page that holds more than one graph gives each a ``scope``, which
+        prefixes every id of the drawing so that no id repeats on the page;
+        without it the ids are the plain ones."""
+        title_id, description_id = TITLE_ID, DESCRIPTION_ID
+        requires_marker, related_marker = REQUIRES_MARKER, RELATED_MARKER
+        band_prefix = "prerequisite-graph-course-"
+        if scope:
+            title_id, description_id = (
+                f"{scope}-{title_id}",
+                f"{scope}-{description_id}",
+            )
+            requires_marker = f"{scope}-{requires_marker}"
+            related_marker = f"{scope}-{related_marker}"
+            band_prefix = f"{scope}-{band_prefix}"
         parts = [
             f'<svg xmlns="http://www.w3.org/2000/svg" class="prerequisite-graph-svg"'
             f' viewBox="0 0 {self.width} {self.height}"'
             f' width="{self.width}" height="{self.height}"'
-            f' aria-labelledby="{TITLE_ID} {DESCRIPTION_ID}">',
-            f'<title id="{TITLE_ID}">Prerequisite graph of the lessons</title>',
-            f'<desc id="{DESCRIPTION_ID}">{escape(summary)}</desc>',
+            f' aria-labelledby="{title_id} {description_id}">',
+            f'<title id="{title_id}">Prerequisite graph of the lessons</title>',
+            f'<desc id="{description_id}">{escape(summary)}</desc>',
             "<defs>",
-            f'<marker id="{REQUIRES_MARKER}" viewBox="0 0 10 10" refX="9" refY="5"'
+            f'<marker id="{requires_marker}" viewBox="0 0 10 10" refX="9" refY="5"'
             ' markerWidth="9" markerHeight="9" orient="auto">'
             '<path class="arrow-requires" d="M0,0 L10,5 L0,10 z"/></marker>',
-            f'<marker id="{RELATED_MARKER}" viewBox="0 0 10 10" refX="9" refY="5"'
+            f'<marker id="{related_marker}" viewBox="0 0 10 10" refX="9" refY="5"'
             ' markerWidth="9" markerHeight="9" orient="auto">'
             '<path class="arrow-related" d="M1,1 L9,5 L1,9"/></marker>',
             "</defs>",
         ]
         for band in self.bands:
-            band_id = f"prerequisite-graph-course-{band.course.id}"
+            band_id = f"{band_prefix}{band.course.id}"
             parts += [
                 f'<g role="group" aria-labelledby="{band_id}">',
                 f'<rect class="band" x="0" y="{band.y}" width="{self.width}"'
@@ -294,7 +309,7 @@ class PrerequisiteGraph:
         parts.append('<g class="edges">')
         for edge in self._ordered():
             doubled = self._both(edge)
-            marker = REQUIRES_MARKER if edge.kind == REQUIRES else RELATED_MARKER
+            marker = requires_marker if edge.kind == REQUIRES else related_marker
             parts.append(
                 f'<path class="edge-{edge.kind}" data-from="{edge.source}"'
                 f' data-to="{edge.target}" data-kind="{edge.kind}"'

@@ -853,52 +853,171 @@ main button {
 
 /* A completed lesson is marked on its card by the script, in words that the
    markup of the card does not carry, so that the mark does not rest on colour. */
-.path-card[data-completed="true"] .lesson-card-title a::after {
+.path-card[data-completed="true"] .lesson-card-title a::after,
+.path-link[data-completed="true"] .lesson-link::after {
   content: " \2713 completed";
   color: var(--pbc-claim-formal-theorem-fg);
   font-size: var(--pbc-text-small);
   font-weight: 600;
 }
 
-/* Path cards (F27): a grid of lesson cards that goes from one column on a
-   phone to as many as fit. */
-.path-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+/* Course panels and lesson rows (F64): a course is a panel with its
+   preview, and its lessons are small rows behind a disclosure. */
+.course-panel {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--pbc-space-3);
+  align-items: flex-start;
+  margin: var(--pbc-space-3) 0;
+  padding: var(--pbc-space-3);
+  border: 1px solid var(--pbc-rule);
+  border-radius: var(--pbc-radius);
+}
+
+.course-thumbnail {
+  width: min(100%, 12rem);
+  height: auto;
+  border: 1px solid var(--pbc-rule);
+}
+
+.course-summary {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.course-summary > :first-child {
+  margin-top: 0;
+}
+
+.course-summary > :last-child {
+  margin-bottom: 0;
+}
+
+.course-count {
+  font-weight: 600;
+}
+
+.course-lessons > summary,
+.course-map > summary,
+.dependency-map > summary,
+.lesson-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.course-lessons > summary:focus-visible,
+.course-map > summary:focus-visible,
+.dependency-map > summary:focus-visible,
+.lesson-details > summary:focus-visible {
+  outline: var(--pbc-focus-width) solid var(--pbc-focus);
+  outline-offset: 2px;
+}
+
+.path-rows,
+.path-links {
   margin: var(--pbc-space-3) 0;
   padding: 0;
   list-style: none;
 }
 
 .path-card {
-  padding: var(--pbc-space-3);
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: var(--pbc-space-1) var(--pbc-space-3);
+  margin: 0 0 var(--pbc-space-2);
+  padding: var(--pbc-space-2) var(--pbc-space-3);
   border: 1px solid var(--pbc-rule);
   border-radius: var(--pbc-radius);
 }
 
-.path-card > :first-child {
-  margin-top: 0;
+.path-card > .lesson-summary {
+  grid-column: 2;
+  min-width: 0;
 }
 
-.path-card > :last-child {
-  margin-bottom: 0;
+.path-card > .lesson-details {
+  grid-column: 1 / -1;
 }
 
-.path-card .path-card-meta {
+.lesson-thumbnail {
+  grid-column: 1;
+  grid-row: 1;
+  width: 6rem;
+  height: auto;
+  border: 1px solid var(--pbc-rule);
+}
+
+/* Without a thumbnail the summary takes the whole row. */
+.path-card > .lesson-summary:first-child {
+  grid-column: 1 / -1;
+}
+
+.lesson-question,
+.lesson-meta {
+  margin: 0 0 var(--pbc-space-1);
+}
+
+.lesson-meta {
   color: var(--pbc-muted);
   font-size: var(--pbc-text-small);
 }
 
-/* Planned slots of the reference curriculum (ADR 013): visibly not a lesson
-   card, a dashed rule and the word "planned"; never a link. */
-.planned-slots {
-  margin: var(--pbc-space-3) 0;
+.level-badge,
+.chips li {
+  display: inline-block;
+  padding: 0 var(--pbc-space-2);
+  border: 1px solid var(--pbc-rule);
+  border-radius: var(--pbc-radius);
+  font-size: var(--pbc-text-small);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pbc-space-1);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.planned-slots li {
+.path-link {
+  margin: 0 0 var(--pbc-space-1);
+}
+
+.path-link-meta {
+  color: var(--pbc-muted);
+  font-size: var(--pbc-text-small);
+}
+
+.path-jump ul {
+  margin: 0 0 var(--pbc-space-3);
+}
+
+.path-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pbc-space-2) var(--pbc-space-3);
+  align-items: center;
+}
+
+/* A long option (a course title) must not widen the form past a narrow
+   screen: the label takes the row, the select shrinks to it. */
+.path-filter-form label {
+  max-width: 100%;
+}
+
+.path-filter-form select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Planned slots of the reference curriculum (ADR 013): visibly not a lesson
+   row, a dashed rule and the word "planned"; never a link. */
+.planned-slot {
   margin: 0 0 var(--pbc-space-2);
   padding: var(--pbc-space-2) var(--pbc-space-3);
   border: 1px dashed var(--pbc-rule);
@@ -906,12 +1025,12 @@ main button {
   color: var(--pbc-muted);
 }
 
-.planned-slots .slot-label {
+.planned-slot .slot-label {
   color: var(--pbc-text);
   font-weight: 600;
 }
 
-.planned-slots .slot-status {
+.planned-slot .slot-status {
   font-style: italic;
 }
 

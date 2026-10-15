@@ -89,10 +89,19 @@ def test_path_page_explains_the_difficulty_scale(
         assert difficulty.description in scale
 
 
+def _expand(scope: Locator) -> None:
+    """Open every disclosure of ``scope`` the way a reader does, by its
+    summary: the courses first, then the details of the lessons in them."""
+    for selector in ("details.course-lessons", "details.lesson-details"):
+        for details in scope.locator(selector).all():
+            if details.get_attribute("open") is None:
+                details.locator("> summary").click()
+
+
 def _check_items(
     items: Locator, lessons: tuple[Lesson, ...], server: SiteServer
 ) -> None:
-    """Each card shows what the front matter of its lesson says."""
+    """Each row shows what the front matter of its lesson says."""
     assert items.count() == len(lessons)
     for item, lesson in zip(items.all(), lessons, strict=True):
         difficulty = DIFFICULTIES[lesson.difficulty - 1]
@@ -101,14 +110,27 @@ def _check_items(
         assert _plain(heading.inner_text()) == _plain(lesson.title)
         assert _hrefs(heading, "a") == [server.url + built(lesson)]
         if lesson.description:
-            assert _plain(item.locator("> p").first.inner_text()) == _plain(
+            assert _plain(item.locator(".lesson-question").inner_text()) == _plain(
                 " ".join(lesson.description.split())
             )
+        # One thumbnail from the build, with alt text, never from outside.
+        thumbnail = item.locator("img.lesson-thumbnail")
+        assert thumbnail.count() == 1
+        assert thumbnail.get_attribute("alt").startswith("Preview, ")
+        assert thumbnail.get_attribute("src").startswith("../previews/")
+        assert difficulty.title in item.locator(".level-badge").inner_text()
 
         facts = {
             term: item.locator(f"dt:text-is('{term}') + dd")
             for term in ("Course", "Methods", "Level", "What you\u2019ll learn")
         }
+        # What the reader builds is the description of the lesson.
+        what_built = item.locator("dt:text-is('What you build') + dd")
+        assert what_built.count() == (1 if lesson.description else 0)
+        if lesson.description:
+            assert _plain(what_built.inner_text()) == _plain(
+                " ".join(lesson.description.split())
+            )
         assert facts["Course"].inner_text() == next(
             c.title for c in LESSON_PATH.courses if c.id == lesson.course
         )
@@ -127,8 +149,6 @@ def _check_items(
             for text in facts["What you\u2019ll learn"].locator("li").all_inner_texts()
         ] == list(lesson.outcomes)
 
-        # The links after the heading: course, methods, level, prerequisites,
-        # related lessons.
         prerequisites = item.locator("dt:text-is('Prerequisites') + dd")
         assert _hrefs(prerequisites, "a") == [
             server.url + built(LESSON_PATH.lesson(item))
@@ -141,7 +161,11 @@ def _check_items(
         ]
 
 
-def test_path_page_lists_the_lessons_of_each_course_in_order(
+def _published_rows(section: Locator) -> Locator:
+    return section.locator("li.path-card")
+
+
+def test_a_course_is_closed_until_opened_and_then_shows_its_lessons_without_javascript(
     without_scripts: BrowserContext, server: SiteServer
 ):
     page = without_scripts.new_page()
@@ -151,27 +175,45 @@ def test_path_page_lists_the_lessons_of_each_course_in_order(
         section = page.locator(f"main section#course-{course.id}")
         assert section.locator("h3").first.inner_text() == course.title
         lessons = LESSON_PATH.in_course(course)
-        core = tuple(lesson for lesson in lessons if lesson.strand == course.id)
-        extensions = tuple(lesson for lesson in lessons if lesson.strand != course.id)
-        _check_items(
-            section.locator(f"section#course-{course.id}-core li.path-card"),
-            core,
-            server,
-        )
-        _check_items(
-            section.locator(f"section#course-{course.id}-extensions li.path-card"),
-            extensions,
-            server,
-        )
-        # Every lesson of the course is listed, once.
-        assert len(core) + len(extensions) == len(lessons)
-    # A course without a lesson has no section.
+        panel = section.locator(".course-panel")
+        assert f"{len(lessons)} published" in panel.inner_text()
+        assert panel.locator("img.course-thumbnail").get_attribute("alt")
+        disclosure = section.locator("details.course-lessons")
+        # Closed by default: no lesson row is visible before it is opened.
+        assert disclosure.get_attribute("open") is None
+        assert not _published_rows(section).first.is_visible()
+        _expand(section)
+        _check_items(_published_rows(section), lessons, server)
+        # Every lesson of the course is listed, once, and a planned row is
+        # never a link.
+        planned = section.locator("li.planned-slot")
+        assert planned.locator(".slot-label").all_inner_texts() == [
+            slot.label for slot in LESSON_PATH.planned_in_course(course)
+        ]
+        assert planned.locator("a").count() == 0
+        assert "planned" in planned.first.inner_text()
+    # A course without a lesson has no panel; one sentence names it.
     assert page.locator("main section#courses > section.level3").count() == len(
         LESSON_PATH.courses
     )
+    courses = page.locator("main section#courses").inner_text()
+    for course in LESSON_PATH.planned_courses:
+        assert _plain(course.title) in _plain(courses)
+        assert page.locator(f"main section#course-{course.id}").count() == 0
+    assert page.locator("main .slot-label:text-is('T0')").count() == 0
 
 
-def test_path_page_lists_the_lessons_of_each_method_in_path_order(
+def _check_links(items: Locator, lessons: tuple[Lesson, ...], server: SiteServer):
+    """A path or a method lists each lesson once, as a link to its page."""
+    assert items.count() == len(lessons)
+    assert items.locator("a").evaluate_all("links => links.map(a => a.href)") == [
+        server.url + built(lesson) for lesson in lessons
+    ]
+    # No lesson content is repeated: no heading, no facts, no thumbnail.
+    assert items.locator("dl, h3, h4, img").count() == 0
+
+
+def test_path_page_lists_the_lessons_of_each_method_as_links_in_path_order(
     without_scripts: BrowserContext, server: SiteServer
 ):
     page = without_scripts.new_page()
@@ -180,33 +222,40 @@ def test_path_page_lists_the_lessons_of_each_method_in_path_order(
     for method in LESSON_PATH.methods:
         section = page.locator(f"main section#method-{method.id}")
         assert section.locator("h3").first.inner_text() == method.title
-        _check_items(section.locator("li.path-card"), LESSON_PATH.using(method), server)
+        _check_links(section.locator("li.path-link"), LESSON_PATH.using(method), server)
     # A method without a lesson has no section.
     assert page.locator("main section#methods > section.level3").count() == len(
         LESSON_PATH.methods
     )
 
 
-def test_path_page_lists_every_lesson_under_its_course_and_its_methods(
+def test_every_lesson_is_a_row_under_its_course_and_a_link_under_its_methods_and_path(
     without_scripts: BrowserContext, server: SiteServer
 ):
     # The page compared with the metadata, the other way round: for each
-    # lesson, the sections that link it are exactly its course and methods.
+    # lesson, the one row is under its course; the sections that only link it
+    # are exactly its methods and path.
     page = without_scripts.new_page()
     page.goto(server.url + PATH, wait_until="load")
 
     for lesson in LESSON_PATH.lessons:
-        sections = page.locator("main section.level3").evaluate_all(
+        href = server.url + built(lesson)
+        rows = page.locator("main section.level3").evaluate_all(
             "(sections, href) => sections"
-            ".filter(s => [...s.querySelectorAll('.lesson-card-title > a')]"
-            ".some(a => a.href === href))"
-            ".map(s => s.id)",
-            server.url + built(lesson),
+            ".filter(s => [...s.querySelectorAll('li.path-card h4 > a')]"
+            ".some(a => a.href === href)).map(s => s.id)",
+            href,
+        )
+        links = page.locator("main section.level3").evaluate_all(
+            "(sections, href) => sections"
+            ".filter(s => [...s.querySelectorAll('li.path-link > a.lesson-link')]"
+            ".some(a => a.href === href)).map(s => s.id)",
+            href,
         )
         slot = LESSON_PATH.slot_of(lesson)
-        assert sorted(sections) == sorted(
-            [f"course-{lesson.course}"]
-            + [f"method-{method}" for method in lesson.methods]
+        assert rows == [f"course-{lesson.course}"], lesson.id
+        assert sorted(links) == sorted(
+            [f"method-{method}" for method in lesson.methods]
             + ([f"path-{slot.path}"] if slot and slot.path else [])
         ), lesson.id
 
@@ -215,7 +264,7 @@ def test_path_page_lists_each_method_path_with_its_planned_slots(
     without_scripts: BrowserContext, server: SiteServer
 ):
     # The curriculum file and the front matter, compared with the page: the
-    # published lessons of a path in the order of its slots as cards, and
+    # published lessons of a path in the order of its slots as links, and
     # every slot no lesson fills as a planned entry without a link.
     page = without_scripts.new_page()
     page.goto(server.url + PATH, wait_until="load")
@@ -226,37 +275,81 @@ def test_path_page_lists_each_method_path_with_its_planned_slots(
     for method_path in LESSON_PATH.paths:
         section = page.locator(f"main section#path-{method_path.id}")
         assert section.locator("h3").first.inner_text() == method_path.title
-        _check_items(
-            section.locator("li.path-card"), LESSON_PATH.in_path(method_path), server
+        _check_links(
+            section.locator("li.path-link"), LESSON_PATH.in_path(method_path), server
         )
-        planned = section.locator("ul.planned-slots li")
+        published = len(LESSON_PATH.in_path(method_path))
+        planned_count = len(LESSON_PATH.planned_in_path(method_path))
+        expected = f"{published} published lesson{'s' if published != 1 else ''}"
+        if planned_count:
+            expected += f", {planned_count} planned"
+        assert section.locator("p.path-count").inner_text() == expected
+        assert section.locator("li.path-link").count() == published
+        planned = section.locator("li.planned-slot")
         assert planned.locator(".slot-label").all_inner_texts() == [
             slot.label for slot in LESSON_PATH.planned_in_path(method_path)
         ]
         assert planned.locator("a").count() == 0
 
 
-def test_path_page_shows_planned_slots_of_a_course_with_a_lesson_and_names_the_others(
+def test_the_page_discloses_by_keyboard(
     without_scripts: BrowserContext, server: SiteServer
 ):
     page = without_scripts.new_page()
     page.goto(server.url + PATH, wait_until="load")
+    course = LESSON_PATH.courses[0]
+    summary = page.locator(
+        f"main section#course-{course.id} details.course-lessons > summary"
+    )
+    summary.focus()
+    assert page.evaluate("document.activeElement.tagName") == "SUMMARY"
+    page.keyboard.press("Enter")
+    assert page.locator(
+        f"main section#course-{course.id} li.path-card"
+    ).first.is_visible()
+    page.keyboard.press("Space")
+    assert not page.locator(
+        f"main section#course-{course.id} li.path-card"
+    ).first.is_visible()
 
-    for course in LESSON_PATH.courses:
-        section = page.locator(f"main section#course-{course.id}")
-        planned = section.locator("ul.planned-slots li")
-        assert planned.locator(".slot-label").all_inner_texts() == [
-            slot.label for slot in LESSON_PATH.planned_in_course(course)
-        ]
-        assert planned.locator("a").count() == 0
-        assert "planned" in planned.first.inner_text()
-    # A course without a lesson is named in one sentence, with no section and
-    # no slot (T0 belongs to a course that has no lesson until F70).
-    courses = page.locator("main section#courses").inner_text()
-    for course in LESSON_PATH.planned_courses:
-        assert _plain(course.title) in _plain(courses)
-        assert page.locator(f"main section#course-{course.id}").count() == 0
-    assert page.locator("main .slot-label:text-is('T0')").count() == 0
+
+def test_the_page_reflows_at_320_pixels_without_two_way_scrolling(
+    browser: Browser, server: SiteServer
+):
+    context = browser.new_context(viewport={"width": 320, "height": 800})
+    page = context.new_page()
+    page.goto(server.url + PATH, wait_until="load")
+    for details in page.locator("main details.course-lessons").all():
+        details.locator("> summary").click()
+    assert page.evaluate("document.documentElement.scrollWidth") <= 320
+    context.close()
+
+
+def test_the_filters_hide_rows_and_store_nothing(browser: Browser, server: SiteServer):
+    context = browser.new_context(viewport=DESKTOP)
+    page = context.new_page()
+    page.goto(server.url + PATH, wait_until="load")
+    stored = page.evaluate("JSON.stringify({...window.localStorage})")
+    form = page.locator("#path-filters form")
+    form.locator("select[name=state]").select_option("planned")
+    assert page.locator("li.path-card:visible").count() == 0
+    assert page.locator("li.planned-slot:visible").count() > 0
+    form.locator("button").click()
+    assert page.locator("#path-filters [role=status]").inner_text() == ""
+    # The filters wrote nothing: the storage is what it was before.
+    assert page.evaluate("JSON.stringify({...window.localStorage})") == stored
+    context.close()
+
+
+def test_a_link_to_a_course_opens_its_lessons_with_scripts(
+    browser: Browser, server: SiteServer
+):
+    context = browser.new_context(viewport=DESKTOP)
+    page = context.new_page()
+    course = LESSON_PATH.courses[0]
+    page.goto(f"{server.url}{PATH}#course-{course.id}", wait_until="load")
+    assert page.locator(f"#course-{course.id} li.path-card").first.is_visible()
+    context.close()
 
 
 def test_path_page_explains_previous_and_next(
@@ -434,7 +527,11 @@ def test_graph_and_its_text_alternative_are_present_without_javascript(
     page = without_scripts.new_page()
     page.goto(server.url + PATH, wait_until="load")
 
-    graph = page.locator("main .prerequisite-graph")
+    # The map is optional: it is behind a disclosure, closed until opened.
+    disclosure = page.locator("main details#dependency-map")
+    assert disclosure.get_attribute("open") is None
+    disclosure.locator("> summary").click()
+    graph = disclosure.locator(".prerequisite-graph")
     assert graph.count() == 1
     svg = graph.locator("svg")
     assert svg.get_attribute("role") is None
@@ -442,7 +539,7 @@ def test_graph_and_its_text_alternative_are_present_without_javascript(
         assert svg.locator(f"#{name}").count() == 1
 
     # Every lesson is a node that links to it, in path order.
-    nodes = page.locator("main .prerequisite-graph a").evaluate_all(
+    nodes = graph.locator("a").evaluate_all(
         "links => links.map("
         "a => new URL(a.getAttribute('href'), document.baseURI).href)"
     )
@@ -452,8 +549,8 @@ def test_graph_and_its_text_alternative_are_present_without_javascript(
         len(lesson.prerequisites) + len(lesson.related)
         for lesson in LESSON_PATH.lessons
     )
-    assert page.locator("main ol.visually-hidden > li").count() == edges
-    legend = page.locator("main .graph-legend").inner_text()
+    assert disclosure.locator("ol.visually-hidden > li").count() == edges
+    legend = disclosure.locator(".graph-legend").inner_text()
     assert "Requires" in legend and "Related" in legend
 
 
@@ -462,7 +559,10 @@ def test_graph_nodes_are_reached_by_keyboard_in_path_order_with_visible_focus(
 ):
     page = without_scripts.new_page()
     page.goto(server.url + PATH, wait_until="load")
-    nodes = page.locator("main .prerequisite-graph a")
+    # Opened by keyboard, so that the focus of the nodes is a keyboard focus.
+    page.locator("main details#dependency-map > summary").focus()
+    page.keyboard.press("Enter")
+    nodes = page.locator("main details#dependency-map .prerequisite-graph a")
     nodes.first.focus()
 
     seen = []
@@ -484,8 +584,9 @@ def test_graph_scrolls_inside_its_box_on_a_phone(browser: Browser, server: SiteS
     context = browser.new_context(viewport=PHONE, java_script_enabled=False)
     page = context.new_page()
     page.goto(server.url + PATH, wait_until="load")
+    page.locator("main details#dependency-map > summary").click()
 
-    box = page.locator("main .prerequisite-graph")
+    box = page.locator("main details#dependency-map .prerequisite-graph")
     widths = box.evaluate("e => [e.clientWidth, e.scrollWidth]")
     assert widths[1] > widths[0]
     assert box.get_attribute("tabindex") == "0"

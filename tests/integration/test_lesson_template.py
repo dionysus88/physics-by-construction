@@ -128,9 +128,11 @@ def test_lesson_made_from_the_template_builds_with_every_construct(
     assert "Replace: what the reader can do after the lesson" in header
     previous = Path(MECHANICS[-1].page).parent.name
     assert f'href="../{previous}/index.html"' in header
-    # Each entry of the path page links the lesson, its prerequisites, and its
-    # related lessons, in the course, in its method path, and in every method
-    # the lesson is listed under.
+    # The path page shows each lesson once as a row of its course, which links
+    # the lesson, its prerequisites, and its related lessons; the panel links
+    # the first lesson of the course, and the new lesson, which has a
+    # "Reproduce this" section, links it. The methods and the paths list a
+    # lesson as a link of another kind, and the maps are drawings.
     path_page = (built / "path/index.html").read_text()
     new = Lesson(
         **{
@@ -142,23 +144,21 @@ def test_lesson_made_from_the_template_builds_with_every_construct(
         }
     )
     mechanics_ids = {lesson.id for lesson in MECHANICS}
-
-    def path_slot(lesson: Lesson) -> bool:
-        # A lesson of a method path is also listed under its path.
-        slot = PATH.slot_of(lesson)
-        return bool(slot and slot.path)
-
-    links = sum(
-        (1 + len(lesson.methods) + path_slot(lesson))
-        * (
+    first = PATH.in_course(PATH.courses[0])[0]
+    links = (
+        sum(
             (lesson.strand == "mechanics")
             + sum(p in mechanics_ids for p in lesson.prerequisites)
             + sum(r in mechanics_ids for r in lesson.related)
+            for lesson in (*PATH.lessons, new)
         )
-        for lesson in (*PATH.lessons, new)
+        + 1  # the reproduce link of the new lesson
+        + (first.strand == "mechanics")  # "Start with" of the course panel
     )
-    lists, graph = path_page.split('<div class="prerequisite-graph"')
-    graph = graph.split("</svg>")[0]
+    drawings = re.findall(r"<svg xmlns.*?</svg>", path_page, re.S)
+    lists = re.sub(r"<svg xmlns.*?</svg>", "", path_page, flags=re.S)
+    # The whole map comes last, after the map of each course.
+    graph = drawings[-1]
     assert lists.count('<a href="../lessons/mechanics/') == links
     # The graph has a node for every lesson, the new one too.
     assert graph.count("<a href=") == len(PATH.lessons) + 1

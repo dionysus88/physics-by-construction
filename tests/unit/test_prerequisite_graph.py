@@ -168,10 +168,15 @@ def test_the_overview_embeds_the_graph_once_with_its_legend_and_text_list():
     text = str(PathOverview(path, PATH_PAGE))
 
     assert text == str(PathOverview(path, PATH_PAGE))
-    assert text.count("<svg xmlns") == 1
+    # The whole map once, and one scoped map per course with a lesson.
+    maps = 1 + len(path.courses)
+    assert text.count("<svg xmlns") == maps
     assert "## Prerequisite graph {#graph}" in text
     assert "Requires</strong>" in text and "Related</strong>" in text
-    assert text.count('<ol class="visually-hidden"') == 1
+    assert text.count('<ol class="visually-hidden"') == maps
+    assert text.count("View dependency map") == 1
+    ids = re.findall(r' id="([^"]+)"', text)
+    assert len(ids) == len(set(ids))
 
 
 def test_a_long_title_is_cut_but_keeps_its_full_name_for_assistive_technology():
