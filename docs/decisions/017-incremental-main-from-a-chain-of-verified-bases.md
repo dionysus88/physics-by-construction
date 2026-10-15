@@ -33,6 +33,18 @@ remaining decisions stay proposed, and the heading of this record stays
 "(proposed)" until the owner has decided on all of them. Decision 9
 follows decisions 1 to 6.
 
+**Partial acceptance, 2026-10-15.** The project owner accepted
+**decisions 7 and 8** of this record on the evidence of F118 (Issue #180;
+pull request #182: `docs/verification-audit.md` and the section "The full
+run and the one-lesson pull request, decomposed (F118)" of
+`docs/release-readiness.md`): proportional local verification for agents
+and the removal of a check only by coverage evidence. F119 delivers them;
+the statuses of ADR 003, ADR 005, and ADR 012 record the amendment with
+that feature (F119 acceptance criterion 7). **Decisions 1 to 6 and 9 stay
+proposed** and wait for F120's evidence and the owner's decision, so the
+heading of this record stays "(proposed)" and, until the owner decides on
+them, every push to `main` executes and checks every lesson.
+
 **What decision 7 amends on acceptance.** Decision 7 changes the accepted
 meaning of a local verification and of the finish and review gate of the
 agent workflow, and names what it amends:
