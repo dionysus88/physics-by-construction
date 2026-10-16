@@ -45,6 +45,25 @@ proposed** and wait for F120's evidence and the owner's decision, so the
 heading of this record stays "(proposed)" and, until the owner decides on
 them, every push to `main` executes and checks every lesson.
 
+**Applied, 2026-10-15 (F119, Issue #185).** Decision 7: the targeted run is
+`./scripts/verify.sh --targeted` (the groups of the reserved entry
+`targeted:` of `scripts/verify.conf`, after the selection against the base
+that `scripts/fetch-base.sh` retrieves read-only on a developer's machine;
+the single-page render of the selected lessons is
+`scripts/check-lesson-pages.sh`; the experiment check joins it when F117
+delivers the entry points), `./scripts/verify.sh --base` retrieves the base
+itself, the full run is unchanged, and `scripts/finish-feature.sh`,
+`scripts/review-feature.sh`, and `scripts/apply-triage.sh` gate on
+`./scripts/verify.sh --reuse --targeted` and record the tier, the base, and
+the selection. Decision 8: the preview test's third build is consolidated
+into the determinism check after the regression test
+`tests/integration/test_determinism_check.py`; `integration` runs in three
+parts that run every test once; `tests/integration` left the check identity
+with a completeness test, and no other input did. The statuses of ADR 003,
+ADR 005, ADR 012, and ADR 014 record the amendments. The measurement after
+the change (three consecutive one-lesson pull requests, one full run) is
+owed to `docs/release-readiness.md`.
+
 **What decision 7 amends on acceptance.** Decision 7 changes the accepted
 meaning of a local verification and of the finish and review gate of the
 agent workflow, and names what it amends:

@@ -60,13 +60,19 @@ voice guide, `docs/editorial-voice.md`. It changes none of the rules below.
 6. Check it:
 
    ```bash
-   uv run --locked pytest tests/unit                 # the code
-   uv run --locked pytest tests/lessons              # the lesson source checks
-   uv run --locked quarto preview site               # read the page while writing
-   ./scripts/verify.sh                               # everything, before a pull request
+   uv run --locked pytest tests/unit                                       # the code
+   uv run --locked pytest tests/lessons                                    # the lesson source checks
+   uv run --locked quarto render site/lessons/<course>/<lesson>/index.qmd  # the page alone, to read it under site/_site/
+   ./scripts/verify.sh --targeted                                          # before a pull request: the targeted run
    ```
 
-   `docs/development.md` has the one-time setup these commands need.
+   `docs/development.md` has the one-time setup these commands need, and
+   under "Verification" the three tiers. The targeted run computes what CI
+   will execute, runs the checks that need no site build, and renders the
+   changed lessons alone; it builds no site. A new lesson, or a change to the
+   front-matter fields that form the learning path and the headers of its
+   neighbours, needs `./scripts/verify.sh --base`; when a change needs the
+   full `./scripts/verify.sh`, the targeted run says so.
 
 ## Front matter
 
@@ -379,7 +385,7 @@ lean_excerpt(MODULE, "velocity_sq_of_constant_acceleration")
   below the listing link to them at the built commit. The helper refuses a
   file that changed after `scripts/check-lean.sh` compiled it, so the page
   never shows a proof that was not checked. Run `./scripts/check-lean.sh`
-  after every change to a Lean file, before `quarto preview` or a build.
+  after every change to a Lean file, before a page render or a build.
 - `lean_evidence(module, ...)` writes the box that states what compiled the
   proofs: the commit, the versions of Lean and Mathlib, a link to each file
   in the repository at the built commit, and a link that opens it in the Lean
@@ -1177,7 +1183,8 @@ the allowlist changed. The failure message says so.
 4. Read `replay.json`. Check that it holds no credential, that the model and
    the date are right, and that the agent's conclusion is correct. The page
    shows the model's words as they are.
-5. Run `./scripts/verify.sh`, then commit the file.
+5. Run `./scripts/verify.sh --targeted` (the agent lesson is a selected
+   lesson, and its page renders alone), then commit the file.
 
 ### Counterexample hunts
 

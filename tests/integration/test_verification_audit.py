@@ -3,9 +3,11 @@
 ``docs/verification-audit.md`` states what a full run executes and compares,
 that the third build duplicates the determinism check, which inputs the check
 identity has and which domain each affects, and how ``integration`` divides
-into parts that run every test once. These tests read the code and the
-document and fail when the two disagree, so the audit cannot go stale
-unnoticed. They run no lesson and no browser.
+into parts that run every test once. F119 (Issue #185) applied what the
+audit justified; where the repository differs from the state the audit
+recorded, these tests assert the state after F119 and the audit says so.
+They read the code and the document and fail when the two disagree, so the
+audit cannot go stale unnoticed. They run no lesson and no browser.
 """
 
 import ast
@@ -13,18 +15,17 @@ import re
 import subprocess
 import sys
 
-import pytest
-from support import lesson_checks, second_build, verify_conf
+from support import lesson_checks, verify_conf
 from support.paths import REPO_ROOT, SCRIPTS
 
 from pbc.authoring import digest
-from pbc.authoring import selection as selecting
 from pbc.authoring import store as storing
 
 AUDIT = REPO_ROOT / "docs" / "verification-audit.md"
 READINESS = REPO_ROOT / "docs" / "release-readiness.md"
+# The test of the third build, consolidated into the determinism check (F119).
 PREVIEW_TEST = "test_a_second_build_gives_byte_identical_previews"
-# What the second build of both comparisons leaves out of the copy.
+# What the second build of the determinism check leaves out of its copy.
 COPY_LEAVES_OUT = {"_site", ".quarto", "_freeze", "_digests.json", "_timings.json"}
 
 
@@ -82,9 +83,11 @@ def test_the_audit_names_every_check_of_the_group_build_and_the_e2e_groups():
             assert f"`{name}`" in graph, f"the call graph does not name {name}"
 
 
-def test_a_lesson_executes_four_times_in_a_full_run():
-    # build 1 is site-build, build 2 is determinism, build 3 is the preview
-    # test, and the fourth execution is the reproduction of the lesson.
+def test_a_lesson_executes_three_times_in_a_full_run():
+    # build 1 is site-build, build 2 is determinism, and the third execution
+    # is the reproduction of the lesson. The third build of the preview test
+    # (four executions, as the audit recorded) is consolidated into the
+    # determinism check (F119, ADR 017 decision 8).
     commands = verify_conf.checks()
     assert commands["site-build"] == "./scripts/build-site.sh"
     assert commands["determinism"] == "./scripts/check-determinism.sh"
@@ -113,11 +116,10 @@ def test_a_lesson_executes_four_times_in_a_full_run():
     assert result.returncode == 0, result.stdout + result.stderr
     collected = [line for line in result.stdout.splitlines() if "::" in line]
     reproductions = [line for line in collected if "reproduce_commands" in line]
-    previews = [line for line in collected if PREVIEW_TEST in line]
-    assert len(previews) == 1
+    assert [line for line in collected if PREVIEW_TEST in line] == []
     # One reproduction per lesson, and nothing else compares bytes on the
     # machine of the build.
-    assert len(reproductions) + len(previews) == len(collected)
+    assert reproductions == collected
     assert len(reproductions) == len(lesson_checks.lesson_pages(REPO_ROOT))
 
     # The reproduction renders in a clone, which holds no store and no
@@ -144,74 +146,37 @@ def _determinism_leaves_out() -> set[str]:
     return removed
 
 
-def test_both_second_builds_start_from_a_copy_without_the_same_state():
+def test_the_second_build_starts_from_a_copy_without_the_state_of_a_build():
     assert _determinism_leaves_out() == COPY_LEAVES_OUT
-    source = (REPO_ROOT / "tests" / "support" / "second_build.py").read_text("utf-8")
-    patterns = ast.literal_eval(
-        "(" + source.split("ignore_patterns(")[1].split(")")[0] + ")"
-    )
-    assert set(patterns) == COPY_LEAVES_OUT
 
 
 def test_a_selection_that_is_not_selective_restores_nothing(tmp_path):
     # The determinism check hands the selection file to its build whatever the
-    # mode, and the preview test only when it is selective; the two agree
-    # because a build restores nothing for any other mode.
+    # mode; a build restores nothing for any mode but selective.
     site = tmp_path / "site"
     site.mkdir()
     assert storing.prepare(site, None) == []
     assert storing.prepare(site, {"mode": "full"}) == []
-    root = tmp_path / "root"
-    named = selecting.write(
-        root, {"format": selecting.SELECTION_FORMAT, "mode": "full"}
-    )
-    assert second_build.selection_environment(root) == {}
-    selecting.write(root, {"format": selecting.SELECTION_FORMAT, "mode": "selective"})
-    assert second_build.selection_environment(root) == {
-        "PBC_STORE_SELECTION": str(named)
-    }
     script = (SCRIPTS / "check-determinism.sh").read_text(encoding="utf-8")
     assert "selection.json" in script and "PBC_STORE_SELECTION" in script
 
 
-def test_the_preview_test_compares_only_what_the_determinism_check_compares():
+def test_the_preview_test_is_consolidated_into_the_determinism_check():
+    # F119, on the verdict of the audit: the determinism check compares every
+    # file of the first build with every file of the second, names and bytes,
+    # previews included; the test that compared the previews of a third build
+    # and its helper are gone; the regression test of the comparison runs the
+    # script on fixture trees; and a lesson without a preview still fails a
+    # check of the built site.
     script = (SCRIPTS / "check-determinism.sh").read_text(encoding="utf-8")
-    # Every file of the first build, names and bytes.
     assert 'diff -r "$first" "$tmp/second"' in script
-    source = (REPO_ROOT / "tests" / "e2e" / "test_lessons.py").read_text("utf-8")
-    start = source.index(f"def {PREVIEW_TEST}")
-    body = source[start:]
-    # The files of previews/ and nothing else.
-    assert '(site_dir / "previews").glob("*")' in body
-    assert body.count("site_dir /") == body.count('site_dir / "previews"')
-    assert "second_build.build_copy(SITE_SOURCE, second, tmp_path)" in body
-
-
-@pytest.mark.parametrize("difference", ["bytes", "missing", "extra"])
-def test_the_comparison_of_the_determinism_check_fails_on_a_differing_preview(
-    tmp_path, difference
-):
-    # The property the regression test of F119 needs: with the comparison the
-    # script makes, a preview that differs between two builds fails, by bytes,
-    # by a missing file, or by an extra file, and the output names the file.
-    first, second = tmp_path / "first", tmp_path / "second"
-    for tree in (first, second):
-        (tree / "previews").mkdir(parents=True)
-        (tree / "previews" / "a.png").write_bytes(b"one")
-        (tree / "index.html").write_text("page")
-    same = subprocess.run(["diff", "-r", str(first), str(second)], capture_output=True)
-    assert same.returncode == 0
-    if difference == "bytes":
-        (second / "previews" / "a.png").write_bytes(b"two")
-    elif difference == "missing":
-        (second / "previews" / "a.png").unlink()
-    else:
-        (second / "previews" / "b.png").write_bytes(b"one")
-    result = subprocess.run(
-        ["diff", "-rq", str(first), str(second)], capture_output=True, text=True
-    )
-    assert result.returncode != 0
-    assert ".png" in result.stdout
+    lessons = (REPO_ROOT / "tests" / "e2e" / "test_lessons.py").read_text("utf-8")
+    assert PREVIEW_TEST not in lessons and "second_build" not in lessons
+    assert not (REPO_ROOT / "tests" / "support" / "second_build.py").exists()
+    regression = REPO_ROOT / "tests" / "integration" / "test_determinism_check.py"
+    assert "previews" in regression.read_text("utf-8")
+    built = (REPO_ROOT / "tests" / "e2e" / "test_built_site.py").read_text("utf-8")
+    assert "def test_every_lesson_has_one_verified_preview_within_the_budget" in built
 
 
 # The validity domains of the check identity.
@@ -231,12 +196,16 @@ def _identity_rows() -> dict[str, dict]:
 
 def test_every_input_of_the_check_identity_is_classified_in_the_audit():
     inputs = set(digest.CHECK_FILES) | set(digest.CHECK_DIRECTORIES)
-    classified = set(_identity_rows())
+    rows = _identity_rows()
+    classified = set(rows)
     assert inputs - classified == set(), (
         "an input of the check identity that the audit does not classify "
         "belongs to every domain (ADR 014 decision 10): classify it"
     )
-    assert classified - inputs == set(), "the audit classifies an input that is gone"
+    # The one input that left the identity (F119): classified, V only, and
+    # the domain of no reused result; the row says so.
+    assert classified - inputs == {"tests/integration"}
+    assert "left the identity" in rows["tests/integration"]["verdict"]
 
 
 def test_the_verdict_of_an_input_agrees_with_its_domains():
@@ -258,6 +227,8 @@ def test_no_check_that_a_base_reduces_reads_the_integration_tests():
         "tests/support/lesson_checks.py",
         "scripts/verify.conf",
         "src/pbc/authoring/digest.py",
+        # A comment that names the test of the division of the checks.
+        ".github/workflows/ci.yml",
     }
     mentions = set()
     for directory in ("tests/e2e", "tests/support", "scripts", "src", ".github"):
@@ -267,6 +238,18 @@ def test_no_check_that_a_base_reduces_reads_the_integration_tests():
             if "tests/integration" in path.read_text(encoding="utf-8"):
                 mentions.add(path.relative_to(REPO_ROOT).as_posix())
     assert mentions <= allowed, sorted(mentions - allowed)
+    # Its only consumers are the check-tests-* checks, in groups that a base
+    # never reduces (the groups build and e2e-* are the reduced ones).
+    consumers = {
+        name
+        for name, command in verify_conf.checks().items()
+        if "tests/integration" in command
+    }
+    parts = ("check-tests-quarto", "check-tests-browser", "check-tests-other")
+    assert consumers == set(parts)
+    for name in consumers:
+        group = verify_conf.groups()[name]
+        assert group != "build" and not group.startswith("e2e-"), name
     for path in [
         *(REPO_ROOT / "tests" / "e2e").glob("*.py"),
         *(REPO_ROOT / "tests" / "support").glob("*.py"),
@@ -293,28 +276,12 @@ def _parts() -> tuple[list[str], list[str]]:
     return named[1], named[2]
 
 
-def _collect(*arguments: str) -> list[str]:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "--collect-only",
-            "-q",
-            "-p",
-            "no:cacheprovider",
-            *arguments,
-        ],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-    return [line for line in result.stdout.splitlines() if "::" in line]
-
-
-def test_the_proposed_parts_of_integration_run_every_test_exactly_once():
+def test_the_parts_of_integration_are_the_checks_of_verify_conf():
+    # F119 applied the division: parts 1 and 2 of the record are the files the
+    # checks check-tests-quarto and check-tests-browser name, and
+    # check-tests-other runs every file they do not name. That the three run
+    # every test exactly once is proved by collection in
+    # tests/integration/test_site_check_division.py.
     first, second = _parts()
     here = REPO_ROOT / "tests" / "integration"
     present = sorted(p.name for p in here.glob("test_*.py"))
@@ -325,13 +292,41 @@ def test_the_proposed_parts_of_integration_run_every_test_exactly_once():
     assert rest and "test_verification_audit.py" in rest
 
     directory = "tests/integration"
-    whole = _collect(directory)
-    one = _collect(*[f"{directory}/{name}" for name in first])
-    two = _collect(*[f"{directory}/{name}" for name in second])
-    three = _collect(directory, *[f"--ignore={directory}/{name}" for name in named])
-    assert whole and one and two and three
-    assert sorted(one + two + three) == sorted(whole)
-    assert len(set(whole)) == len(whole)
+    commands = verify_conf.checks()
+    assert verify_conf.groups()["check-tests-quarto"] == "integration-quarto"
+    assert verify_conf.groups()["check-tests-browser"] == "integration-browser"
+    assert verify_conf.groups()["check-tests-other"] == "integration-other"
+    assert "check-tests" not in commands
+    quarto = commands["check-tests-quarto"].split()[4:]
+    browser = commands["check-tests-browser"].split()[4:]
+    assert quarto == [f"{directory}/{name}" for name in first]
+    assert browser == [f"{directory}/{name}" for name in second]
+    other = commands["check-tests-other"].split()[4:]
+    assert other == [directory, *(f"--ignore={directory}/{name}" for name in named)]
+
+
+# The targeted run (ADR 017 decision 7).
+
+
+def test_the_targeted_run_builds_no_site_and_reads_none():
+    # The groups of the targeted run hold no check that builds the site, builds
+    # it again, reproduces a lesson, or reads the built site; the render of
+    # the selected lessons never calls the site build.
+    groups = verify_conf.groups()
+    commands = verify_conf.checks()
+    targeted = verify_conf.targeted()
+    assert "build" not in targeted and not any(g.startswith("e2e-") for g in targeted)
+    for name, group in groups.items():
+        if group in targeted:
+            assert name not in {"site-build", "determinism", "lean-build"}, name
+            assert not name.startswith("site-checks-"), name
+            assert "build-site" not in commands[name], name
+            assert "tests/e2e" not in commands[name], name
+    assert groups["lesson-pages"] in targeted
+    assert commands["lesson-pages"] == "./scripts/check-lesson-pages.sh"
+    render = (SCRIPTS / "check-lesson-pages.sh").read_text(encoding="utf-8")
+    assert "build-site.sh" not in render and "quarto render" in render
+    assert "never builds the site" in render
 
 
 # The record of the measurements.

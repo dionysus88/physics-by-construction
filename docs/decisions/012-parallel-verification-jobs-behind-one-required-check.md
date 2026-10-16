@@ -29,14 +29,19 @@ F113 (requirements decision 35, change cycle
 `pbc-planning-change-four-workstreams`): the group `build` runs in one
 job, as this record decided, until the owner decides on
 [ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md)
-(proposed, not accepted) or resumes F113. ADR 017 decision 7, proposed,
-would amend decision 1 of this record if the owner accepts it on F118's
-evidence: a recorded targeted run of `./scripts/verify.sh` (a partial run
-that builds no site, with its tier, base, and selection) would be the
-finish and review evidence of an ordinary change, while only a run
-without options stays a verification of the content and CI runs every
-check; until that acceptance, decision 1 stands as written. F119 records
-the amendment here on acceptance.
+(proposed, not accepted) or resumes F113. **ADR 017 decision 7, accepted
+by the owner on 2026-10-15 on F118's evidence and applied by F119 (Issue
+#185), amends decision 1 of this record**: a recorded targeted run of
+`./scripts/verify.sh --targeted` (the checks of the groups the entry
+`targeted:` of `scripts/verify.conf` names, against the selection, with no
+site build, recorded with its tier, base, and selection) is the finish and
+review evidence of an ordinary change, while a run with `--only` still
+verifies nothing and records nothing, only a run without options is a
+verification of the content, and CI runs every check. F119 also divided
+the job `integration` into three jobs (`integration-quarto`,
+`integration-browser`, `integration-other`), each running one group of
+`scripts/verify.conf` as decision 2 requires, behind the same required
+check.
 
 Date: 2026-10-12
 

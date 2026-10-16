@@ -479,7 +479,7 @@ while IFS= read -r finding_id; do
       "## Recommended action\n\n\($d.followup.recommended_action)\n\n" +
       "## Acceptance criteria\n\n" +
       ($d.followup.acceptance_criteria | map("- \(.)\n") | join("")) +
-      "- `./scripts/verify.sh` passes."
+      "- The verification tier the change needs passes (`./scripts/verify.sh --targeted` for an ordinary change; the full `./scripts/verify.sh` when the targeted run says so)."
   ' "$pending" >"$issue_body_file"
 
   echo "Creating follow-up Issue for $finding_id..."

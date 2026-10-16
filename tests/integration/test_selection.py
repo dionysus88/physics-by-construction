@@ -30,11 +30,21 @@ CHECK_INPUTS = [
     "tests/e2e/shards.json",
     "tests/e2e/test_one.py",
     "tests/support/helper.py",
-    "tests/integration/test_two.py",
     "pyproject.toml",
     "uv.lock",
     ".github/actions/prepare/action.yml",
 ]
+# An integration test: not an input of the identity (F119).
+INTEGRATION_TEST = "tests/integration/test_two.py"
+# One input of each validity domain of the identity (docs/verification-audit.md,
+# "Validity domains of the check identity"): scientific execution, rendered
+# output, the verification rule, the browser tooling.
+DOMAINS = {
+    "S": "scripts/build-site.sh",
+    "R": "scripts/verify.conf",
+    "V": "tests/e2e/test_one.py",
+    "B": ".github/actions/prepare/action.yml",
+}
 
 
 def make_base(root: Path, base: Path) -> Path:
@@ -55,7 +65,7 @@ def repository(tmp_path: Path) -> Path:
         _write(root, name, text)
     _write(root, "src/pbc/data/__init__.py", 'SAMPLES_DIR = "data/samples"\n')
     _write(root, f"{LESSON}/index.qmd", _lesson("from pbc.mech.top import VALUE\n"))
-    for name in CHECK_INPUTS:
+    for name in (*CHECK_INPUTS, INTEGRATION_TEST):
         _write(root, name, "check\n")
     return root
 
@@ -242,6 +252,39 @@ def test_a_change_to_the_checks_makes_the_run_a_full_run(repository, base, name)
     assert result["reuse"] == []
 
 
+@pytest.mark.parametrize("domain", DOMAINS)
+def test_no_reused_result_is_certified_by_older_check_logic(repository, base, domain):
+    # A change to an input of any domain makes the run a full run: nothing of
+    # the base is reused, so the current checks certify every result.
+    append(repository, DOMAINS[domain])
+    result = chosen(repository, base)
+    assert result["mode"] == "full"
+    assert "checks changed" in result["reason"]
+    assert result["reuse"] == []
+
+
+def test_a_change_to_an_input_no_classification_names_invalidates_every_domain(
+    repository, base
+):
+    # The identity is one digest over every file of its directories, so a
+    # new input that no classification names belongs to every domain.
+    _write(repository, "tests/support/unnamed.py", "new\n")
+    result = chosen(repository, base)
+    assert result["mode"] == "full"
+    assert "checks changed" in result["reason"]
+    assert result["reuse"] == []
+
+
+def test_a_change_to_an_integration_test_keeps_the_selection(repository, base):
+    # F119: tests/integration left the identity, with the completeness test
+    # of tests/integration/test_verification_audit.py.
+    append(repository, INTEGRATION_TEST)
+    result = chosen(repository, base)
+    assert result["mode"] == "selective"
+    assert result["execute"] == []
+    assert result["reuse"] == [LESSON, LESSON_TWO]
+
+
 def test_every_input_of_the_identity_is_in_the_tested_list():
     declared = set(CHECK_FILES)
     assert declared <= set(CHECK_INPUTS)
@@ -273,6 +316,12 @@ def project(repository: Path, tmp_path: Path) -> Path:
     (repository / "scripts" / "verify.conf").write_text(
         "pass [one]: true\npass-too [two]: true\n", encoding="utf-8"
     )
+    # The record and the log of the checks are ignored, so a run changes no
+    # content and its pass is recorded.
+    (repository / ".gitignore").write_text(
+        ".agents/verification/\nran.log\n", encoding="utf-8"
+    )
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repository, check=True)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     stub = bin_dir / "uv"
@@ -285,8 +334,14 @@ def project(repository: Path, tmp_path: Path) -> Path:
     return repository
 
 
-def verify(project: Path, tmp_path: Path, *arguments: str | Path):
-    env = {**os.environ, "PATH": f"{tmp_path / 'bin'}:{os.environ['PATH']}"}
+def verify(
+    project: Path,
+    tmp_path: Path,
+    *arguments: str | Path,
+    env: dict[str, str] | None = None,
+):
+    path = f"{tmp_path / 'bin'}:{os.environ['PATH']}"
+    env = {**os.environ, "PATH": path, **(env or {})}
     return subprocess.run(
         ["bash", "scripts/verify.sh", *map(str, arguments)],
         cwd=project,
@@ -344,6 +399,212 @@ def test_base_cannot_be_combined_with_reuse_or_groups(project, tmp_path):
     made = make_base(project, tmp_path / "base")
     assert verify(project, tmp_path, "--base", made, "--reuse").returncode != 0
     assert verify(project, tmp_path, "--base", made, "--groups").returncode != 0
+
+
+# --- the targeted run (ADR 017 decision 7, F119) ---------------------------
+
+# Checks in the groups of this project's tiers, each leaving its name in a log,
+# and the entry that names the groups of the targeted run.
+TIERED_CONF = """\
+targeted: default,code
+lint [code]: echo lint >>ran.log
+plain: echo plain >>ran.log
+site-build [build]: echo site-build >>ran.log
+pages [e2e-pages]: echo pages >>ran.log
+"""
+# A fake scripts/fetch-base.sh: copies the base at FAKE_BASE, or reports none.
+FAKE_FETCH = """\
+#!/usr/bin/env bash
+set -euo pipefail
+target="$1"
+rm -rf "$target"
+mkdir -p "$(dirname "$target")"
+if [[ -n "${FAKE_BASE:-}" ]]; then
+  cp -R "$FAKE_BASE" "$target"
+  echo "Base accepted: the artifact of the push run 4242 on main."
+  printf 'accepted=true\\nrun-id=4242\\n' >>"$GITHUB_OUTPUT"
+else
+  echo "No base: no earlier push to main has a successful run."
+  printf 'accepted=false\\nrun-id=\\n' >>"$GITHUB_OUTPUT"
+fi
+"""
+
+
+@pytest.fixture
+def tiered(project: Path) -> Path:
+    (project / "scripts" / "verify.conf").write_text(TIERED_CONF, encoding="utf-8")
+    fetch = project / "scripts" / "fetch-base.sh"
+    fetch.write_text(FAKE_FETCH, encoding="utf-8")
+    fetch.chmod(fetch.stat().st_mode | stat.S_IEXEC)
+    return project
+
+
+def ran(project: Path) -> list[str]:
+    log = project / "ran.log"
+    return log.read_text(encoding="utf-8").split() if log.exists() else []
+
+
+def record(project: Path) -> dict[str, str]:
+    path = project / ".agents" / "verification" / "passed"
+    if not path.exists():
+        return {}
+    return dict(
+        line.split(": ", 1) for line in path.read_text(encoding="utf-8").splitlines()
+    )
+
+
+def test_the_targeted_run_performs_exactly_the_groups_of_its_entry_and_builds_no_site(
+    tiered, tmp_path
+):
+    made = make_base(tiered, tmp_path / "base")
+    append(tiered, f"{LESSON}/index.qmd")
+    outcome = verify(tiered, tmp_path, "--targeted", "--base", made)
+    assert outcome.returncode == 0, outcome.stdout + outcome.stderr
+    assert ran(tiered) == ["lint", "plain"]
+    assert "No site is built" in outcome.stdout
+    assert "Verification passed (targeted run)" in outcome.stdout
+    assert selecting.read(tiered)["tier"] == "targeted"
+    assert selecting.read(tiered)["execute"] == [LESSON]
+    found = record(tiered)
+    assert found["tier"] == "targeted"
+    assert found["selection"].startswith("selective run against base")
+    assert found["base"] == f"directory {made}"
+
+
+def test_the_full_run_and_the_run_with_a_base_perform_every_check(tiered, tmp_path):
+    outcome = verify(tiered, tmp_path)
+    assert outcome.returncode == 0, outcome.stderr
+    assert ran(tiered) == ["lint", "plain", "site-build", "pages"]
+    assert record(tiered)["tier"] == "full" and "base" not in record(tiered)
+    (tiered / "ran.log").unlink()
+    made = make_base(tiered, tmp_path / "base")
+    outcome = verify(tiered, tmp_path, "--base", made)
+    assert outcome.returncode == 0, outcome.stderr
+    assert ran(tiered) == ["lint", "plain", "site-build", "pages"]
+    assert "tier" not in selecting.read(tiered)
+    assert record(tiered)["tier"] == "base"
+    assert record(tiered)["base"] == f"directory {made}"
+
+
+def test_the_targeted_run_retrieves_the_base_and_records_the_run_it_came_from(
+    tiered, tmp_path
+):
+    made = make_base(tiered, tmp_path / "base")
+    env = {"FAKE_BASE": str(made)}
+    outcome = verify(tiered, tmp_path, "--targeted", env=env)
+    assert outcome.returncode == 0, outcome.stdout + outcome.stderr
+    assert "Base accepted" in outcome.stdout
+    assert ran(tiered) == ["lint", "plain"]
+    assert record(tiered)["base"] == "run 4242"
+    assert (tiered / ".agents" / "verification" / "base" / "digests.json").is_file()
+
+
+def test_without_an_acceptable_base_the_targeted_run_reports_and_verifies_nothing(
+    tiered, tmp_path
+):
+    outcome = verify(tiered, tmp_path, "--targeted")
+    assert outcome.returncode == 1
+    assert "No base:" in outcome.stdout
+    assert "CI will run everything" in outcome.stdout
+    assert "run the full ./scripts/verify.sh" in outcome.stdout
+    assert "REFUSED  targeted-run" in outcome.stdout
+    assert ran(tiered) == []
+    assert record(tiered) == {}
+
+
+def test_a_full_selection_refuses_the_targeted_run_and_names_the_full_run(
+    tiered, tmp_path
+):
+    made = make_base(tiered, tmp_path / "base")
+    append(tiered, "scripts/verify.conf")
+    outcome = verify(tiered, tmp_path, "--targeted", "--base", made)
+    assert outcome.returncode == 1
+    assert "CI will run everything: the checks changed" in outcome.stdout
+    assert "run the full ./scripts/verify.sh" in outcome.stdout
+    assert "REFUSED  targeted-run" in outcome.stdout
+    assert ran(tiered) == []
+    assert record(tiered) == {}
+
+
+def test_a_new_lesson_refuses_the_targeted_run_and_names_the_run_with_a_base(
+    tiered, tmp_path
+):
+    made = make_base(tiered, tmp_path / "base")
+    page = _lesson("from pbc.mech.top import VALUE\n")
+    _write(tiered, "site/lessons/s/03-three/index.qmd", page)
+    outcome = verify(tiered, tmp_path, "--targeted", "--base", made)
+    assert outcome.returncode == 1
+    assert "new lesson(s)" in outcome.stdout
+    assert "run ./scripts/verify.sh --base" in outcome.stdout
+    assert ran(tiered) == []
+
+
+def test_without_a_base_a_run_with_base_is_a_full_run(tiered, tmp_path):
+    outcome = verify(tiered, tmp_path, "--base")
+    assert outcome.returncode == 0, outcome.stderr
+    assert "No base:" in outcome.stdout and "full run" in outcome.stdout
+    assert ran(tiered) == ["lint", "plain", "site-build", "pages"]
+    assert record(tiered)["tier"] == "full"
+
+
+def test_reuse_takes_a_targeted_pass_only_with_targeted(tiered, tmp_path):
+    made = make_base(tiered, tmp_path / "base")
+    env = {"FAKE_BASE": str(made)}
+    assert verify(tiered, tmp_path, "--targeted", env=env).returncode == 0
+    assert record(tiered)["tier"] == "targeted"
+    (tiered / "ran.log").unlink()
+    # The same base and selection: the pass stands, after the selection is made.
+    outcome = verify(tiered, tmp_path, "--reuse", "--targeted", env=env)
+    assert outcome.returncode == 0, outcome.stderr
+    assert "already passed" in outcome.stdout and "a targeted run" in outcome.stdout
+    assert ran(tiered) == []
+    # A full verification is not what a targeted pass recorded: it runs.
+    outcome = verify(tiered, tmp_path, "--reuse")
+    assert outcome.returncode == 0, outcome.stderr
+    assert ran(tiered) == ["lint", "plain", "site-build", "pages"]
+    assert record(tiered)["tier"] == "full"
+    (tiered / "ran.log").unlink()
+    # A full pass stands for a targeted one.
+    outcome = verify(tiered, tmp_path, "--reuse", "--targeted")
+    assert outcome.returncode == 0, outcome.stderr
+    assert "a full run" in outcome.stdout and ran(tiered) == []
+
+
+def test_a_targeted_pass_does_not_stand_for_another_base_or_without_one(
+    tiered, tmp_path
+):
+    made = make_base(tiered, tmp_path / "base")
+    env = {"FAKE_BASE": str(made)}
+    assert verify(tiered, tmp_path, "--targeted", env=env).returncode == 0
+    recorded = record(tiered)
+    assert recorded["base"] == "run 4242"
+    # Main advanced, the tree did not: the base given by directory differs
+    # from the recorded run, so the targeted checks run again.
+    (tiered / "ran.log").unlink()
+    outcome = verify(tiered, tmp_path, "--reuse", "--targeted", "--base", made)
+    assert outcome.returncode == 0, outcome.stdout + outcome.stderr
+    assert "another base or selection" in outcome.stdout
+    assert ran(tiered) == ["lint", "plain"]
+    assert record(tiered)["base"] == f"directory {made}"
+    # No acceptable base: CI will run everything, the pass does not stand.
+    (tiered / "ran.log").unlink()
+    outcome = verify(tiered, tmp_path, "--reuse", "--targeted", env={"FAKE_BASE": ""})
+    assert outcome.returncode != 0
+    assert "CI will run everything" in outcome.stdout
+    assert ran(tiered) == []
+
+
+def test_targeted_cannot_be_combined_with_only(tiered, tmp_path):
+    assert verify(tiered, tmp_path, "--targeted", "--only", "code").returncode != 0
+    assert ran(tiered) == []
+
+
+def test_the_targeted_refusals_of_a_selection():
+    full = {"mode": "full", "reason": "no base was given", "execute": []}
+    assert "CI will run everything" in selecting.targeted_refusal(full)
+    new = {"mode": "selective", "reason": "", "new": [LESSON]}
+    assert "--base" in selecting.targeted_refusal(new)
+    assert selecting.targeted_refusal({"mode": "selective", "new": []}) is None
 
 
 def test_the_module_imports_and_runs_as_a_command_on_the_pinned_python():

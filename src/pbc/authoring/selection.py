@@ -5,6 +5,14 @@ the result to one file, ``SELECTION_FILE``, where the checks read it. The
 selection names the lessons this run executes and the lessons whose executed
 results are restored from the base.
 
+The targeted run (``./scripts/verify.sh --targeted``, ADR 017 decision 7)
+calls it with ``--tier targeted``: the selection then says what CI will
+execute, and the per-lesson check of that tier renders the selected lessons
+without a site build. The targeted run never guesses: when the selection is
+a full run, or a selected lesson is new to the base (it changes what other
+pages display), the module says which run the change needs and exits with
+status 3, and the targeted run is refused.
+
 A base is a directory with ``digests.json`` (what ``pbc.authoring.digest``
 writes: format, identity of the checks, input digest of every lesson) and
 ``freeze/`` (the executed results of every lesson, laid out as the build
@@ -128,7 +136,7 @@ def select(root: Path, base: Path | None) -> dict:
             "is executed, every page checked, every lesson reproduced",
             named,
         )
-    execute, reuse = [], []
+    execute, reuse, new = [], [], []
     for path in lessons:
         unchanged = loaded["lessons"].get(path) == current[path].value
         problem = _stored(base, path) if unchanged else None
@@ -139,6 +147,8 @@ def select(root: Path, base: Path | None) -> dict:
                 named,
             )
         (reuse if unchanged else execute).append(path)
+        if path not in loaded["lessons"]:
+            new.append(path)
     return {
         "format": SELECTION_FORMAT,
         "mode": "selective",
@@ -149,6 +159,8 @@ def select(root: Path, base: Path | None) -> dict:
         "lessons": lessons,
         "execute": execute,
         "reuse": reuse,
+        # The executed lessons the base does not know (ADR 017 decision 7).
+        "new": new,
     }
 
 
@@ -169,6 +181,32 @@ def read(root: Path = REPOSITORY_ROOT) -> dict | None:
     return data if ok else None
 
 
+TIER_TARGETED = "targeted"
+# The exit status of main for a selection the targeted run cannot act on.
+REFUSED = 3
+
+
+def targeted_refusal(selection: dict) -> str | None:
+    """Why the targeted run cannot act on ``selection``, or None.
+
+    A full run means CI executes every lesson, and the change needs the full
+    ``./scripts/verify.sh``; a lesson that the base does not know changes the
+    headers and links of other pages, which only a build shows, so the change
+    needs ``./scripts/verify.sh --base``."""
+    if selection["mode"] == "full":
+        return (
+            f"CI will run everything: {selection['reason']}. The targeted run "
+            "does not select; run the full ./scripts/verify.sh."
+        )
+    new = selection.get("new", [])
+    if new:
+        return (
+            f"{len(new)} new lesson(s) (first: {new[0]}) change what other pages "
+            "display; run ./scripts/verify.sh --base."
+        )
+    return None
+
+
 def summary(selection: dict) -> str:
     n, e = len(selection["lessons"]), len(selection["execute"])
     base = selection["base"]["id"][:12] if selection["base"] else "none"
@@ -187,12 +225,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Select what a run executes.")
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
     parser.add_argument("--base", type=Path, required=True)
+    parser.add_argument(
+        "--tier",
+        choices=[TIER_TARGETED],
+        help="the targeted run: refuse a selection it cannot act on",
+    )
     arguments = parser.parse_args(argv)
     selection = select(arguments.root, arguments.base)
+    if arguments.tier:
+        selection["tier"] = arguments.tier
     write(arguments.root.resolve(), selection)
     print(summary(selection))
     for path in selection["execute"][:20]:
         print(f"  execute {path.removeprefix(LESSONS + '/')}")
+    if arguments.tier == TIER_TARGETED:
+        refusal = targeted_refusal(selection)
+        if refusal:
+            print(refusal)
+            return REFUSED
     return 0
 
 

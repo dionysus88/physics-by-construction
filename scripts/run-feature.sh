@@ -147,10 +147,12 @@ open_question() {
 }
 
 # failing_checks <verification-output>
-# Prints the names of the checks that a verification run reports as failed.
+# Prints the names of the checks that a verification run reports as failed,
+# and 'targeted-run' when the targeted run refused the change (it then needs
+# the full run or the run with a base, as the output says).
 failing_checks() {
   [[ -f "$1" ]] || return 0
-  awk '$1 == "FAIL" { print $2 }' "$1" | sort -u
+  awk '$1 == "FAIL" || $1 == "REFUSED" { print $2 }' "$1" | sort -u
 }
 
 # retrying <title> <command>...
@@ -238,7 +240,9 @@ repair_verification() {
 
   first="$(failing_checks "$first_log")"
   mkdir -p "$(dirname "$log")"
-  (cd "$worktree" && ./scripts/verify.sh) >"$log" 2>&1 || repeat_status=$?
+  # The same tier the gate ran: the targeted run for an ordinary change, which
+  # is the full run in a project with one tier (ADR 017 decision 7).
+  (cd "$worktree" && ./scripts/verify.sh --targeted) >"$log" 2>&1 || repeat_status=$?
   second="$(failing_checks "$log")"
   twice="$(comm -12 <(printf '%s\n' "$first") <(printf '%s\n' "$second") | grep . || true)"
   once="$(comm -3 <(printf '%s\n' "$first") <(printf '%s\n' "$second") | tr -d '\t' | grep . | tr '\n' ' ' || true)"
@@ -268,8 +272,11 @@ repair_verification() {
     echo
     echo "## Verification failed ($(date -u +'%Y-%m-%dT%H:%M:%SZ'), recorded by run-feature.sh)"
     echo
-    echo "./scripts/verify.sh fails on the content as it is. These checks failed in two"
-    echo "runs; repair them. The complete output is in .agents/run/$issue-verify.log."
+    echo "./scripts/verify.sh --targeted fails on the content as it is. These checks"
+    echo "failed in two runs; repair them. The complete output is in"
+    echo ".agents/run/$issue-verify.log. A 'targeted-run' that was refused means the"
+    echo "change needs the full ./scripts/verify.sh or ./scripts/verify.sh --base, as"
+    echo "the output says: run that tier last, so that its pass is recorded."
     echo "Repair attempt $repairs of $MAX_REPAIRS."
     echo
     printf '%s\n' "${twice:-(no check named; read the log)}" | sed 's/^/- FAIL /'

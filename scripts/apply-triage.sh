@@ -305,14 +305,16 @@ if [[ "$triage_signature_before" != "$triage_signature_after" ]]; then
   protected_artifact_changed=1
 fi
 
-# The fixed content must pass verification. A pass that the agent's own run
-# recorded for exactly this content is not repeated.
+# The fixed content must pass verification, in the tier the change needs
+# (ADR 017 decision 7): the targeted run for an ordinary change. A pass that
+# the agent's own run recorded for exactly this content, of any tier, is not
+# repeated.
 echo
 echo "Checking repository verification..."
 set +e
 (
   cd "$root"
-  ./scripts/verify.sh --reuse
+  ./scripts/verify.sh --reuse --targeted
 )
 verification_status=$?
 set -e

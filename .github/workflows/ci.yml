@@ -47,8 +47,35 @@ jobs:
       - name: Verify the group default
         run: ./scripts/verify.sh --all --only default
 
-  # Every check fails on an input that violates it.
-  integration:
+  # Every check fails on an input that violates it: the integration tests in
+  # the three parts of docs/verification-audit.md ("Division into independent
+  # parts"), each job preparing only what its part needs. Every test runs in
+  # exactly one of them (tests/integration/test_site_check_division.py).
+  integration-quarto:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/prepare
+      - name: Verify the group integration-quarto
+        run: ./scripts/verify.sh --all --only integration-quarto
+
+  integration-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/prepare
+        with:
+          browser: "true"
+      - name: Verify the group integration-browser
+        run: ./scripts/verify.sh --all --only integration-browser
+
+  integration-other:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -58,9 +85,8 @@ jobs:
       - uses: ./.github/actions/prepare
         with:
           lean-packages: restore
-          browser: "true"
-      - name: Verify the group integration
-        run: ./scripts/verify.sh --all --only integration
+      - name: Verify the group integration-other
+        run: ./scripts/verify.sh --all --only integration-other
 
   # Builds the Lean project and the site, once, and makes the comparisons
   # that need the machine of the build: the second build for determinism and
@@ -199,7 +225,7 @@ jobs:
   # failed, was cancelled, or was skipped fails it.
   verify:
     if: ${{ always() }}
-    needs: [code, workflow, integration, build, e2e]
+    needs: [code, workflow, integration-quarto, integration-browser, integration-other, build, e2e]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -209,7 +235,7 @@ jobs:
       - name: Require that every job succeeded
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: ./scripts/ci-aggregate.sh code workflow integration build e2e
+        run: ./scripts/ci-aggregate.sh code workflow integration-quarto integration-browser integration-other build e2e
 
   # Publishes the artifact the build job made for this commit, after every
   # job succeeded. It builds nothing.

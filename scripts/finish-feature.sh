@@ -8,6 +8,7 @@ source "$script_dir/lib/fingerprint.sh"
 source "$script_dir/lib/planning.sh"
 source "$script_dir/lib/guardrails.sh"
 source "$script_dir/lib/completion.sh"
+source "$script_dir/lib/verification.sh"
 
 usage() {
   echo "Usage: $0 <issue-number> \"<commit summary>\" [--no-review \"<reason>\"] [--unattended] [--partial]"
@@ -144,11 +145,31 @@ elif [[ -f "$root/$PLANNING_APPROVAL_FILE" ]] || git -C "$root" cat-file -e "HEA
   fail "could not determine the base of $branch, so it cannot be checked that the feature leaves the approved planning as it is. Nothing was committed."
 fi
 
-# 1. Verification passes. A pass that was already recorded for exactly this
-# content, by apply-triage.sh or review-feature.sh, is not repeated.
+# 1. Verification passes, in the tier the change needs (ADR 017 decision 7):
+# the targeted run for an ordinary change, which the implementer runs last
+# and which refuses a change that needs the full run or the run with a base.
+# A pass that was already recorded for exactly this content, of any tier, by
+# the implementer, apply-triage.sh, or review-feature.sh, is not repeated.
 echo "Checking repository verification..."
-(cd "$root" && ./scripts/verify.sh --reuse) || fail "verification failed; nothing was committed."
+(cd "$root" && ./scripts/verify.sh --reuse --targeted) || fail "verification failed; nothing was committed."
 echo
+# What the commit message says about it: the tier of the recorded pass and,
+# for a run with a base, the base and the selection.
+verification_lines="- ./scripts/verify.sh passed"
+case "$(verification_tier "$root")" in
+  targeted)
+    verification_lines="- ./scripts/verify.sh --targeted passed (the targeted run: no site built locally; CI builds and checks the site)"
+    ;;
+  base)
+    verification_lines="- ./scripts/verify.sh --base passed (every check, against a base)"
+    ;;
+esac
+if [[ -n "$(verification_field "$root" base)" ]]; then
+  verification_lines+=$'\n'"- base: $(verification_field "$root" base)"
+fi
+if [[ -n "$(verification_field "$root" selection)" ]]; then
+  verification_lines+=$'\n'"- selection: $(verification_field "$root" selection)"
+fi
 
 # 2. The latest review is current and resolved, unless explicitly skipped.
 if [[ -n "$no_review_reason" ]]; then
@@ -285,7 +306,7 @@ $changes
 $completion_lines
 
 Verification:
-- ./scripts/verify.sh passed
+$verification_lines
 
 Manual steps:
 $manual_steps

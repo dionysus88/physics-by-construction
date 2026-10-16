@@ -243,7 +243,6 @@ IDENTITY_FILES = [
     "tests/e2e/test_page.py",
     "tests/e2e/shards.json",
     "tests/support/checks.py",
-    "tests/integration/test_x.py",
 ]
 
 
@@ -266,6 +265,16 @@ def test_a_new_check_file_changes_the_identity(checks):
     before = check_identity(checks)
     _write(checks, "tests/support/new.py", "1\n")
     assert check_identity(checks) != before
+
+
+def test_an_integration_test_does_not_change_the_identity(checks):
+    # F119: no check a base reduces reads tests/integration, and the checks
+    # that run it are never reduced by a base (docs/verification-audit.md).
+    before = check_identity(checks)
+    _write(checks, "tests/integration/test_x.py", "1\n")
+    assert check_identity(checks) == before
+    _write(checks, "tests/integration/test_x.py", "2\n")
+    assert check_identity(checks) == before
 
 
 def test_a_lesson_does_not_change_the_identity(checks):

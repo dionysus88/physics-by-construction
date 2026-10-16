@@ -587,6 +587,25 @@ ADR 015; its wall clock is 21 min 59 s to 40 min 48 s at 22 to 32 lessons
 proposal for its timeout is in `docs/verification-audit.md`, "Proposal for
 the owner".
 
+### F119, measurements pending the merge
+
+Nothing below is measured yet, and none of it can be before the workflow of
+#185 is merged: it needs the merged `ci.yml`, a base from the `main` run
+after the merge, and ordinary features that follow. Criteria 3, 5 (the
+one-lesson finish and review) and 6 of #185 stay `not_met` until then.
+
+- **Three consecutive one-lesson pull requests**, each with the duration of
+  its CI run and its critical path, against the budget of 20 minutes and the
+  15-minute target of ADR 015 (criterion 6).
+- **One full run on `main`** after the merge, with its duration (criterion 6).
+- **The critical path of the integration part**, before (the single
+  `integration` job of F118 above) and after (the slowest of
+  `integration-quarto`, `integration-browser`, `integration-other`), on a
+  one-lesson pull request (criterion 3).
+- **A real one-lesson `finish-feature.sh` and `review-feature.sh`**, whose
+  recorded pass names the tier `targeted`, the base, and the selection, and
+  in which no step builds the site (criterion 5).
+
 ## Release (human)
 
 After the items above: tag the merge commit (`git tag -a mvp-v1.0.0`) and

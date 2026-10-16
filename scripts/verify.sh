@@ -9,25 +9,37 @@ set -euo pipefail
 # or always with --all.
 #
 # A run in which every check passed is recorded for the content it verified
-# (scripts/lib/verification.sh). With --reuse, a second run on identical
-# content is skipped.
+# (scripts/lib/verification.sh), with its tier. With --reuse, a second run on
+# identical content is skipped.
 #
 # A check may name a group: '<name> [<group>]: <command>'. A check without one
 # belongs to the group 'default'. --only runs the checks of the named groups,
 # for a CI that spreads the same checks over parallel jobs. Such a partial
 # run is never a verification: it records nothing.
+#
+# Three tiers (ADR 017 decision 7): a run without options runs every check;
+# --base runs every check against a verified base, which selects the lessons
+# to execute; --targeted runs the checks of the groups that the reserved
+# entry 'targeted:' of scripts/verify.conf names, after the selection, and
+# builds no site. The targeted run never guesses: without an acceptable base,
+# or when the selection says CI will run everything, it reports that and
+# verifies nothing.
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 config="$root/scripts/verify.conf"
 workflow_config="$root/scripts/verify-workflow.conf"
+fetch_script="$root/scripts/fetch-base.sh"
+fetched_base="$root/.agents/verification/base"
 
 comment_pattern='^[[:space:]]*(#.*)?$'
 check_pattern='^([a-z0-9][a-z0-9-]*)([[:space:]]*\[([a-z0-9][a-z0-9-]*)\])?:[[:space:]]*(.*[^[:space:]])[[:space:]]*$'
+groups_pattern='^[a-z0-9][a-z0-9-]*(,[a-z0-9][a-z0-9-]*)*$'
 default_group="default"
 
 usage() {
   echo "Usage: $0 [--all] [--reuse]"
-  echo "       $0 [--all] --base <directory> [--only <group>[,<group>...]]"
+  echo "       $0 [--all] --targeted [--base <directory>] [--reuse]"
+  echo "       $0 [--all] --base [<directory>] [--only <group>[,<group>...]]"
   echo "       $0 [--all] --only <group>[,<group>...]"
   echo "       $0 --groups"
   echo
@@ -36,7 +48,8 @@ usage() {
   echo "that file differs from the base branch. --all runs them regardless."
   echo
   echo "--reuse skips the run when verification already passed for exactly the"
-  echo "current content, as recorded by an earlier run."
+  echo "current content, as recorded by an earlier run: a full run, or with"
+  echo "--targeted a run of any tier."
   echo
   echo "--only runs the checks of the named groups only. A check names its group"
   echo "as '<name> [<group>]: <command>'; one without a group is in 'default'."
@@ -46,8 +59,20 @@ usage() {
   echo "--base names the directory of a verified base (digests.json and freeze/, as"
   echo "a run on main publishes them). The script selects once what this run"
   echo "executes and checks, writes the selection to .agents/verification/selection.json,"
-  echo "and records the base. Without it every lesson is executed and checked. A"
-  echo "base that cannot be used gives a full run, with the reason (ADR 014)."
+  echo "and records the base. Without a directory the base is retrieved with"
+  echo "scripts/fetch-base.sh into .agents/verification/base. Without a base every"
+  echo "lesson is executed and checked. A base that cannot be used gives a full run,"
+  echo "with the reason (ADR 014)."
+  echo
+  echo "--targeted is the targeted run (ADR 017 decision 7): the selection CI will"
+  echo "make, from the base, and then the checks of the groups that the entry"
+  echo "'targeted:' of scripts/verify.conf names, which need no site build. It"
+  echo "builds no site. Without an acceptable base, when the selection names a"
+  echo "full run, or when a selected lesson is new to the base, it reports what CI"
+  echo "will run and which run the change needs, and verifies nothing. A pass is"
+  echo "recorded with its tier, the base, and the selection. A project whose"
+  echo "scripts/verify.conf has no 'targeted:' entry has one tier: --targeted then"
+  echo "runs every check."
   echo
   echo "--groups prints the groups that have a check, one per line."
   exit 1
@@ -65,18 +90,24 @@ list_groups=0
 only=""
 partial=0
 base=""
+fetch_base=0
+targeted=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all) run_all=1 ;;
     --reuse) reuse=1 ;;
     --groups) list_groups=1 ;;
+    --targeted) targeted=1 ;;
     --base)
-      [[ $# -ge 2 && -n "$2" ]] || usage
-      base="$2"
-      shift
+      if [[ $# -ge 2 && -n "$2" && "$2" != --* ]]; then
+        base="$2"
+        shift
+      else
+        fetch_base=1
+      fi
       ;;
     --only)
-      [[ $# -ge 2 && "$2" =~ ^[a-z0-9][a-z0-9-]*(,[a-z0-9][a-z0-9-]*)*$ ]] || usage
+      [[ $# -ge 2 && "$2" =~ $groups_pattern ]] || usage
       only="$2"
       partial=1
       shift
@@ -85,7 +116,7 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-if [[ -n "$base" && "$reuse" -eq 1 ]]; then
+if [[ ( -n "$base" || "$fetch_base" -eq 1 ) && "$reuse" -eq 1 && "$targeted" -eq 0 ]]; then
   echo "Error: --base cannot be combined with --reuse: a run with a base is a verification against that base, not of the content alone." >&2
   exit 1
 fi
@@ -93,7 +124,15 @@ if [[ "$partial" -eq 1 && "$reuse" -eq 1 ]]; then
   echo "Error: --only cannot be combined with --reuse: a partial run is not a verification, so there is nothing to reuse." >&2
   exit 1
 fi
-if [[ "$list_groups" -eq 1 && ( "$partial" -eq 1 || "$reuse" -eq 1 || "$run_all" -eq 1 || -n "$base" ) ]]; then
+if [[ "$partial" -eq 1 && "$targeted" -eq 1 ]]; then
+  echo "Error: --only cannot be combined with --targeted: the targeted run performs the groups that scripts/verify.conf names for it." >&2
+  exit 1
+fi
+if [[ "$targeted" -eq 1 && "$fetch_base" -eq 1 ]]; then
+  echo "Error: --targeted retrieves the base itself; give --base a directory, or leave it out." >&2
+  exit 1
+fi
+if [[ "$list_groups" -eq 1 && ( "$partial" -eq 1 || "$reuse" -eq 1 || "$run_all" -eq 1 || -n "$base" || "$fetch_base" -eq 1 || "$targeted" -eq 1 ) ]]; then
   usage
 fi
 
@@ -115,13 +154,16 @@ names=()
 commands=()
 groups=()
 workflow_paths=""
+targeted_groups=""
 
-# load_checks <file> <paths-entry>
-# Appends the checks of <file> to names and commands. With <paths-entry> 'yes',
-# the reserved entry 'paths:' sets workflow_paths instead of declaring a check.
+# load_checks <file> <reserved-entry>
+# Appends the checks of <file> to names and commands. <reserved-entry> names
+# the one entry of the file that declares no check: 'paths' sets
+# workflow_paths (the workflow files), 'targeted' sets targeted_groups (the
+# groups of the targeted run), and 'none' reserves nothing.
 load_checks() {
   local file="$1"
-  local paths_entry="$2"
+  local reserved="$2"
   local label="${1#"$root"/}"
   local line
   local line_number=0
@@ -139,11 +181,22 @@ load_checks() {
     name="${BASH_REMATCH[1]}"
     group="${BASH_REMATCH[3]}"
     value="${BASH_REMATCH[4]}"
-    if [[ "$paths_entry" == "yes" && "$name" == "paths" ]]; then
-      [[ -z "$group" ]] || config_fail "'paths' takes no group on line $line_number of $label."
-      [[ -z "$workflow_paths" ]] ||
-        config_fail "'paths' is declared more than once in $label."
-      workflow_paths="$value"
+    if [[ "$reserved" != "none" && "$name" == "$reserved" ]]; then
+      [[ -z "$group" ]] || config_fail "'$reserved' takes no group on line $line_number of $label."
+      case "$reserved" in
+        paths)
+          [[ -z "$workflow_paths" ]] ||
+            config_fail "'paths' is declared more than once in $label."
+          workflow_paths="$value"
+          ;;
+        targeted)
+          [[ -z "$targeted_groups" ]] ||
+            config_fail "'targeted' is declared more than once in $label."
+          [[ "$value" =~ $groups_pattern ]] ||
+            config_fail "'targeted' names groups as '<group>[,<group>...]' on line $line_number of $label: $value"
+          targeted_groups="$value"
+          ;;
+      esac
       continue
     fi
     for existing in ${names[@]+"${names[@]}"}; do
@@ -193,7 +246,7 @@ workflow_files_changed() {
 [[ "$list_groups" -eq 1 ]] || echo "== Agentic project verification =="
 
 [[ -f "$config" ]] || config_fail "verification config not found: $config"
-load_checks "$config" no
+load_checks "$config" targeted
 [[ "${#names[@]}" -gt 0 ]] || config_fail "scripts/verify.conf declares no checks."
 
 # Decide whether the workflow self-tests run. Their checks follow the project
@@ -203,7 +256,7 @@ workflow_note=""
 workflow_skipped=""
 workflow_base=""
 if [[ -f "$workflow_config" ]]; then
-  load_checks "$workflow_config" yes
+  load_checks "$workflow_config" paths
   workflow_count=$((${#names[@]} - project_count))
   [[ "$workflow_count" -gt 0 ]] || config_fail "scripts/verify-workflow.conf declares no checks."
   [[ -n "$workflow_paths" ]] ||
@@ -240,8 +293,98 @@ if [[ "$partial" -eq 1 ]]; then
   echo "Only the groups: ${only//,/, }. A partial run is not a verification and records nothing."
 fi
 
+# The tier of this run (ADR 017 decision 7). The targeted run performs the
+# groups of the 'targeted:' entry after the selection; a project without the
+# entry has one tier, and --targeted runs every check (a full run, recorded
+# as one; --reuse still takes a recorded pass of any tier for it).
+tier="full"
+selected_groups=""
+if [[ "$targeted" -eq 1 ]]; then
+  if [[ -z "$targeted_groups" ]]; then
+    echo "The targeted run: scripts/verify.conf declares no 'targeted:' entry, so this project has one tier and every check runs."
+  else
+    IFS=, read -r -a wanted <<<"$targeted_groups"
+    for group in "${wanted[@]}"; do
+      in_list "$group" "$known_groups" ||
+        config_fail "the entry 'targeted' of scripts/verify.conf names the group '$group', which has no check. The groups are: ${known_groups//,/, }."
+    done
+    tier="targeted"
+    selected_groups="$targeted_groups"
+    [[ -n "$base" ]] || fetch_base=1
+    echo "The targeted run (ADR 017 decision 7): the selection CI will make, then the checks of the groups ${targeted_groups//,/, }. No site is built."
+  fi
+elif [[ -n "$base" || "$fetch_base" -eq 1 ]]; then
+  tier="base"
+fi
+[[ "$partial" -eq 0 ]] || selected_groups="$only"
+
+# With --reuse, a recorded pass for exactly this content stands in for a run:
+# a full run, or with --targeted a run of any tier. A record made without the
+# workflow self-tests does not cover a run that needs them.
+tree_before=""
+targeted_record_pending=0
+if [[ "$recordable" -eq 1 ]]; then
+  tree_before="$(fingerprint_worktree "$root" "$scratch")" || tree_before=""
+  if [[ "$reuse" -eq 1 && -n "$tree_before" && "$(verification_field "$root" tree)" == "$tree_before" ]]; then
+    recorded_tier="$(verification_tier "$root")"
+    if [[ "$recorded_tier" == "full" || "$targeted" -eq 1 ]]; then
+      recorded_workflow="$(verification_field "$root" workflow-tests)"
+      if [[ "$recorded_workflow" != "skipped" || ( -n "$workflow_skipped" && "$run_all" -eq 0 ) ]]; then
+        if [[ "$recorded_tier" == "targeted" ]]; then
+          # A targeted pass holds for the selection it was made against: the
+          # tree alone does not say what CI selects once main has advanced.
+          # It stands only after the current base and selection match it.
+          targeted_record_pending=1
+        else
+          echo
+          echo "Verification already passed for this content at $(verification_field "$root" verified-at) (a $recorded_tier run); not run again."
+          echo "Run ./scripts/verify.sh without --reuse to run every check."
+          exit 0
+        fi
+      fi
+    fi
+  fi
+fi
+
+# The base of the run, retrieved read-only from the latest successful run on
+# main under the same provenance rule as CI (ADR 014 decision 2). Without an
+# acceptable base the targeted run cannot tell what CI will execute and
+# verifies nothing; a run with --base and no base is a full run.
+base_record=""
+if [[ "$fetch_base" -eq 1 ]]; then
+  [[ -x "$fetch_script" ]] ||
+    config_fail "scripts/fetch-base.sh is missing or not executable, so no base can be retrieved; give --base <directory>."
+  fetch_output="$(mktemp "${TMPDIR:-/tmp}/verify-base.XXXXXX")"
+  echo
+  echo "== Base =="
+  fetch_status=0
+  GITHUB_OUTPUT="$fetch_output" "$fetch_script" "$fetched_base" || fetch_status=$?
+  accepted="$(sed -n 's/^accepted=//p' "$fetch_output" | tail -n 1)"
+  base_run="$(sed -n 's/^run-id=//p' "$fetch_output" | tail -n 1)"
+  rm -f "$fetch_output"
+  if [[ "$fetch_status" -ne 0 ]]; then
+    echo "No base: scripts/fetch-base.sh exited with status $fetch_status."
+    accepted="false"
+  fi
+  if [[ "$accepted" == "true" && -n "$base_run" && -d "$fetched_base" ]]; then
+    base="$fetched_base"
+    base_record="run $base_run"
+  elif [[ "$tier" == "targeted" ]]; then
+    echo "CI will run everything. The targeted run cannot tell what CI will execute, so it verifies nothing; run the full ./scripts/verify.sh."
+    echo
+    echo "REFUSED  targeted-run (no base: CI will run everything; the change needs the full ./scripts/verify.sh)"
+    exit 1
+  else
+    echo "The run is a full run: every lesson is executed and checked."
+    base=""
+    tier="full"
+  fi
+elif [[ -n "$base" ]]; then
+  base_record="directory $base"
+fi
+
 # The selection of the run (ADR 014 decision 5): made once, here, and written
-# to the one file the checks read. A run without --base removes any selection
+# to the one file the checks read. A run without a base removes any selection
 # an earlier run left, so that it verifies everything.
 selection_file="$root/.agents/verification/selection.json"
 if [[ -e "$selection_file" ]]; then rm -f "$selection_file"; fi
@@ -249,28 +392,34 @@ selection_note=""
 if [[ -n "$base" ]]; then
   [[ -d "$base" ]] || echo "Note: the base $base is not a directory; the run is a full run."
   base_abs="$(cd "$base" 2>/dev/null && pwd -P || printf '%s' "$base")"
-  selection_note="$(cd "$root" && uv run --locked python -m pbc.authoring.selection --root "$root" --base "$base_abs")" ||
-    config_fail "the selection against the base $base failed."
+  tier_options=()
+  [[ "$tier" != "targeted" ]] || tier_options=(--tier targeted)
+  selection_status=0
+  selection_note="$(cd "$root" && uv run --locked python -m pbc.authoring.selection --root "$root" --base "$base_abs" ${tier_options[@]+"${tier_options[@]}"})" ||
+    selection_status=$?
+  echo
   echo "== Selection =="
   echo "$selection_note"
+  if [[ "$selection_status" -eq 3 ]]; then
+    # The targeted run does not act on this selection (ADR 017 decision 7):
+    # the change needs the full run, or the run with --base, as said above.
+    echo "The targeted run verifies nothing for this change."
+    echo
+    echo "REFUSED  targeted-run (${selection_note##*$'\n'})"
+    exit 1
+  elif [[ "$selection_status" -ne 0 ]]; then
+    config_fail "the selection against the base $base failed."
+  fi
   selection_note="${selection_note%%$'\n'*}"
-fi
-
-# With --reuse, a recorded pass for exactly this content stands in for a run.
-# A record made without the workflow self-tests does not cover a run that
-# needs them.
-tree_before=""
-if [[ "$recordable" -eq 1 ]]; then
-  tree_before="$(fingerprint_worktree "$root" "$scratch")" || tree_before=""
-  if [[ "$reuse" -eq 1 && -n "$tree_before" && "$(verification_field "$root" tree)" == "$tree_before" &&
-    -z "$(verification_field "$root" selection)" ]]; then
-    recorded_workflow="$(verification_field "$root" workflow-tests)"
-    if [[ "$recorded_workflow" != "skipped" || ( -n "$workflow_skipped" && "$run_all" -eq 0 ) ]]; then
+  if [[ "$targeted_record_pending" -eq 1 ]]; then
+    if [[ "$(verification_field "$root" base)" == "$base_record" && "$(verification_field "$root" selection)" == "$selection_note" ]]; then
       echo
-      echo "Verification already passed for this content at $(verification_field "$root" verified-at); not run again."
+      echo "Verification already passed for this content at $(verification_field "$root" verified-at) (a targeted run) against this base and selection; not run again."
       echo "Run ./scripts/verify.sh without --reuse to run every check."
       exit 0
     fi
+    echo
+    echo "The recorded targeted pass was made against another base or selection (base: $(verification_field "$root" base), now $base_record); the targeted checks run again."
   fi
 fi
 
@@ -284,7 +433,7 @@ for index in "${!names[@]}"; do
   fi
   name="${names[$index]}"
   command="${commands[$index]}"
-  if [[ "$partial" -eq 1 ]] && ! in_list "${groups[$index]}" "$only"; then
+  if [[ -n "$selected_groups" ]] && ! in_list "${groups[$index]}" "$selected_groups"; then
     continue
   fi
   read -r tool _ <<<"$command"
@@ -331,8 +480,9 @@ if [[ "$partial" -eq 1 ]]; then
   exit 0
 fi
 
-# Record the pass for the content that was verified. When a check changed a
-# file, no single content was verified, so nothing is recorded.
+# Record the pass for the content that was verified, with its tier. When a
+# check changed a file, no single content was verified, so nothing is
+# recorded.
 if [[ "$recordable" -eq 1 ]]; then
   if [[ -n "$tree_before" && "$(fingerprint_worktree "$root" "$scratch")" == "$tree_before" ]]; then
     if [[ ! -f "$workflow_config" ]]; then
@@ -342,11 +492,16 @@ if [[ "$recordable" -eq 1 ]]; then
     else
       workflow_state="ran"
     fi
-    verification_write "$root" "$tree_before" "$workflow_state" "$selection_note" ||
+    verification_write "$root" "$tree_before" "$workflow_state" "$selection_note" "$tier" "$base_record" ||
       echo "Warning: could not record the passed verification." >&2
   else
     verification_forget "$root"
   fi
 fi
 
-echo "Verification passed."
+if [[ "$tier" == "targeted" ]]; then
+  echo "The targeted run passed: the checks of the groups ${targeted_groups//,/, }, for the selection above (base: $base_record). No site was built; CI builds and checks the site of the pull request."
+  echo "Verification passed (targeted run)."
+else
+  echo "Verification passed."
+fi

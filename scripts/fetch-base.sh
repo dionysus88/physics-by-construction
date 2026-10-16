@@ -26,8 +26,13 @@ set -euo pipefail
 # everything. With GITHUB_OUTPUT set it writes accepted=true|false and
 # run-id=<id>.
 #
-# Needs the environment variables GH_TOKEN and GITHUB_REPOSITORY, and the
-# tools gh, jq, unzip and sha256sum (or shasum).
+# Needs the tools gh, jq, unzip and sha256sum (or shasum). In CI the
+# environment variables GH_TOKEN and GITHUB_REPOSITORY name the token and the
+# repository. On a developer's machine (the targeted run, ADR 017 decision 7)
+# both may be absent: the repository is then the one of this clone, as gh
+# reports it, and the login of gh is used, read-only. Without a login or a
+# repository there is no base, and the caller says that CI will run
+# everything; nothing is ever guessed.
 
 workflow_path=".github/workflows/ci.yml"
 artifact_name="verification-base"
@@ -58,10 +63,6 @@ elif command -v shasum >/dev/null 2>&1; then
 else
   fail "sha256sum or shasum is required."
 fi
-repo="${GITHUB_REPOSITORY:-}"
-[[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail "GITHUB_REPOSITORY is not set to owner/name."
-[[ -n "${GH_TOKEN:-}" ]] || fail "GH_TOKEN is not set."
-
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/fetch-base.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 
@@ -82,6 +83,19 @@ without_base() {
 api() {
   gh api -H "Accept: application/vnd.github+json" "$1"
 }
+
+# The repository and the credentials: from the environment in CI, from the
+# clone and the login of gh on a developer's machine.
+repo="${GITHUB_REPOSITORY:-}"
+if [[ -z "$repo" ]]; then
+  repo="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)" ||
+    without_base "the repository cannot be determined (set GITHUB_REPOSITORY, or run in a clone whose remote is on GitHub)"
+fi
+[[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail "GITHUB_REPOSITORY is not set to owner/name."
+if [[ -z "${GH_TOKEN:-}" ]]; then
+  gh auth status >/dev/null 2>&1 ||
+    without_base "GH_TOKEN is not set and gh is not logged in (run gh auth login)"
+fi
 
 # Whether the record of one run, in $scratch/run.json, is a run whose
 # artifacts may be a base. Sets $why when it is not.
