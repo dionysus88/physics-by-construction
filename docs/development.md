@@ -170,7 +170,7 @@ that CI can run them side by side (see "Groups of checks"):
 
 | Check | Group | Runs |
 |---|---|---|
-| `site-checks-reproduction` | `build` | The tests marked `same_machine`: the reproduction of every lesson, which compares the regenerated page byte for byte with the built one. |
+| `site-checks-reproduction` | `build` | The tests marked `same_machine`: the reproduction of every lesson, which compares the regenerated page byte for byte with the built one. A selective run reproduces the lessons it executed; one that executes no lesson (a change to the documentation only) has nothing to reproduce and passes, while every other run that selects no test fails. |
 | `site-checks-pages-1`, `site-checks-pages-2` | `e2e-pages-1`, `e2e-pages-2` | `tests/e2e/test_built_site.py`; part 2 is the three slowest tests. |
 | `site-checks-other` | `e2e-other` | Every other test of `tests/e2e`. It names the file it leaves out, so a new test file runs without a change. |
 

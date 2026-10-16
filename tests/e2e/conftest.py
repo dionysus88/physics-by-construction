@@ -54,6 +54,21 @@ def _reproductions_of_unchanged_lessons(items: list[pytest.Item]) -> list[pytest
     ]
 
 
+# Set when this run deselected reproductions and its selection executes no
+# lesson: a run with nothing to reproduce, such as a change to the
+# documentation only.
+_NOTHING_TO_REPRODUCE = pytest.StashKey[bool]()
+
+
+def _executes_no_lesson() -> bool:
+    selection = selecting.read(REPO_ROOT)
+    return (
+        selection is not None
+        and selection.get("mode") == "selective"
+        and selection.get("execute") == []
+    )
+
+
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
@@ -61,6 +76,7 @@ def pytest_collection_modifyitems(
     executed, and the part of each test file that --shard asks for."""
     skipped = _reproductions_of_unchanged_lessons(items)
     if skipped:
+        config.stash[_NOTHING_TO_REPRODUCE] = _executes_no_lesson()
         gone = set(skipped)
         config.hook.pytest_deselected(items=skipped)
         items[:] = [item for item in items if item not in gone]
@@ -89,3 +105,21 @@ def pytest_collection_modifyitems(
         gone = set(left_out)
         config.hook.pytest_deselected(items=left_out)
         items[:] = [item for item in items if item not in gone]
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """A selective run that executes no lesson has no reproduction to run
+    (issue 200): 'pytest -m same_machine' then selects no test, and pytest's
+    status 5 (no tests collected) is that valid state, so it passes. Every
+    other empty run still fails with 5: a run without a selection, a full
+    run, a selection that executes a lesson, and a run that deselected no
+    reproduction for the selection."""
+    if exitstatus == pytest.ExitCode.NO_TESTS_COLLECTED and session.config.stash.get(
+        _NOTHING_TO_REPRODUCE, False
+    ):
+        print(
+            "\nno reproduction to run: this selective run executes no lesson",
+            flush=True,
+        )
+        session.exitstatus = pytest.ExitCode.OK
