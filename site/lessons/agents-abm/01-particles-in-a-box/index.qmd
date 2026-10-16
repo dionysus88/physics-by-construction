@@ -178,7 +178,7 @@ $v$ alone, and the area element is $v\,\mathrm dv\,\mathrm d\theta$, so
 integrating over the angle gives the density of the speed,
 
 $$
-f(v) = \frac{m v}{k_B T}\exp\!\left(-\frac{m v^2}{2 k_B T}\right).
+f(v) = \frac{m v}{k_B T}\exp\!\left(-\frac{m v^2}{2 k_B T}\right),
 $$
 
 with $\sigma^2 = k_B T/m$. The temperature fixes the whole curve.
