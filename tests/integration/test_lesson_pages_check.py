@@ -4,7 +4,10 @@
 selected, alone, in a clone of the working tree, and never builds the site.
 It runs here on a copy of this repository's committed files, so a broken page
 and a changed proof can be made without touching the checkout, and the
-checkout's own site is never built. Each render executes a real lesson.
+checkout's own site is never built. Each render executes a real lesson, in
+the clone's own locked environment: the page reads the clone's files, so a
+lesson that displays Lean reads the record of the Lean build in the clone and
+not one this checkout may hold from its own build (CI starts without one).
 """
 
 import os
@@ -22,8 +25,31 @@ from pbc.authoring import selection as selecting
 
 KINEMATICS = "site/lessons/mechanics/01-kinematics-as-a-program"
 LEAN_LESSON = "site/lessons/lean/01-proving-what-the-simulation-showed"
-# A fake Lean build: it records where it ran.
-FAKE_LEAN = '#!/usr/bin/env bash\npwd >>"$FAKE_LEAN_LOG"\nexit 0\n'
+# A fake Lean build: it compiles nothing, records where it ran, and writes the
+# build record as scripts/check-lean.sh does (the versions and a checksum of
+# every module), in the project it ran in, so a page that displays Lean reads
+# the record of the build in that project. With FAKE_LEAN_RECORD=no it leaves
+# no record, as a build that did not run.
+FAKE_LEAN = r"""#!/usr/bin/env bash
+set -euo pipefail
+pwd >>"$FAKE_LEAN_LOG"
+[[ "${FAKE_LEAN_RECORD:-yes}" == "yes" ]] || exit 0
+cd lean
+mkdir -p .lake
+{
+  printf '{"toolchain":"fake","lean":{"version":"4.0.0","commit":"0"},'
+  printf '"mathlib":{"tag":"v4.0.0","rev":"0123456789abcdef"},'
+  printf '"exercises":{},"modules":{'
+  separator=""
+  while IFS= read -r file; do
+    module="$(sed -e 's/\.lean$//' -e 's#/#.#g' <<<"$file")"
+    checksum="$(shasum -a 256 "$file" | cut -d" " -f1)"
+    printf '%s"%s":"%s"' "$separator" "$module" "$checksum"
+    separator=","
+  done < <(find PhysicsByConstruction -name '*.lean' | LC_ALL=C sort)
+  printf '}}\n'
+} >.lake/pbc-build-record.json
+"""
 
 
 @pytest.fixture(scope="module")
@@ -62,7 +88,11 @@ def select(root: Path, lessons: list[str], tier: str | None) -> None:
     selecting.write(root, data)
 
 
-def check(root: Path, tmp_path: Path) -> subprocess.CompletedProcess[str]:
+def check(
+    root: Path, tmp_path: Path, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    # UV_PROJECT runs the script's own helper in the environment of this
+    # checkout; the clone's commands must not inherit it.
     return subprocess.run(
         ["bash", str(SCRIPTS / "check-lesson-pages.sh"), str(root)],
         cwd=root,
@@ -70,6 +100,7 @@ def check(root: Path, tmp_path: Path) -> subprocess.CompletedProcess[str]:
             **os.environ,
             "UV_PROJECT": str(REPO_ROOT),
             "FAKE_LEAN_LOG": str(tmp_path / "lean.log"),
+            **(env or {}),
         },
         capture_output=True,
         text=True,
@@ -104,6 +135,7 @@ def test_the_selected_lesson_renders_alone_in_a_clone_and_no_site_is_built(
     select(tree, [KINEMATICS], "targeted")
     result = check(tree, tmp_path)
     assert result.returncode == 0, output(result)
+    assert "The locked environment of the clone" in result.stdout
     assert f"Rendered {KINEMATICS}/index.qmd in " in result.stdout
     assert "no site was built" in result.stdout
     # Rendered in a clone, which is gone: the tree holds no page and no build.
@@ -137,18 +169,39 @@ def test_a_changed_proof_runs_the_lean_build_of_the_checkout(tree, tmp_path):
 
 
 def test_a_lesson_that_displays_lean_gets_the_lean_build_in_the_clone(tree, tmp_path):
-    # As the page's commands say: the Lean build first, in the clone, then
-    # the render of the page.
+    # As the page's commands say: the environment, the Lean build, then the
+    # render of the page, each in the clone. The page renders from the record
+    # that build left in the clone (the fake writes it there and nowhere
+    # else; the copy of the repository holds none).
     select(tree, [LEAN_LESSON], "targeted")
     result = check(tree, tmp_path)
     assert result.returncode == 0, output(result)
     assert "a selected lesson displays Lean modules" in result.stdout
     [where] = lean_runs(tmp_path)
     assert where != str(tree.resolve()) and "lesson-pages." in where
-    assert result.stdout.index("Lean build in the clone") < result.stdout.index(
-        f"Rendering {LEAN_LESSON}/index.qmd alone"
+    assert not (tree / "lean" / ".lake" / "pbc-build-record.json").exists()
+    assert (
+        result.stdout.index("locked environment of the clone")
+        < result.stdout.index("Lean build in the clone")
+        < result.stdout.index(f"Rendering {LEAN_LESSON}/index.qmd alone")
     )
     assert f"Rendered {LEAN_LESSON}/index.qmd in " in result.stdout
+
+
+def test_the_page_reads_the_lean_build_of_the_clone_and_not_of_the_checkout(
+    tree, tmp_path
+):
+    # The build in the clone left no record. The page must fail on the
+    # clone's record, whatever record this checkout holds from its own Lean
+    # build: a page rendered with the checkout's environment would read that
+    # one and pass here while a fresh machine fails.
+    select(tree, [LEAN_LESSON], "targeted")
+    result = check(tree, tmp_path, env={"FAKE_LEAN_RECORD": "no"})
+    assert result.returncode != 0
+    assert f"the page {LEAN_LESSON}/index.qmd does not render" in result.stderr
+    [where] = lean_runs(tmp_path)
+    record = Path(where).resolve() / "lean" / ".lake" / "pbc-build-record.json"
+    assert f"{record} does not exist" in result.stderr, result.stderr
 
 
 def test_the_check_needs_a_working_tree(tmp_path):

@@ -16,15 +16,21 @@ set -euo pipefail
 #
 # For the targeted run it renders each selected lesson page alone, as the
 # page's "Reproduce this" commands do: in a clone of the working tree (the
-# files Git tracks or would add), with the Lean build first when a selected
-# lesson displays Lean modules, and `uv run --locked quarto render <page>` in
-# the locked environment of this checkout, within the 30-second budget of a
+# files Git tracks or would add) with its own locked environment (`uv sync
+# --locked`, so the page's package is the clone's and reads the clone's
+# files: the record of its Lean build, its data), with the Lean build first
+# in the clone when a selected lesson displays Lean modules, and `uv run
+# --locked quarto render <page>` there, within the 30-second budget of a
 # lesson page. A failing cell, an equation that cannot become MathML, or a
 # slow page fails the check. When a file under lean/ differs from the base
 # branch, it also runs the Lean build of this checkout, so a changed proof
 # that no selected lesson displays is checked too. It never builds the site:
 # the experiment check of ADR 016 decision 4 joins here when the lessons
 # declare their entry points (F117).
+#
+# UV_PROJECT, which the tests set to run this script on a copy of the
+# repository, applies to the script's own Python helper only; the commands in
+# the clone run without it, in the clone's environment.
 
 default_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 root="${1:-$default_root}"
@@ -111,9 +117,21 @@ trap 'rm -rf "$clone"' EXIT
     tar -C "$clone" -xf -
 ) || fail "the working tree could not be copied."
 
-# A lesson that displays Lean modules reads the record of the Lean build, so
-# the clone builds the proofs first, with the packages of this checkout, as
-# the page's commands say.
+# The clone's own locked environment, as the page's commands say ("uv sync
+# --locked" after the clone). The package is installed from the clone, so a
+# page rendered there reads the clone's files, not this checkout's: the
+# record of the Lean build below, the datasets. From uv's cache this takes
+# seconds.
+log="$clone/render.log"
+echo "-- The locked environment of the clone"
+if ! (cd "$clone" && env -u UV_PROJECT uv sync --locked) >"$log" 2>&1; then
+  cat "$log" >&2
+  fail "the locked environment could not be installed in the clone."
+fi
+
+# A lesson that displays Lean modules reads the record of the Lean build of
+# its repository, so the clone builds the proofs first, with the packages of
+# this checkout, as the page's commands say.
 displays_lean=0
 for lesson in "${lessons[@]}"; do
   [[ -f "$root/$lesson/index.qmd" ]] || fail "$lesson has no index.qmd."
@@ -127,15 +145,15 @@ if [[ "$displays_lean" -eq 1 ]]; then
     mkdir -p "$clone/lean/.lake"
     ln -s "$root/lean/.lake/packages" "$clone/lean/.lake/packages"
   fi
-  (cd "$clone" && ./scripts/check-lean.sh) || fail "the Lean build failed in the clone."
+  (cd "$clone" && env -u UV_PROJECT ./scripts/check-lean.sh) ||
+    fail "the Lean build failed in the clone."
 fi
 
-log="$clone/render.log"
 for lesson in "${lessons[@]}"; do
   page="$lesson/index.qmd"
   echo "-- Rendering $page alone"
   started="$(date +%s)"
-  if ! (cd "$clone" && UV_PROJECT="$project" uv run --locked quarto render "$page") >"$log" 2>&1; then
+  if ! (cd "$clone" && env -u UV_PROJECT uv run --locked quarto render "$page") >"$log" 2>&1; then
     cat "$log" >&2
     fail "the page $page does not render."
   fi
