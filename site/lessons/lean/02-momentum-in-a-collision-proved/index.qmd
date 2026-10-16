@@ -57,7 +57,7 @@ project declares.
    sphere changes by a multiple of the direction `n`, and the multiple is
    $-2\,m_2/(m_1+m_2)$ times the component of the relative velocity along
    `n`; the second sphere changes by $+2\,m_1/(m_1+m_2)$ times the same.
-   This is the definition `firstAfter` and `secondAfter`. A rule with other
+   These are the definitions `firstAfter` and `secondAfter`. A rule with other
    coefficients is another definition, and the theorem says nothing about it.
 2. **Positive masses.** `hm₁ : 0 < m₁` and `hm₂ : 0 < m₂`. They make the sum
    $m_1 + m_2$ non-zero, which the rule divides by, and they say that the
