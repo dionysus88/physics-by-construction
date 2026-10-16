@@ -587,24 +587,63 @@ ADR 015; its wall clock is 21 min 59 s to 40 min 48 s at 22 to 32 lessons
 proposal for its timeout is in `docs/verification-audit.md`, "Proposal for
 the owner".
 
-### F119, measurements pending the merge
+### F119, measurements after the merge
 
-Nothing below is measured yet, and none of it can be before the workflow of
-#185 is merged: it needs the merged `ci.yml`, a base from the `main` run
-after the merge, and ordinary features that follow. Criteria 3, 5 (the
-one-lesson finish and review) and 6 of #185 stay `not_met` until then.
+Measured on 2026-10-16, after the workflow of #185 (PR #191) was merged and
+the `main` run after it had published a base. The evidence below is
+recorded here; whether it satisfies criteria 3, 5 and 6 of #185 and
+criterion 1 of #147 is for the independent assessment and the owner, and
+neither Issue is closed by this record.
 
-- **Three consecutive one-lesson pull requests**, each with the duration of
-  its CI run and its critical path, against the budget of 20 minutes and the
-  15-minute target of ADR 015 (criterion 6).
-- **One full run on `main`** after the merge, with its duration (criterion 6).
-- **The critical path of the integration part**, before (the single
-  `integration` job of F118 above) and after (the slowest of
-  `integration-quarto`, `integration-browser`, `integration-other`), on a
-  one-lesson pull request (criterion 3).
-- **A real one-lesson `finish-feature.sh` and `review-feature.sh`**, whose
-  recorded pass names the tier `targeted`, the base, and the selection, and
-  in which no step builds the site (criterion 5).
+**Three consecutive one-lesson pull requests** (no other pull request was
+merged to `main` between them; each ran against the base published by the
+`main` run of the previous merge):
+
+| Pull request | Lesson | Wall clock | Base (`main` run) | Selection |
+|---|---|---|---|---|
+| #195 (Issue #192) | agents-abm/01 | 14 min 05 s | 38868679531 | 2 of 32 lessons: agents-abm/01, mechanics/09 |
+| #197 (Issue #193) | lean/02 | 14 min 52 s | 38876222290 | 2 of 32 lessons: lean/02, mechanics/09 |
+| #198 (Issue #194) | waves/01 | 12 min 27 s | 38882391600 | 2 of 32 lessons: mechanics/09, waves/01 |
+
+Wall clock is the time from the creation of the pull request to the last
+check. All three are within the budget of 20 minutes and the 15-minute
+target of ADR 015 (by 8 s at the least). All three changed one lesson file,
+no workflow, and every check was green with `mergeStateStatus` `CLEAN`.
+Each pull request executed two lessons: the changed lesson and
+mechanics/09, which the selection added each time (the reason is not
+investigated here).
+
+**The critical path of the integration part, before and after** (criterion
+3). Before: the single `integration` job of F118 took 14 min 29 s in the
+slowest of three runs (#163) and 12 min 08 s to 16 min 08 s in full runs.
+After, on the three pull requests: `integration-quarto` 5 min 38 s to
+6 min 00 s, `integration-browser` 5 min 00 s to 5 min 22 s,
+`integration-other` 5 min 22 s to 6 min 30 s; the slowest of the three was
+5 min 38 s to 6 min 30 s. The critical path of a pull request is now
+`build` (5 min 32 s to 7 min 25 s) followed by the slowest `e2e` job (`e2e (other)`,
+6 min 35 s to 7 min 08 s), then `verify`; the integration jobs
+end before `build` does and are off the critical path.
+
+**Full runs on `main`** (criterion 6), 32 lessons: 28 min 01 s (run
+38868679531, the merge of #191), 34 min 14 s (38876222290, after #195),
+31 min 32 s (38882391600, after #197), and 31 min 18 s (38888399762, after
+#198). Each published a base and deployed.
+
+**A real one-lesson `finish-feature.sh` and `review-feature.sh`**
+(criterion 5): for #192, #193 and #194 the review passed and the finish
+recorded a targeted pass naming the base ("the artifact of the push run ...
+on `main`, whose job `verify` succeeded") and the selection (2 of 32
+lessons executed, 30 restored). The targeted tier built no site in these
+runs. The review of #192 first returned a major because the Issue asked for
+pull request CI evidence that cannot exist before the pull request; the
+Issues were reworded so that this measurement is recorded here and not as
+an acceptance criterion of the fix.
+
+**Not measured here:** the invalidation of a reused targeted verification
+when the base changes (it must fail closed) is not demonstrated by these
+runs; F120 (#196) covers the fail-closed cases in its evidence. No pull
+request without an accepted base, a fork pull request, and a cold-cache run
+were measured.
 
 ## Release (human)
 
