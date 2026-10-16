@@ -39,7 +39,7 @@ Pluck a guitar string and a bump runs along it, reaches the end, and comes
 back turned upside down. The same happens to a pressure pulse in an organ pipe
 and to a ripple on a rope, and none of them carries matter from one end to the
 other: the string only moves up and down, and the shape travels. This lesson
-asks what equation says so, and how a program that knows only values on a
+asks which equation says so, and how a program that knows only values on a
 grid, at discrete times, can reproduce the travelling shape and its
 reflection.
 
