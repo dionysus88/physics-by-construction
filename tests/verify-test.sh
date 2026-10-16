@@ -442,4 +442,146 @@ grep -Fq "duplicate check name" "$project/out.log" || fail "the duplicate name w
 [[ ! -e "$project/tools.log" ]] || fail "a check ran although a check name is used twice"
 if run_with "$project" --groups; then fail "--groups accepted a duplicate check name"; fi
 
+# The tiers (ADR 017 decision 7). A project without the entry 'targeted:' has
+# one tier: --targeted runs every check, and --reuse --targeted reuses a pass.
+project="$(setup_recorded_project one-tier)"
+printf '%s\n' "lint [code]: ruff check ." "tests: pytest" >"$project/scripts/verify.conf"
+git -C "$project" commit -qam "Two groups, one tier"
+run_with "$project" --targeted || fail "--targeted failed in a project with one tier"
+[[ "$(ran "$project")" == "ruff check .;pytest ;" ]] || fail "--targeted without the entry did not run every check: $(ran "$project")"
+grep -Fq "one tier" "$project/out.log" || fail "the one tier was not reported"
+grep -Fq "tier: full" "$project$record" || fail "the run was not recorded as a full run: $(cat "$project$record")"
+run_with "$project" --reuse --targeted || fail "--reuse --targeted failed"
+[[ ! -e "$project/tools.log" ]] || fail "--reuse --targeted ran the checks again"
+grep -Fq "a full run" "$project/out.log" || fail "the reused tier was not reported"
+
+# With the entry, the targeted run performs the groups it names after the
+# selection against the base, and records the tier, the base, and the
+# selection. The selection is made by the project's module, faked here, and
+# the base is retrieved by scripts/fetch-base.sh, faked here.
+setup_tiered_project() {
+  local project
+
+  project="$(setup_recorded_project "$1")"
+  printf '%s\n' "targeted: default,code" "lint [code]: ruff check ." "plain: ruff plain" \
+    "build [build]: pytest build" >"$project/scripts/verify.conf"
+  cat >"$project/scripts/fetch-base.sh" <<'FETCH'
+#!/usr/bin/env bash
+mkdir -p "$1"
+if [[ "${MOCK_BASE:-accepted}" == accepted ]]; then
+  echo "Base accepted: the artifact of the push run 77 on main, whose job verify succeeded."
+  printf 'accepted=true\nrun-id=%s\n' "${MOCK_RUN:-77}" >>"$GITHUB_OUTPUT"
+else
+  echo "No base: no run offers a base. Every lesson is executed and checked."
+  printf 'accepted=false\nrun-id=\n' >>"$GITHUB_OUTPUT"
+fi
+FETCH
+  chmod +x "$project/scripts/fetch-base.sh"
+  git -C "$project" add -A
+  git -C "$project" commit -qm "Tiers"
+  printf '%s\n' "$project"
+}
+# The fake selection module: 'uv run --locked python -m pbc.authoring.selection
+# --root <root> --base <base> [--tier targeted]' writes the selection and
+# prints its summary; MOCK_SELECTION is 'selective', 'full', or 'new'.
+cat >"$tmp/bin/uv" <<'UV'
+#!/usr/bin/env bash
+echo "uv $*" >>"$MOCK_TOOL_LOG"
+root=""; tier=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --root) root="$2"; shift ;;
+    --tier) tier="$2"; shift ;;
+  esac
+  shift
+done
+mkdir -p "$root/.agents/verification"
+printf '{"format": 1, "mode": "%s"}\n' "${MOCK_SELECTION:-selective}" >"$root/.agents/verification/selection.json"
+case "${MOCK_SELECTION:-selective}" in
+  selective) echo "selective run against base abc: ${MOCK_LESSONS:-1} of 2 lessons executed, 1 restored" ;;
+  full) echo "full run, base abc: the checks changed since the base (identity differs) (2 of 2 lessons executed)"
+        [[ "$tier" != targeted ]] || { echo "CI will run everything: the checks changed. The targeted run does not select; run the full ./scripts/verify.sh."; exit 3; } ;;
+  new) echo "selective run against base abc: 1 of 2 lessons executed, 1 restored"
+       [[ "$tier" != targeted ]] || { echo "1 new lesson(s) change what other pages display; run ./scripts/verify.sh --base."; exit 3; } ;;
+esac
+UV
+chmod +x "$tmp/bin/uv"
+
+project="$(setup_tiered_project tiered)"
+# verify.sh resolves its root, so the paths it passes on are the resolved ones.
+resolved="$(cd "$project" && pwd -P)"
+selection_call="uv run --locked python -m pbc.authoring.selection --root $resolved --base $resolved/.agents/verification/base"
+run_with "$project" --targeted || {
+  cat "$project/out.log" >&2
+  fail "the targeted run failed"
+}
+[[ "$(ran "$project")" == "$selection_call --tier targeted;ruff check .;ruff plain;" ]] ||
+  fail "the targeted run did not perform exactly the selection and the groups of its entry: $(ran "$project")"
+grep -Fq "Base accepted" "$project/out.log" || fail "the base was not retrieved"
+grep -Fq "Verification passed (targeted run)" "$project/out.log" || fail "the targeted pass was not reported"
+[[ "$(sed -n 's/^tier: //p' "$project$record")" == "targeted" ]] || fail "the tier was not recorded: $(cat "$project$record")"
+[[ "$(sed -n 's/^base: //p' "$project$record")" == "run 77" ]] || fail "the base was not recorded: $(cat "$project$record")"
+grep -Fq "selection: selective run against base abc" "$project$record" || fail "the selection was not recorded"
+run_with "$project" --reuse --targeted || fail "--reuse --targeted failed after a targeted pass"
+[[ "$(ran "$project")" == "$selection_call --tier targeted;" ]] ||
+  fail "a recorded targeted pass was reused without the current selection, or a check ran again: $(ran "$project")"
+grep -Fq "against this base and selection" "$project/out.log" || fail "the reuse did not say that base and selection match"
+# Main advanced (another base) with the tree unchanged: the pass does not stand.
+MOCK_RUN=78 run_with "$project" --reuse --targeted || fail "--reuse --targeted failed on a newer base"
+[[ "$(ran "$project")" == "$selection_call --tier targeted;ruff check .;ruff plain;" ]] ||
+  fail "a targeted pass of an older base was reused: $(ran "$project")"
+grep -Fq "another base or selection" "$project/out.log" || fail "the rerun was not explained"
+[[ "$(sed -n 's/^base: //p' "$project$record")" == "run 78" ]] || fail "the new base was not recorded: $(cat "$project$record")"
+# The same base, a different selection: rerun.
+MOCK_LESSONS=2 run_with "$project" --reuse --targeted || fail "--reuse --targeted failed on another selection"
+[[ "$(ran "$project")" == "$selection_call --tier targeted;ruff check .;ruff plain;" ]] ||
+  fail "a targeted pass of another selection was reused: $(ran "$project")"
+# No acceptable base: the pass does not stand, CI will run everything.
+if MOCK_BASE=none run_with "$project" --reuse --targeted; then fail "a targeted pass was reused without a base"; fi
+[[ "$(ran "$project")" == "" ]] || fail "a check ran without a base: $(ran "$project")"
+MOCK_LESSONS=1 MOCK_RUN=77 run_with "$project" --targeted || fail "the targeted run failed"
+run_with "$project" --reuse || fail "--reuse after a targeted pass failed"
+[[ "$(ran "$project")" == "ruff check .;ruff plain;pytest build;" ]] || fail "--reuse took a targeted pass for a full verification: $(ran "$project")"
+[[ "$(sed -n 's/^tier: //p' "$project$record")" == "full" ]] || fail "the full run was not recorded as such"
+
+# Without an acceptable base, or when the selection names a full run or a new
+# lesson, the targeted run reports what CI will run and verifies nothing.
+if MOCK_BASE=none run_with "$project" --targeted; then fail "the targeted run passed without a base"; fi
+grep -Fq "CI will run everything" "$project/out.log" || fail "the missing base was not reported as a full run of CI"
+grep -Fq "REFUSED  targeted-run" "$project/out.log" || fail "the refusal was not in the summary"
+[[ "$(ran "$project")" == "" ]] || fail "a check ran without a base: $(ran "$project")"
+# A refusal says nothing about the content: the record of the full run stands.
+[[ "$(sed -n 's/^tier: //p' "$project$record")" == "full" ]] || fail "a refused targeted run changed the record of the full run"
+if MOCK_SELECTION=full run_with "$project" --targeted; then fail "the targeted run passed on a full selection"; fi
+grep -Fq "run the full ./scripts/verify.sh" "$project/out.log" || fail "the full run was not named"
+[[ "$(ran "$project")" == "$selection_call --tier targeted;" ]] ||
+  fail "a check ran on a full selection: $(ran "$project")"
+if MOCK_SELECTION=new run_with "$project" --targeted; then fail "the targeted run passed on a new lesson"; fi
+grep -Fq "run ./scripts/verify.sh --base" "$project/out.log" || fail "the run with a base was not named"
+
+# --base without a directory retrieves the base; without one it is a full run.
+MOCK_BASE=none run_with "$project" --base || fail "--base without a base failed"
+[[ "$(ran "$project")" == "ruff check .;ruff plain;pytest build;" ]] || fail "--base without a base did not run every check: $(ran "$project")"
+grep -Fq "full run" "$project/out.log" || fail "the full run was not reported"
+[[ "$(sed -n 's/^tier: //p' "$project$record")" == "full" ]] || fail "the run without a base was not recorded as full"
+run_with "$project" --base || fail "--base with a retrieved base failed"
+[[ "$(ran "$project")" == "$selection_call;ruff check .;ruff plain;pytest build;" ]] ||
+  fail "--base did not select and run every check: $(ran "$project")"
+[[ "$(sed -n 's/^tier: //p' "$project$record")" == "base" ]] || fail "the run with a base was not recorded as such"
+
+# The entry is checked: a group without a check, a duplicate, a group on it.
+if run_with "$project" --targeted --only code; then fail "--targeted was accepted with --only"; fi
+if run_with "$project" --targeted --base; then fail "--targeted was accepted with --base without a directory"; fi
+printf '%s\n' "targeted: code,nope" "lint [code]: ruff check ." >"$project/scripts/verify.conf"
+if run_with "$project" --targeted; then fail "a targeted entry naming an unknown group was accepted"; fi
+grep -Fq "'nope'" "$project/out.log" || fail "the unknown group of the entry was not named"
+run_with "$project" || fail "a plain run failed because of the targeted entry"
+printf '%s\n' "targeted: code" "targeted: default" "lint [code]: ruff check ." >"$project/scripts/verify.conf"
+expect_failure "$project" "a duplicate targeted entry must fail"
+printf '%s\n' "targeted [code]: code" "lint [code]: ruff check ." >"$project/scripts/verify.conf"
+expect_failure "$project" "a targeted entry with a group must fail"
+printf '%s\n' "targeted: Code" "lint [code]: ruff check ." >"$project/scripts/verify.conf"
+expect_failure "$project" "a targeted entry with a malformed group must fail"
+rm -f "$tmp/bin/uv"
+
 echo "verify tests passed"

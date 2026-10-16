@@ -42,8 +42,10 @@ if [[ "${#AGENT_POSITIONAL[@]}" -lt 1 || "${#AGENT_POSITIONAL[@]}" -gt 2 ]]; the
   echo "The agent and model come from role 'reviewer' in .agents/agents.conf"
   echo "unless --agent and --model are given."
   echo
-  echo "The review starts only when ./scripts/verify.sh passes for the current"
-  echo "content; a pass that was already recorded for it is reused. --unverified"
+  echo "The review starts only when ./scripts/verify.sh --targeted passes for the"
+  echo "current content (the tier an ordinary change needs; the targeted run refuses"
+  echo "a change that needs the full run); a pass that was already recorded for it,"
+  echo "of any tier, is reused. --unverified"
   echo "reviews anyway, for a review that must help diagnose a failure; the reason"
   echo "is recorded in the review."
   echo
@@ -136,7 +138,9 @@ if [[ "$changes_only" -eq 1 ]]; then
 fi
 
 # A reviewer cannot run the checks, so the review starts only on content that
-# passes them. A pass recorded for exactly this content is reused.
+# passes them, in the tier the change needs (ADR 017 decision 7). A pass
+# recorded for exactly this content, of any tier, is reused; the review
+# records the tier, the base, and the selection.
 tmp_work="$(mktemp -d "${TMPDIR:-/tmp}/review-feature.XXXXXX")"
 trap 'rm -rf "$tmp_work"' EXIT
 
@@ -152,12 +156,18 @@ else
     fail "could not compute the fingerprint of the working tree."
   # Status 4 tells a caller that the verification failed, apart from every
   # other reason for which no review was stored.
-  (cd "$root" && ./scripts/verify.sh --reuse) || {
+  (cd "$root" && ./scripts/verify.sh --reuse --targeted) || {
     echo "Error: verification failed; the review was not started. Fix the failing check, or review anyway with --unverified \"<reason>\"." >&2
     exit 4
   }
   verification="$(jq -n --arg at "$(verification_field "$root" verified-at)" \
-    '{status: "passed", verified_at: (if $at == "" then (now | todate) else $at end)}')"
+    --arg tier "$(verification_tier "$root")" \
+    --arg base "$(verification_field "$root" base)" \
+    --arg selection "$(verification_field "$root" selection)" \
+    '{status: "passed", verified_at: (if $at == "" then (now | todate) else $at end)}
+     + (if $tier == "" then {} else {tier: $tier} end)
+     + (if $base == "" then {} else {base: $base} end)
+     + (if $selection == "" then {} else {selection: $selection} end)')"
 fi
 echo
 
@@ -320,6 +330,7 @@ fi
 
 echo "Preparing independent review:"
 echo "  Issue:    #$issue"
+echo "  Verified: $(jq -r 'if .status == "passed" then "\(.tier // "full") run" + (if .base then ", base \(.base)" else "" end) else "not verified" end' <<<"$verification")"
 echo "  Branch:   $branch"
 echo "  Base:     $base_ref"
 echo "  Agent:    $agent"

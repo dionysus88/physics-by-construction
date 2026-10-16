@@ -32,13 +32,19 @@ maintainers' and agents' setup; the learner's setup is separate since
 of ADR 014 (a run on `main` executes every lesson) is under review by
 [ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md),
 proposed and not accepted; this record's decisions 3 and 6 are not
-changed by it. ADR 017 decision 7, if the owner accepts it on F118's
-evidence, amends decision 1 as ADR 005 decision 5 restates it ("every
-product check runs locally on every run"): a recorded targeted run, a
-partial run that builds no site, would be the finish and review evidence
-of an ordinary change, while a run without options still runs every
-product check and CI runs every check. Until that acceptance, decision 1
-stands as written. F119 records the amendment here on acceptance.
+changed by it. **ADR 017 decision 7, accepted by the owner on 2026-10-15 on
+F118's evidence and applied by F119 (Issue #185), amends decision 1 as
+ADR 005 decision 5 restates it** ("every product check runs locally on
+every run"): a recorded targeted run (`./scripts/verify.sh --targeted`,
+which runs the checks that need no site build against the selection CI
+will make and builds no site) is the finish and review evidence of an
+ordinary change, recorded with its tier, its base, and its selection; a
+run without options still runs every product check and is the only
+verification of the content; CI runs every check on every pull request
+and push. The one removal F119 made under decision 6 (the preview test's
+third build, consolidated into the determinism check) has its coverage
+evidence in `docs/verification-audit.md` and its regression test in
+`tests/integration/test_determinism_check.py`.
 
 Date: 2026-10-06
 

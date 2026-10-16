@@ -150,17 +150,29 @@ Before declaring the issue complete:
 4. Record the manual steps, the summary of the changes, and the completion
    record with status `complete`, as described here and below.
 5. Finish every edit to a file that Git tracks, including the plan.
-6. Run `./scripts/verify.sh` as the last thing that touches the repository.
-7. Report the result, with compact verification evidence and unresolved
-   issues or risks, in your final message.
+6. Run the verification tier the change needs as the last thing that touches
+   the repository (ADR 017 decision 7; `docs/development.md`,
+   "Verification"): `./scripts/verify.sh --targeted` for an ordinary change.
+   It computes the selection CI will make, runs the checks that need no
+   site build and the single-page render of the selected lessons, and builds
+   no site. When it reports that CI will run everything, run the full
+   `./scripts/verify.sh`; when it reports a new lesson, or when your change
+   alters what other pages display of a lesson (the front-matter fields that
+   form the learning path and the headers), run `./scripts/verify.sh --base`.
+   Without a base (no `gh` login, no successful run on `main`) the targeted
+   run reports that CI will run everything and the full run is yours.
+7. Report the result, with compact verification evidence (the tier, the
+   base, and the selection it reported) and unresolved issues or risks, in
+   your final message.
 
 The order of the last steps matters. A pass is recorded for exactly the
-content it verified, and the scripts that follow reuse it instead of running
-every check again. Any later change to a tracked file, also a note in the
-plan about the verification itself, makes the record stale and costs another
-full run. Evidence of the final run therefore belongs in your final message
-or in the handoff note, which Git ignores, not in a tracked file. While you
-work, run the single checks you need; the full run is for the end.
+content it verified, with its tier, and the scripts that follow reuse it
+instead of running the checks again. Any later change to a tracked file,
+also a note in the plan about the verification itself, makes the record
+stale and costs another run. Evidence of the final run therefore belongs in
+your final message or in the handoff note, which Git ignores, not in a
+tracked file. While you work, run the single checks you need; the tier's run
+is for the end.
 
 A manual step is something only the human can do and without which the
 feature does not work after the merge: a repository or account setting, a

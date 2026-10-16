@@ -12,6 +12,32 @@ full run and the one-lesson pull request, decomposed (F118)". The facts that
 code can show are asserted by `tests/integration/test_verification_audit.py`,
 so the record does not drift from the repository.
 
+**Applied by F119 (Issue #185), under ADR 017 decisions 7 and 8, which the
+owner accepted on 2026-10-15.** The tables below record the state at the base
+commit of F118; where F119 changed it, the place says so, and the tests
+assert the state after F119:
+
+- `test_a_second_build_gives_byte_identical_previews` and its helper
+  `tests/support/second_build.py` are removed, after the regression test
+  `tests/integration/test_determinism_check.py` showed that a differing,
+  missing, or extra preview, and any other differing file, still fails
+  `scripts/check-determinism.sh` in a full run and in a selective run. **A
+  lesson executes three times in a full run** (build 1, build 2, and its
+  reproduction) where it executed four; in a selective run an executed
+  lesson executes three times and an unchanged lesson is rendered from the
+  store twice.
+- The `integration` job is divided into the three parts of "Division into
+  independent parts": the checks `check-tests-quarto`, `check-tests-browser`,
+  and `check-tests-other` of `scripts/verify.conf`, in three jobs of
+  `.github/workflows/ci.yml` with the preparation each part needs.
+- `tests/integration` left the check identity (`CHECK_DIRECTORIES` of
+  `src/pbc/authoring/digest.py`), with the completeness test this record
+  names; every other input stays, and the identity stays one digest.
+- The local build obligations of the inventory are replaced by the three
+  verification tiers of ADR 017 decision 7: the targeted run
+  (`./scripts/verify.sh --targeted`), `./scripts/verify.sh --base`, and the
+  full run (`docs/development.md`, "Verification").
+
 Read on 2026-10-15 at the base commit `553214c` of the feature branch.
 
 ## Call graph
@@ -28,11 +54,12 @@ its cells do not run. A *build* is a run of `scripts/build-site.sh`.
 | `site-build` (`build`) | **build 1** of `site/` into `site/_site`, with `site/_freeze` empty (full) or restored from the base for the unchanged lessons (selective); it writes `_digests.json`, `_timings.json`, and `_pages.json` | every lesson, once | the selected lessons, once | none; it fails on a failing cell and on an equation that cannot become MathML |
 | `determinism` (`build`) | **build 2**: `scripts/check-determinism.sh` copies the sources without `_site`, `.quarto`, `_freeze`, `_digests.json`, and `_timings.json`, and builds the copy into a temporary directory with the selection of the run | every lesson, once | the selected lessons, once (the others restored again) | every file of build 1 with every file of build 2 (`diff -r`), names and bytes: 178 files at 32 lessons |
 | `site-checks-reproduction` (`build`), the reproductions | for each lesson a clone of the tracked files and `quarto render` of that one page, as the page's "Reproduce" commands say (no store, so no restore) | its own lesson, once, in each of the lessons' reproduction tests: every lesson | the same, for the lessons the run executed only (the tests of the others are deselected) | the regenerated page and every figure file of its directory with the page and figure files of build 1 |
-| `site-checks-reproduction` (`build`), `test_a_second_build_gives_byte_identical_previews` | **build 3**: `tests/support/second_build.py` copies the sources without the same five names and builds the copy through `scripts/build-site.sh`, with the selection of the run when it is selective | every lesson, once | the selected lessons, once | the names and bytes of the files in `previews/` of build 1 with those of build 3 |
+| `site-checks-reproduction` (`build`), `test_a_second_build_gives_byte_identical_previews` (removed by F119) | **build 3**: `tests/support/second_build.py` copies the sources without the same five names and builds the copy through `scripts/build-site.sh`, with the selection of the run when it is selective | every lesson, once | the selected lessons, once | the names and bytes of the files in `previews/` of build 1 with those of build 3 |
 | `site-checks-pages-1`, `site-checks-pages-2` (`e2e-pages-1`, `e2e-pages-2`) | none; they read the site that `build` built | none | none | none; the per-page checks run for every page (full) or for the pages whose normalised bytes differ from the base's record `_pages.json` and the pages of the executed lessons (selective) |
 | `site-checks-other` (`e2e-other`) | none | none | none | none; the same page selection for the per-page checks |
 
-- **A lesson executes four times in a full run**: build 1, build 2, build 3,
+- **A lesson executes four times in a full run** (three since F119 removed
+  build 3): build 1, build 2, build 3,
   and its reproduction. ADR 014 decision 11 counts three. In a selective run
   an executed lesson also executes four times and an unchanged lesson none;
   it is rendered from the store three times (builds 1, 2, and 3), 1.2 to 1.4 s
@@ -94,6 +121,17 @@ build is replaced by a fixture, or it tests the comparison at the level of
 `diff -r` as `tests/integration/test_verification_audit.py` does now for
 the property that the comparison covers `previews/`.
 
+**Applied by F119.** The regression test is
+`tests/integration/test_determinism_check.py`: it runs the script with a
+fake `scripts/build-site.sh` that writes a fixture tree, so a differing,
+missing, or extra preview, and a differing page, fail the check and are
+named, in a full run and in a selective run (the selection reaches the
+second build), and identical trees pass. The preview test and
+`tests/support/second_build.py` are removed; the two tests of
+`tests/integration/test_store.py` that used the helper exercise the
+determinism check itself. A lesson without a preview still fails
+`test_every_lesson_has_one_verified_preview_within_the_budget`.
+
 ## Validity domains of the check identity
 
 `check_identity` (`src/pbc/authoring/digest.py`) is one digest over the
@@ -121,7 +159,7 @@ accessibility engine the page checks use).
 | `.github/actions/prepare/action.yml` | x | x | | x | every domain: it installs the toolchains and the browser build |
 | `tests/e2e` | | | x | | V only: the per-page checks and the reproduction; `tests/e2e/shards.json` is inside it and divides tests between jobs |
 | `tests/support` | | | x | | V only, shared by `tests/e2e` and `tests/integration`: it belongs to the domain of each of them |
-| `tests/integration` | | | x | | V only, and no consumer of a reused result: `check-tests` is never reduced by a base |
+| `tests/integration` | | | x | | V only, and no consumer of a reused result: `check-tests` is never reduced by a base; left the identity with F119 (the `check-tests-*` checks are its only consumers) |
 
 **Rule.** An input that this table does not classify belongs to every domain,
 as ADR 014 decision 10 requires. `tests/integration/test_verification_audit.py`
@@ -149,6 +187,13 @@ table, so a new input cannot be taken for a single-domain one.
   the 102 merges to `main` from 2026-10-01 to 2026-10-15, 71 changed an input
   of the identity and 8 of those changed `tests/integration` and no other
   input; each of those 8 made the next run against a base a full run, by the rule of ADR 014 decision 10.
+  **Applied by F119**: `tests/integration` is no longer in
+  `CHECK_DIRECTORIES`; the completeness test is
+  `test_no_check_that_a_base_reduces_reads_the_integration_tests` of
+  `tests/integration/test_verification_audit.py`, and
+  `tests/integration/test_selection.py` shows that a change to an input of
+  each domain, and to an input no classification names, gives a full run,
+  while a change to `tests/integration` keeps the selection.
 - **Possible but without effect:** `scripts/check-determinism.sh` is V only,
   and `tests/e2e` and `tests/support` are V only, but a change to them
   changes the logic of a check that certifies the pages of the base (the
@@ -216,9 +261,16 @@ runs) in all three. The cost is the runner time of two more preparations
 (about 200 s per run) and one more check in `scripts/verify.conf`; parts 1
 and 2 need not restore the Lean packages (saving the Mathlib cache restore, 45
 to 60 s of each preparation). No part can be shorter than its largest
-file, so `test_store.py` (124 to 177 s) bounds part 1 from below. This is a proposal for F119 and is not applied. The test
+file, so `test_store.py` (124 to 177 s) bounds part 1 from below.
+**Applied by F119** as the checks `check-tests-quarto` (part 1),
+`check-tests-browser` (part 2), and `check-tests-other` (part 3, every file
+the first two do not name, so a file added later runs there) of
+`scripts/verify.conf`, run by the jobs `integration-quarto`,
+`integration-browser`, and `integration-other` of
+`.github/workflows/ci.yml`. The test
 `tests/integration/test_verification_audit.py` checks, without a browser, that
-parts 1 and 2 name files that exist, that no file is named twice, and that
+parts 1 and 2 name files that exist, that no file is named twice, that the
+checks name exactly these files, and that
 the three parts together collect exactly the tests of the directory, each once.
 
 ### Could the reproduction of the lessons run in parallel?
@@ -265,8 +317,9 @@ before a result counts, found by searching the files named in the Issue on
 unit tests and lesson source checks the change touches, the experiment check
 of the changed lessons, the single-page render of each changed lesson page,
 the Lean build for affected proofs, and the computation of the selection CI will
-make); F119 would deliver it as an option of `./scripts/verify.sh`. None is
-applied here, and ADR 017 is proposed, not accepted.
+make); F119 delivers it as `./scripts/verify.sh --targeted`. None was
+applied by F118; F119 applied the replacements of this table after the owner
+accepted ADR 017 decisions 7 and 8 (2026-10-15).
 
 | Where | The demand | Replacing targeted check (ADR 017 decision 7) | Change types that keep a local render |
 |---|---|---|---|
@@ -291,6 +344,9 @@ CI stays the publication gate in every row: it builds and checks the site of
 every pull request and push, whatever the agent ran locally.
 
 ## Proposal for the owner
+
+**Decided by the owner on 2026-10-15** (pull request #184, ADR 014 status): a
+timeout of 60 minutes for the job `build`, approved for up to 45 lessons.
 
 For the unresolved question 10 of the requirements and the full-run gate of
 Phase 4 (`docs/roadmap.md`, "The full run on `main` at the current lesson

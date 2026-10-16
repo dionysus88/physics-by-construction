@@ -24,7 +24,14 @@ ARTIFACT = 77
 FAKE_GH = """#!/usr/bin/env bash
 # api [-H header] <path>: answers from $FAKE_API, one file per path (the query
 # string is dropped, so the script's own checks do the filtering).
-[[ "$1" == api ]] || exit 64
+# auth status: the login of a developer's machine, as FAKE_AUTH_EXIT says.
+# repo view: the repository of the clone, FAKE_REPO, or none.
+case "$1" in
+  auth) exit "${FAKE_AUTH_EXIT:-0}" ;;
+  repo) [[ -n "${FAKE_REPO:-}" ]] || exit 1; printf '%s\\n' "$FAKE_REPO"; exit 0 ;;
+  api) ;;
+  *) exit 64 ;;
+esac
 shift
 path=""
 while [[ $# -gt 0 ]]; do
@@ -128,17 +135,25 @@ class Api:
         listing["artifacts"].append(found)
         self.put(path, listing)
 
-    def fetch(self, *arguments: str) -> subprocess.CompletedProcess[str]:
+    def fetch(
+        self, *arguments: str, without: tuple[str, ...] = (), **extra: str
+    ) -> subprocess.CompletedProcess[str]:
+        """Run the script as CI does, or without the variables ``without``
+        and with the variables ``extra``, as a developer's machine has it."""
+        env = {
+            **os.environ,
+            "PATH": f"{self.bin}:{os.environ['PATH']}",
+            "FAKE_API": str(self.api),
+            "GH_TOKEN": "token",
+            "GITHUB_REPOSITORY": REPO,
+            "GITHUB_OUTPUT": str(self.github_output),
+            **extra,
+        }
+        for name in without:
+            env.pop(name, None)
         return subprocess.run(
             [SCRIPTS / "fetch-base.sh", *arguments, str(self.target)],
-            env={
-                **os.environ,
-                "PATH": f"{self.bin}:{os.environ['PATH']}",
-                "FAKE_API": str(self.api),
-                "GH_TOKEN": "token",
-                "GITHUB_REPOSITORY": REPO,
-                "GITHUB_OUTPUT": str(self.github_output),
-            },
+            env=env,
             capture_output=True,
             text=True,
             check=False,
@@ -180,6 +195,38 @@ def test_the_base_of_a_verified_push_run_on_main_is_accepted(api: Api):
     assert (
         api.target / "freeze" / "lessons" / "a" / "index" / "execute-results"
     ).is_dir()
+
+
+# A developer's machine (ADR 017 decision 7): the repository of the clone and
+# the login of gh stand in for the variables CI sets.
+
+
+def test_without_a_token_the_login_of_gh_is_used(api: Api):
+    result = api.fetch(without=("GH_TOKEN",), FAKE_AUTH_EXIT="0")
+    assert result.returncode == 0, output(result)
+    assert api.outputs() == {"accepted": "true", "run-id": str(RUN)}
+
+
+def test_without_a_token_or_a_login_there_is_no_base(api: Api):
+    result = api.fetch(without=("GH_TOKEN",), FAKE_AUTH_EXIT="1")
+    assert_no_base(api, result, "gh is not logged in")
+
+
+def test_without_the_repository_variable_the_repository_of_the_clone_is_used(
+    api: Api,
+):
+    result = api.fetch(without=("GITHUB_REPOSITORY",), FAKE_REPO=REPO)
+    assert result.returncode == 0, output(result)
+    assert api.outputs() == {"accepted": "true", "run-id": str(RUN)}
+    # Another repository's clone finds no base of this one: the records of
+    # the runs are read for the repository gh names.
+    result = api.fetch(without=("GITHUB_REPOSITORY",), FAKE_REPO="other/repo")
+    assert_no_base(api, result, "cannot be listed")
+
+
+def test_without_a_repository_there_is_no_base(api: Api):
+    result = api.fetch(without=("GITHUB_REPOSITORY",))
+    assert_no_base(api, result, "the repository cannot be determined")
 
 
 def test_the_latest_acceptable_run_wins_and_a_rejected_one_is_skipped(api: Api):

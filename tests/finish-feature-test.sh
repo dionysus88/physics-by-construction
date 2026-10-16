@@ -185,6 +185,45 @@ record_reviewed_tree "$repo" "$repo/$review"
 run_finish "$repo" 12 "Add the marker" || fail "finishing changed content failed"
 [[ "$(count_runs "$repo")" -eq 2 ]] || fail "changed content was committed without a new verification"
 
+# The commit message names the tier of the recorded pass and, with a base,
+# the base and the selection (ADR 017 decision 7): a targeted pass that the
+# implementer recorded is reused and described; a full pass reads as before.
+repo="$(setup_repo targeted PASS "[]")"
+printf 'targeted: default\ncount: echo run >>verify-count.log\n' >"$repo/scripts/verify.conf"
+# A targeted pass is reused only against the same current base and selection,
+# so the project offers the base of run 77 and the selection of the record.
+cat >"$repo/scripts/fetch-base.sh" <<'FETCH'
+#!/usr/bin/env bash
+mkdir -p "$1"
+printf 'accepted=true\nrun-id=77\n' >>"$GITHUB_OUTPUT"
+FETCH
+chmod +x "$repo/scripts/fetch-base.sh"
+cat >"$tmp/bin/uv" <<'UV'
+#!/usr/bin/env bash
+echo "selective run against base abc: 1 of 2 lessons executed, 1 restored"
+UV
+chmod +x "$tmp/bin/uv"
+(cd "$repo" && PATH="$tmp/bin:/usr/bin:/bin" ./scripts/verify.sh --targeted >/dev/null) || fail "the first verification failed"
+passed="$repo/.agents/verification/passed"
+grep -q '^tier: targeted$' "$passed" || fail "the targeted run was not recorded with its tier"
+record_reviewed_tree "$repo" "$repo/$review"
+run_finish "$repo" 12 "Add the marker" || {
+  cat "$repo.out" >&2
+  fail "finishing on a recorded targeted pass failed"
+}
+[[ "$(count_runs "$repo")" -eq 1 ]] || { cat "$repo.out" >&2; fail "a recorded targeted pass was not reused"; }
+[[ "$(message "$repo" | sed -n '/^Verification:$/,/^$/p')" == "Verification:
+- ./scripts/verify.sh --targeted passed (the targeted run: no site built locally; CI builds and checks the site)
+- base: run 77
+- selection: selective run against base abc: 1 of 2 lessons executed, 1 restored" ]] ||
+  fail "the commit message does not name the tier, the base, and the selection: $(message "$repo" | sed -n '/^Verification:$/,/^$/p')"
+rm -f "$tmp/bin/uv"
+repo="$(setup_repo full-tier PASS "[]")"
+record_reviewed_tree "$repo" "$repo/$review"
+run_finish "$repo" 12 "Add the marker" || fail "finishing on a full run failed"
+[[ "$(message "$repo" | sed -n '/^Verification:$/,/^$/p')" == "Verification:
+- ./scripts/verify.sh passed" ]] || fail "the commit message of a full run changed: $(message "$repo" | sed -n '/^Verification:$/,/^$/p')"
+
 # A feature is committed on a review of the complete feature. A latest round
 # that reviewed only the changes since an earlier one confirms fixes; it does
 # not establish that the Issue is done, so it is refused.

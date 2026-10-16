@@ -13,9 +13,12 @@ _CHECK = re.compile(
     r"^([a-z0-9][a-z0-9-]*)(?:\s*\[([a-z0-9][a-z0-9-]*)\])?:\s*(.*\S)\s*$"
 )
 DEFAULT_GROUP = "default"
+# The one entry of verify.conf that declares no check: the groups of the
+# targeted run (ADR 017 decision 7), as verify.sh reserves it.
+TARGETED_ENTRY = "targeted"
 
 
-def _lines() -> list[tuple[str, str, str]]:
+def _entries() -> list[tuple[str, str | None, str]]:
     result = []
     for line in (SCRIPTS / "verify.conf").read_text().splitlines():
         if not line.strip() or line.lstrip().startswith("#"):
@@ -23,8 +26,25 @@ def _lines() -> list[tuple[str, str, str]]:
         match = _CHECK.match(line)
         if match is None:
             raise ValueError(f"malformed line in verify.conf: {line!r}")
-        result.append((match.group(1), match.group(2) or DEFAULT_GROUP, match.group(3)))
+        result.append((match.group(1), match.group(2), match.group(3)))
     return result
+
+
+def _lines() -> list[tuple[str, str, str]]:
+    return [
+        (name, group or DEFAULT_GROUP, value)
+        for name, group, value in _entries()
+        if name != TARGETED_ENTRY
+    ]
+
+
+def targeted() -> list[str]:
+    """Return the groups the targeted run performs, from the entry
+    'targeted:'; fail when verify.conf has none or gives it a group."""
+    found = [(g, v) for name, g, v in _entries() if name == TARGETED_ENTRY]
+    if len(found) != 1 or found[0][0] is not None:
+        raise AssertionError("verify.conf has no single 'targeted:' entry")
+    return found[0][1].split(",")
 
 
 def checks() -> dict[str, str]:

@@ -26,7 +26,15 @@ If a material conflict remains, stop and report it.
   A session that ends is not a finished Issue: work that is not complete is
   recorded as `partial` or `blocked`.
 - Tests are added/updated where appropriate.
-- `./scripts/verify.sh` passes.
+- The verification tier the change needs passes, run last (ADR 017
+  decision 7; `docs/development.md`, "Verification"): `./scripts/verify.sh
+  --targeted` for an ordinary change, which computes the selection CI will
+  make and builds no site; `./scripts/verify.sh --base` for a change that
+  alters what other pages display of a lesson (the front-matter fields of
+  the path and the headers, a new lesson); the full `./scripts/verify.sh`
+  when the targeted run reports that CI will run everything (a shared input
+  or a file of the checks changed). CI builds and validates the site on
+  every pull request and push.
 - No unrelated changes are included.
 - Docs/ADRs are updated when architecture or behavior changed.
 - Verification evidence is recorded in the commit message and the pull request, which `finish-feature.sh` and `publish-feature.sh` write.

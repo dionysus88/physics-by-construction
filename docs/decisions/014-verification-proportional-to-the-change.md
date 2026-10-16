@@ -78,6 +78,22 @@ Change cycle `pbc-planning-change-four-workstreams` (2026-10-15):
   architecture say so, and every other job keeps 45 minutes. Measured at
   32 lessons, a full run's `build` job takes 21 to 31 minutes, so no run
   needs the new value yet; the growth is 32 to 46 seconds per lesson.
+- **F119 (Issue #185, 2026-10-15) applied, under ADR 017 decisions 7 and 8
+  (accepted the same day on F118's evidence):** the third build of the
+  preview test is consolidated into the determinism check of decision 3
+  (a lesson executes three times in a full run, as decision 11 counted;
+  the regression test is `tests/integration/test_determinism_check.py`);
+  the integration tests of decision 8 run as three checks in three jobs,
+  still on every run and never selected; `tests/integration` left the
+  check identity of decision 10, with the completeness test the audit
+  names (no check a base reduces reads it, and the checks that run it are
+  never reduced by a base), while every other input stays and the
+  identity stays one digest, so an input no classification names still
+  invalidates every reused result; and the agents' local verification is
+  the three tiers of ADR 017 decision 7, of which `./scripts/verify.sh
+  --base` is the run of decision 5 with the base retrieved read-only on
+  the developer's machine. Decision 4 is unchanged: a run on `main`
+  executes every lesson.
 
 Date: 2026-10-12
 

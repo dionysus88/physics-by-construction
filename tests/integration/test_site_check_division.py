@@ -1,10 +1,12 @@
-"""The checks of the built site are divided, and the division loses nothing.
+"""The checks of the built site and the integration tests are divided, and
+the divisions lose nothing.
 
 ``scripts/verify.conf`` declares the checks of the built site as several
 checks, so that CI can run them side by side (docs/development.md, "The
-checks of the built site"). These tests collect what each of them would run,
-without a browser and without a built site, and compare it with everything
-in ``tests/e2e``.
+checks of the built site"), and the integration tests as three checks since
+F119 (docs/verification-audit.md, "Division into independent parts"). These
+tests collect what each of them would run, without a browser and without a
+built site, and compare it with everything in the directory it divides.
 """
 
 import shlex
@@ -17,9 +19,12 @@ from support.checks import output, run_check
 from support.paths import REPO_ROOT
 
 PREFIX = "site-checks-"
+# The divided checks: the prefix of their names and the directory they divide.
+DIVISIONS = {PREFIX: "tests/e2e", "check-tests-": "tests/integration"}
 
-# The checks of verify.conf before the checks of the built site were divided.
-# Each still exists; 'site-checks' is now the checks named 'site-checks-*'.
+# The checks of verify.conf before the checks of the built site and the
+# integration tests were divided. Each still exists; 'site-checks' is now the
+# checks named 'site-checks-*', and 'check-tests' the checks 'check-tests-*'.
 ORIGINAL = [
     "preflight",
     "preflight-test",
@@ -39,6 +44,9 @@ ORIGINAL = [
     "docs-references",
     "documentation",
 ]
+# The checks added since, outside the divisions: the per-lesson check of the
+# targeted run (F119).
+ADDED = ["lesson-pages"]
 
 
 def _collected(result: subprocess.CompletedProcess[str]) -> list[str]:
@@ -47,58 +55,104 @@ def _collected(result: subprocess.CompletedProcess[str]) -> list[str]:
 
 
 @pytest.fixture(scope="module")
-def parts() -> dict[str, list[str]]:
-    names = [name for name in verify_conf.checks() if name.startswith(PREFIX)]
-    return {name: _collected(run_check(name, "--collect-only", "-q")) for name in names}
+def all_parts() -> dict[str, dict[str, list[str]]]:
+    """What the checks of each division collect, by prefix and check."""
+    return {
+        prefix: {
+            name: _collected(run_check(name, "--collect-only", "-q"))
+            for name in verify_conf.checks()
+            if name.startswith(prefix)
+        }
+        for prefix in DIVISIONS
+    }
 
 
 @pytest.fixture(scope="module")
-def everything() -> list[str]:
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/e2e", "--collect-only", "-q"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return _collected(result)
+def parts(all_parts) -> dict[str, list[str]]:
+    return all_parts[PREFIX]
 
 
-def test_the_parts_together_are_every_test_of_the_built_site(parts, everything):
-    together = [test for tests in parts.values() for test in tests]
-    assert sorted(together) == sorted(everything)
+@pytest.fixture(scope="module")
+def everything() -> dict[str, list[str]]:
+    """Every test of each divided directory, by prefix."""
+    found = {}
+    for prefix, directory in DIVISIONS.items():
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", directory, "--collect-only", "-q"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        found[prefix] = _collected(result)
+    return found
 
 
-def test_no_test_runs_in_two_parts(parts):
+@pytest.mark.parametrize("prefix", DIVISIONS)
+def test_the_parts_together_are_every_test_of_the_directory(
+    all_parts, everything, prefix
+):
+    together = [test for tests in all_parts[prefix].values() for test in tests]
+    assert sorted(together) == sorted(everything[prefix])
+
+
+@pytest.mark.parametrize("prefix", DIVISIONS)
+def test_no_test_runs_in_two_parts(all_parts, prefix):
     seen: dict[str, str] = {}
-    for name, tests in parts.items():
+    for name, tests in all_parts[prefix].items():
         for test in tests:
             assert test not in seen, f"{test} runs in {seen[test]} and in {name}"
             seen[test] = name
 
 
-def test_no_part_is_empty(parts):
+@pytest.mark.parametrize("prefix", DIVISIONS)
+def test_no_part_is_empty(all_parts, prefix):
+    parts = all_parts[prefix]
     assert len(parts) >= 2
     for name, tests in parts.items():
         assert tests, f"{name} runs no test"
 
 
-def test_every_part_is_pytest_on_the_built_site_checks():
-    # A part that ran something else would not be part of this division.
+def test_every_part_is_pytest_on_the_directory_it_divides():
+    # A part that ran something else would not be part of its division.
     for name, command in verify_conf.checks().items():
-        if name.startswith(PREFIX):
-            words = shlex.split(command)
-            assert words[:4] == ["uv", "run", "--locked", "pytest"], name
-            assert words[4].startswith("tests/e2e"), name
+        for prefix, directory in DIVISIONS.items():
+            if name.startswith(prefix):
+                words = shlex.split(command)
+                assert words[:4] == ["uv", "run", "--locked", "pytest"], name
+                assert words[4].startswith(directory), name
+
+
+def test_the_named_files_of_the_integration_parts_exist_and_the_rest_runs_the_others():
+    # Two parts name their files; the third runs the directory without
+    # exactly those files, so a renamed file fails the part that names it
+    # and a new file runs in the third without a change.
+    named = {}
+    for name in ("check-tests-quarto", "check-tests-browser"):
+        words = shlex.split(verify_conf.command(name))[4:]
+        assert words and all(w.startswith("tests/integration/test_") for w in words)
+        assert all((REPO_ROOT / w).is_file() for w in words), name
+        named[name] = words
+    files = [*named["check-tests-quarto"], *named["check-tests-browser"]]
+    assert len(files) == len(set(files)), "a file is named in two parts"
+    words = shlex.split(verify_conf.command("check-tests-other"))[4:]
+    assert words[0] == "tests/integration"
+    ignored = [w.removeprefix("--ignore=") for w in words[1:]]
+    assert all(w.startswith("--ignore=") for w in words[1:])
+    assert sorted(ignored) == sorted(files)
 
 
 def test_every_check_from_before_the_division_is_still_a_check():
     names = list(verify_conf.checks())
-    divided = [name for name in names if name.startswith(PREFIX)]
-    assert "site-checks" not in names
-    undivided = [name for name in names if not name.startswith(PREFIX)]
-    assert sorted([*undivided, "site-checks"]) == sorted(ORIGINAL)
-    assert len(names) == len(set(names)) and divided
+    undivided = list(names)
+    for prefix in DIVISIONS:
+        divided = [name for name in names if name.startswith(prefix)]
+        assert divided, prefix
+        assert prefix.rstrip("-") not in names
+        undivided = [name for name in undivided if not name.startswith(prefix)]
+    before = [*undivided, *(p.rstrip("-") for p in DIVISIONS)]
+    assert sorted(before) == sorted([*ORIGINAL, *ADDED])
+    assert len(names) == len(set(names))
 
 
 def test_a_part_is_in_the_group_of_the_build_or_in_a_group_of_its_own():

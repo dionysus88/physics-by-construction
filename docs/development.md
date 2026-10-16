@@ -70,14 +70,63 @@ same steps.
 
 ## Verification
 
+Verification has three tiers (ADR 017 decision 7). Which one a change needs
+depends on what it touches, and the targeted run says so when it is not the
+right one:
+
 ```bash
-./scripts/verify.sh
+./scripts/verify.sh --targeted   # an ordinary change: no site build
+./scripts/verify.sh --base       # a change to what other pages display of a lesson
+./scripts/verify.sh              # a shared input or a file of the checks changed
 ```
 
-This one command reproduces the whole site and every lesson output. CI runs it
-on every pull request as `./scripts/verify.sh --all`, which also runs the
-workflow self-tests described below. It leaves the built site in `site/_site/`,
-which Git ignores. Open `site/_site/index.html` in a browser to read it.
+- **The targeted run** (`--targeted`) is the run before a pull request for an
+  ordinary change: a lesson, its code and tests, a proof, a document. It
+  retrieves the base of the latest successful run on `main` read-only
+  (`scripts/fetch-base.sh`, with your `gh` login and the same provenance rule
+  as CI; see "Selection against a base"), computes the selection CI will make
+  and reports it (the lessons CI will execute, or that CI will run
+  everything), and runs the checks of the groups that the entry `targeted:`
+  of `scripts/verify.conf` names: the supported-machine contract, lint and
+  format, the unit tests, the lesson source checks, the dataset checks, the
+  documentation and workflow structure checks, the workflow self-tests when a
+  workflow file changed, and `lesson-pages`, the single-page render of each
+  selected lesson in a clone of the working tree with the Lean build for
+  changed proofs (`scripts/check-lesson-pages.sh`). It performs no site
+  build, no determinism build, and no built-site check. It never guesses:
+  without an acceptable base (no `gh` login, no successful run on `main`, a
+  rejected artifact) it reports "No base" and that CI will run everything;
+  when the selection names a full run it reports "CI will run everything"
+  with the reason; when a selected lesson is new to the base it names
+  `--base`. In each case it verifies nothing, and you run the tier it names.
+- **The run with a base** (`--base`, with or without a directory) is for a
+  change that alters what other pages display of a lesson: the front-matter
+  fields that form the learning path and the headers of neighbouring pages
+  (the id, strand, order, prerequisites, related lessons, title, course, and
+  slot), or a new lesson. It renders every page from the base's results,
+  executes the selected lessons, and checks the pages whose bytes differ,
+  with every other check: it builds the site.
+- **The full run** (no options) runs every check and executes every lesson.
+  It is required when the selection cannot bound the change to lessons: a
+  shared input of ADR 014 decision 4 (`src/pbc/authoring`; the templates,
+  filters, assets, and shared site files; `site/_quarto.yml`; the curriculum
+  file; the Python pins; the Lean toolchain and manifest) or a file of the
+  check identity (the verification script and its configuration, the build
+  and determinism scripts, `tests/e2e`, `tests/support`, the pins, the
+  runner preparation). The targeted run reports exactly this. CI runs it
+  without a base on every push to `main`, as `./scripts/verify.sh --all`,
+  which also runs the workflow self-tests described below, and on every pull
+  request against a base. It leaves the built site in `site/_site/`, which
+  Git ignores.
+
+A pass is recorded with its tier, and with a base the base and the selection
+("Recorded verification"). `scripts/review-feature.sh`,
+`scripts/apply-triage.sh`, and `scripts/finish-feature.sh` gate on
+`./scripts/verify.sh --reuse --targeted`, which takes a recorded pass for the
+content (a targeted one only against the same current base and selection) and otherwise runs the targeted run; the commit message
+and the review name the tier, the base, and the selection. CI stays the
+publication gate: it builds and validates the site on every pull request and
+push, whatever tier ran locally.
 
 The checks are declared in `scripts/verify.conf`, and the workflow self-tests
 in `scripts/verify-workflow.conf`. They run in this order:
@@ -89,8 +138,9 @@ in `scripts/verify-workflow.conf`. They run in this order:
 | `lint`, `format` | Ruff on the Python sources. |
 | `unit-tests` | pytest on `tests/unit`: the behaviour of `src/pbc`. |
 | `lean-build` | `scripts/check-lean.sh`: takes Mathlib from its build cache and never compiles it from source, builds every module under `lean/PhysicsByConstruction/`, then audits every declaration. A declared `axiom`, a `sorry`, or any axiom besides Lean's three standard ones fails the check. A passed check writes `lean/.lake/pbc-build-record.json` (the versions and a checksum of every module), which the pages of the `lean` strand read; a failed check removes it. |
-| `check-tests` | pytest on `tests/integration`: every check fails on an input that violates it, a lesson made from the template passes, and the CI workflow keeps its permission boundaries. |
+| `check-tests-quarto`, `check-tests-browser`, `check-tests-other` | Three checks that together are pytest on `tests/integration`: every check fails on an input that violates it, a lesson made from the template passes, and the CI workflow keeps its permission boundaries. The first names the files that build fixture sites with Quarto, the second the files that need the browser, and the third runs every other file, so a new file runs without a change; CI runs them in three jobs that prepare only what each part needs (`docs/verification-audit.md`, "Division into independent parts"). `tests/integration/test_site_check_division.py` proves by collection that every test runs exactly once. |
 | `lesson-checks` | pytest on `tests/lessons`: the lesson sources follow the format of `docs/authoring.md`. Front matter follows the schema, the required sections and the generated header are present, the lessons form one learning path (unique ids, orders without gaps or duplicates, prerequisites that exist, come earlier, and form no cycle), displayed code is an executed cell or marked "not verified", figure cells have alternative text, and no generated artifact is committed under `site/` or `src/`. |
+| `lesson-pages` | `scripts/check-lesson-pages.sh`: in the targeted run, the single-page render of each selected lesson in a clone of the working tree with its own locked environment (so the page reads the clone's files, as the page's "Reproduce this" commands do), within the 30-second budget of a lesson page, after the Lean build in the clone when a selected lesson displays Lean modules, and after the Lean build of the checkout when a file under `lean/` changed. In a run that builds the site it has nothing to do and says so: the build, the determinism check, and the reproduction cover every lesson. |
 | `site-build` | `scripts/build-site.sh`: Quarto executes every page in the locked environment and renders `site/_site/`. A failing cell or an equation that cannot become MathML fails the build. |
 | `site-checks-*` | Four checks that together are pytest on `tests/e2e` ("The checks of the built site" below), on the built site served under its sub-path: nothing is loaded from another origin, no cookie is set, images have alt text and dimensions, internal links resolve, pages are readable without JavaScript and a script adds no content to them (except inside an element with `data-enhancement`, an `id`, and static content of its own), do not scroll sideways at phone, tablet, or desktop width and keep every image on the screen, and the axe-core scan finds no WCAG 2.1 A or AA violation. For lessons: every lesson has a built page with the required sections, the home page leads to every lesson without JavaScript, the learning path page and every lesson header show what the front matter says (order, difficulty, prerequisites, previous and next), excerpts are identical to their source in `src/pbc` or in `lean/` (for a Lean excerpt, the region between its anchors), the formal proofs lesson states the commit, Lean, and Mathlib versions and links to the proofs at the built commit, "not verified" material shows its label, and the commands of each "Reproduce this" section regenerate the published page and its figures within 30 seconds. |
 | `determinism` | `scripts/check-determinism.sh`: builds a fresh copy of the site sources a second time and requires byte-identical output. |
@@ -98,13 +148,16 @@ in `scripts/verify-workflow.conf`. They run in this order:
 
 Run one check on its own with the command from `scripts/verify.conf`, for
 example `uv run --locked pytest tests/unit`. The `site-checks-*` checks and
-`determinism` need the output of `site-build`.
-
-While writing, preview the site with live reload:
+`determinism` need the output of `site-build`. To read a lesson page you
+are changing, render that page alone, which is what the targeted run does in
+a clone:
 
 ```bash
-uv run --locked quarto preview site
+uv run --locked quarto render site/lessons/<course>/<lesson>/index.qmd
 ```
+
+It writes the page under `site/_site/`, which Git ignores. Nobody builds the
+site to read or check a lesson (ADR 016).
 
 How to write a lesson is described in `docs/authoring.md`; the template is
 `docs/lesson-template.qmd`.
@@ -136,7 +189,8 @@ is an error.
 
 `tests/integration/test_site_check_division.py` collects what the four checks
 run and requires that it is every test of `tests/e2e`, each exactly once, and
-that the check in the group `build` holds exactly the marked tests.
+that the check in the group `build` holds exactly the marked tests. It does
+the same for the three `check-tests-*` checks and `tests/integration`.
 
 ### Other browser engines
 
@@ -215,9 +269,15 @@ added without a group runs on a laptop and never in CI. Compare the output of
 
 A partial run is never a verification. With `--only` nothing is recorded as
 passed and `--reuse` is refused, so `review-feature.sh` and
-`finish-feature.sh` still run every check. A failing partial run removes an
-existing record, like any failing run. The workflow self-tests keep their own
-rule with `--only`: they run when a workflow file changed, or with `--all`.
+`finish-feature.sh` still run the tier the change needs ("Verification"). A
+failing partial run removes an existing record, like any failing run. The
+workflow self-tests keep their own rule with `--only`: they run when a
+workflow file changed, or with `--all`.
+
+The targeted run is not a partial run in this sense: the reserved entry
+`targeted: <group>[,<group>...]` of `scripts/verify.conf` declares the groups
+it performs, and its pass is recorded with its tier. A project without that
+entry has one tier, and `./scripts/verify.sh --targeted` runs every check.
 
 ### Selection against a base
 
@@ -229,7 +289,10 @@ leaves them beside the site as `site/_digests.json`, `site/_pages.json`, and
 `site/_freeze/`).
 
 `./scripts/verify.sh --base <directory>` (ADR 014) names the directory of a
-verified base: `digests.json` (the input digest of every lesson and the
+verified base; without a directory, `--base` and `--targeted` retrieve it
+with `scripts/fetch-base.sh` into `.agents/verification/base`, using the
+`gh` login of your machine read-only (`GH_TOKEN` and `GITHUB_REPOSITORY`
+when set, as in CI), under the same provenance rule as CI. The base is `digests.json` (the input digest of every lesson and the
 identity of the checks, written by `python -m pbc.authoring.digest`) and
 `freeze/` (the executed results). The script computes the selection once with
 `pbc.authoring.selection` and writes it to `.agents/verification/selection.json`,
@@ -284,12 +347,18 @@ a working file that Git ignores, together with the fingerprint of the content
 it verified. Any change to a file that Git does not ignore makes the record
 stale, and a failing run removes it.
 
-`./scripts/verify.sh --reuse` skips the run when the record matches the current
-content exactly, and says so. `review-feature.sh`, `apply-triage.sh`, and
+The record names the tier of the run (`tier: full`, `base`, or `targeted`)
+and, with a base, where the base came from (`base: run <id>`, or the
+directory) and the selection. `./scripts/verify.sh --reuse` skips the run
+when the record of a full run matches the current content exactly, and says
+so; `./scripts/verify.sh --reuse --targeted` takes a record of a full or base
+run for the content, and a record of a targeted run only after it has
+retrieved the current base and recomputed the selection and both match the
+record (main may have advanced); otherwise it runs the targeted run. `review-feature.sh`, `apply-triage.sh`, and
 `finish-feature.sh` call it that way, so in a feature the checks run once per
 version of the content instead of once per step: the agent verifies its final
-result, and the scripts that follow reuse that pass. Plain
-`./scripts/verify.sh` always runs every check.
+result in the tier the change needs, and the scripts that follow reuse that
+pass and record the tier. Plain `./scripts/verify.sh` always runs every check.
 
 Two limits:
 
@@ -763,9 +832,10 @@ new worktree. After the session it prints the worktree path and the next
 commands.
 
 The implementer verifies its result itself: it finishes every edit to a
-tracked file and then runs `./scripts/verify.sh`. That pass is recorded and
-reused by the review that follows, so you do not run the verification by hand
-between the two.
+tracked file and then runs the verification tier the change needs
+(`./scripts/verify.sh --targeted` for an ordinary change; "Verification").
+That pass is recorded with its tier and reused by the review that follows, so
+you do not run the verification by hand between the two.
 
 A new worktree has none of the ignored files of the primary checkout.
 `start-feature.sh` therefore runs `scripts/worktree-setup.sh` in the new
@@ -872,10 +942,12 @@ cd ../project-12-player-movement
 ./scripts/review-feature.sh 12
 ```
 
-A reviewer cannot run the checks, so the review starts only when
-`./scripts/verify.sh` passes for the content under review. The script runs it
-first, names the failing check when it fails, and starts no agent then. The
-review records that verification passed for the reviewed tree. To have a
+A reviewer cannot run the checks, so the review starts only when the
+verification tier the change needs passes for the content under review. The
+script runs `./scripts/verify.sh --reuse --targeted` first, names the failing
+check when it fails, and starts no agent then. The review records that
+verification passed for the reviewed tree, with the tier, the base, and the
+selection. To have a
 failure reviewed, for example when its cause is unclear, pass
 `--unverified "<reason>"`; the review then records the reason instead.
 
@@ -991,8 +1063,8 @@ The helper uses role `triage-implementer`. It validates the approved artifact an
 `FIX_NOW` scope, and asks for confirmation before starting a write-capable
 agent. It never passes `DEFER` or `ACCEPT` findings to that agent. After the
 agent exits, it verifies that the review and triage artifacts are unchanged and
-verifies the result with `./scripts/verify.sh --reuse`, so a pass that the
-agent recorded for exactly that content is not repeated.
+verifies the result with `./scripts/verify.sh --reuse --targeted`, so a pass
+that the agent recorded for exactly that content is not repeated.
 
 The helper does not commit, push, merge, deploy, or create/close Issues. Inspect
 the resulting diff and run another independent review and triage when fixes
@@ -1111,8 +1183,9 @@ worktree:
 
 The script refuses another branch than `feature/12-*` or a tree without
 changes, and a feature whose completion gate does not pass (see "The
-completion gate"). It verifies the result with `./scripts/verify.sh --reuse`,
-and checks the latest review of the
+completion gate"). It verifies the result with `./scripts/verify.sh --reuse
+--targeted`, records the tier, the base, and the selection of the pass in the
+commit message, and checks the latest review of the
 feature: it must be current, cover the complete feature, and have no critical
 or major finding. Every
 review round with findings needs an approved triage that was published on the

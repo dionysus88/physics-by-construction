@@ -865,7 +865,15 @@ CHECK_FILES = (
     "uv.lock",
     ".github/actions/prepare/action.yml",
 )
-CHECK_DIRECTORIES = ("tests/e2e", "tests/support", "tests/integration")
+# ``tests/integration`` is not an input of the identity since F119: no check
+# that a base reduces reads, imports, or executes a file of it, and the checks
+# that run it (``check-tests-*``) are never reduced by a base, so a change to
+# it certifies no reused result (docs/verification-audit.md, "Validity
+# domains of the check identity"; the completeness test is in
+# tests/integration/test_verification_audit.py). Every other input stays, and
+# an input that no classification names belongs to every domain: it is in
+# this one digest.
+CHECK_DIRECTORIES = ("tests/e2e", "tests/support")
 
 
 def check_identity(root: Path = REPOSITORY_ROOT) -> str:

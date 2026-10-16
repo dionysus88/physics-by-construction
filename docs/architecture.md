@@ -479,8 +479,10 @@ build commit normalised, differ from the base's; steps 1 to 5, the checks
 of the site as a whole, and the Lean build run in full. The base also
 records the identity of the checks (a digest over the verification script
 and its configuration, the build and determinism scripts, `tests/e2e`,
-`tests/support`, `tests/integration`, `tests/e2e/shards.json`, the
-Python pins, and the browser tooling, ADR 014 decision 10); when the current tree's
+`tests/support`, `tests/e2e/shards.json`, the Python pins, and the browser
+tooling, ADR 014 decision 10; `tests/integration` left it with F119, because
+no check a base reduces reads it and the checks that run it are never
+reduced by a base, `docs/verification-audit.md`); when the current tree's
 identity differs, nothing of the base is reused and the run is a full run
 with the current checks. A full run executes every lesson: every run on
 `main` and every local run without the option, a run without a readable
@@ -499,6 +501,35 @@ at most 32 lessons with one assembly (F113); that decision is **paused**
 since 2026-10-15 (requirements decision 35, ADR 017 proposed), and a full
 run is the one `build` job of ADR 012, measured at 21 to 31 minutes with
 thirty-two lessons ("CI pipeline and time budget"). No check is dropped.
+
+**Three local tiers (four workstreams, ADR 017 decision 7, F119).** What an
+agent or maintainer runs before a pull request depends on the change, and
+the selection decides. The targeted run, `./scripts/verify.sh --targeted`,
+retrieves the base read-only from the latest successful run on `main`
+(`scripts/fetch-base.sh`, with the machine's `gh` login, under the same
+provenance rule as CI), computes the selection CI will make and reports it,
+and runs the checks of the groups the entry `targeted:` of
+`scripts/verify.conf` names: the supported-machine contract, lint and
+format, the unit tests, the lesson source checks, the dataset checks, the
+documentation and workflow structure checks, the workflow self-tests when a
+workflow file changed, and the single-page render of each selected lesson in
+a clone of the working tree with the Lean build for changed proofs
+(`scripts/check-lesson-pages.sh`); it performs no site build, no
+determinism build, and no built-site check. It never guesses: without an
+acceptable base, when the selection names a full run, or when a selected
+lesson is new to the base, it reports what CI will run and which tier the
+change needs, and verifies nothing. `./scripts/verify.sh --base` is the tier
+for a change that alters what other pages display of a lesson (the
+front-matter fields of the path and the headers, a new lesson); the full
+`./scripts/verify.sh` is the tier for a shared input of ADR 014 decision 4
+or a file of the check identity, and the only verification of the content.
+A pass is recorded with its tier, the base, and the selection;
+`scripts/review-feature.sh`, `scripts/apply-triage.sh`, and
+`scripts/finish-feature.sh` gate on `./scripts/verify.sh --reuse --targeted`
+and record them in the review and the commit message. CI builds and
+validates the site on every pull request and push and stays the publication
+gate. The experiment check of ADR 016 decision 4 joins the render script
+when F117 delivers the entry points.
 
 **The experiment of a lesson (four workstreams, ADR 016, F117).** Every
 lesson declares a runnable experiment entry point that calls its
@@ -533,12 +564,13 @@ selection of the page reproduction (every lesson on a full run, the
 executed lessons on a selective run), as tests marked `same_machine` of
 the check `site-checks-reproduction` in the group `build`, so an unchanged lesson's experiment is not re-run
 on a selective run and is never compared with a result of the base. On
-a full run it is a fifth execution of every lesson in the `build` job,
-so the switch that adds it to `scripts/verify.conf` waits for the
-owner's interim full-run timeout (unresolved question 10, F118's record)
-or for F119's consolidation (ADR 016, "Consequences"; F117 criterion 8).
-The page reproduction stays an internal check until
-the audit of F118 rules on its coverage. The footer of the page lists the
+a full run it is a fourth execution of every lesson in the `build` job
+(a fifth before F119 removed the third build); the switch that adds it to
+`scripts/verify.conf` waited for the owner's interim full-run timeout
+(decided 2026-10-15, ADR 014 status) or for F119's consolidation (applied),
+so it is F117's to flip (ADR 016, "Consequences"; F117 criterion 8). The
+page reproduction stays an internal check; the audit of F118 recorded its
+coverage. The footer of the page lists the
 entry point's commands, the commit, and the files, under "Run this
 experiment", "Replay this experiment", or "Check this proof", in the
 region the post-render step regenerates (ADR 014 decision 9).
@@ -870,7 +902,7 @@ shown.
 | I5 | Code, outputs, figures, proofs, data, and claims on the site come only through the verified display forms. Unverified material is visibly marked. | Lesson source check (F02, F28); ADR 002, 007, 009, 010. |
 | I6 | Generated artifacts are never committed. Figures, outputs, and rendered pages are regenerated by every build. The only committed inputs a build cannot regenerate are the replay fixture of an agent lesson and the dataset samples under `data/samples/`, including the reference artifacts of optional tools declared as `modelled-reference` (final curriculum), each at its declared location, free of credentials and restricted material, and checked on every build (recorded tool results against recomputed ones; sample checksums against their cards). An execution cache restored from a verified artifact of `main` is a build input of a pull request run, never a committed file (ADR 014). | Lesson source check and `.gitignore` (F02); replay (F09); dataset checks (F50); ADR 002, 004, 007, 014. |
 | I7 | A lesson whose code fails, whose proof does not compile, whose sample does not parse, or whose page does not build cannot be merged. | Required status check on `main` (F01, F58). |
-| I8 | CI and local verification run the same product checks through `./scripts/verify.sh`. CI also runs the workflow self-tests on every run; a local run includes them when a workflow file changed. Parallel CI jobs run groups of the same `verify.conf` checks behind one aggregate required check; every group runs in exactly one job, or, for the group that executes the lessons, in one lesson-shard matrix whose lesson shards the script derives (ADR 014 decision 11, paused with F113 since 2026-10-15: one job today). | Workflow calls only that script, and a test compares the declared groups with the groups the jobs run (F01, F58); ADR 003, ADR 005, ADR 012. |
+| I8 | CI and local verification run the same product checks through `./scripts/verify.sh`. CI also runs the workflow self-tests on every run; a local run includes them when a workflow file changed. A local run is one of three tiers (ADR 017 decision 7, F119): the full run runs every product check; the targeted run and the run with a base run the checks of their tier against the selection and are recorded with their tier, and CI runs every check on every pull request and push. Parallel CI jobs run groups of the same `verify.conf` checks behind one aggregate required check; every group runs in exactly one job, or, for the group that executes the lessons, in one lesson-shard matrix whose lesson shards the script derives (ADR 014 decision 11, paused with F113 since 2026-10-15: one job today). | Workflow calls only that script, and a test compares the declared groups with the groups the jobs run (F01, F58); ADR 003, ADR 005, ADR 012. |
 | I9 | The deployed site is the artifact the CI run built for that `main` commit, and the one its jobs checked. The deploy job does not build, and runs only after the required check passed. | Workflow structure (F01); the comparison of the downloaded site with its recorded checksums (F58); ADR 003, ADR 012. |
 | I10 | Toolchains are pinned: Python version and `uv.lock`; Lean toolchain and Mathlib revision; Quarto version; the browser build through the Playwright version in `uv.lock`; GitHub Actions by commit SHA; any JavaScript dependency by version and checksum. | Lock files; frozen installs in verification (F01). |
 | I11 | Builds are deterministic: the same commit produces byte-identical output. | Determinism check (F01). |
@@ -990,9 +1022,11 @@ is attached to the workflow run for review before merge.
 
 One workflow, triggered by `pull_request` and by `push` to `main`:
 
-- **The jobs that run checks** (always; ADR 012): `code`, `workflow`,
-  `integration`, and `build` start together; the three `e2e` jobs wait for
-  `build`. `build` also makes the comparisons of bytes with the built site
+- **The jobs that run checks** (always; ADR 012): `code`, `workflow`, the
+  three `integration-*` jobs (the integration tests in the three parts of
+  `docs/verification-audit.md`, each job preparing only what its part needs:
+  Quarto, the browser, the Lean packages; F119), and `build` start together;
+  the three `e2e` jobs wait for `build`. `build` also makes the comparisons of bytes with the built site
   (the second build, the reproduction of every lesson), which need the
   machine of the build. Each checks out, prepares its runner with
   what its checks need (uv, the Lean toolchain, the `.lake` packages with
@@ -1103,19 +1137,24 @@ size exceeds the growth from 28 to 32 lessons, so the cost per lesson is
 left to F118 to separate. The roadmap's full-run gate (no lesson feature
 past 32 lessons before F113) is reached with F113 paused; the interim
 gate is the owner's decision under unresolved question 10 on F118's
-record. The `build` job of a full run executes every lesson in the site
+record. The `build` job of a full run executed every lesson in the site
 build, in the determinism build, in the build of the preview test
 (`test_a_second_build_gives_byte_identical_previews`, a third build
 through the same helper), and in the reproduction in a fresh clone: four
-executions, where ADR 014 counts three; whether the third duplicates the
-determinism build with identical coverage is F118's first verdict, and
-nothing is removed before it. The experiment check of F117 (ADR 016
-decision 4) would be a fifth: its expected cost on the `build` job is
-derived from the reproduction time (about 11 min 13 s for thirty-two
-lessons in one fast run, execution and render together; the check
-repeats the execution, not the render) and not measured, so its switch
-waits for the owner's interim timeout or for F119's consolidation, and
-the first full run after it is measured (F117 criterion 8).
+executions, where ADR 014 counts three. F118 found the third build a
+duplicate of the determinism check with identical coverage, and F119
+removed it with a regression test (2026-10-15): a lesson executes three
+times in a full run since, and F119 also divided the `integration` job
+(10 min 48 s to 16 min 08 s, the longest fixed job) into three parts. The
+measurement after the change (three consecutive one-lesson pull requests
+against ADR 015, one full run) is owed and goes to
+`docs/release-readiness.md`. The experiment check of F117 (ADR 016
+decision 4) would be a fourth execution: its expected cost on the `build`
+job is derived from the reproduction time (about 11 min 13 s for
+thirty-two lessons in one fast run, execution and render together; the
+check repeats the execution, not the render) and not measured; its
+preconditions (the owner's interim timeout, F119's consolidation) hold,
+and the first full run after it is measured (F117 criterion 8).
 
 ### Verification simplification under review (four workstreams, requirements decision 35, ADR 017 proposed)
 
@@ -1145,7 +1184,9 @@ checks every lesson (ADR 014 decision 4, invariant I26).
   day; lesson shards only if measurements, reliability, or a latency
   requirement demonstrably justify them; no scheduled audit unless the
   owner approves one on its stated defect, cost, and residual risk.
-- **Proportional local verification by agents** (ADR 017 decision 7; F119),
+- **Proportional local verification by agents** (ADR 017 decision 7,
+  **accepted 2026-10-15 and applied by F119**; the paragraph "Three local
+  tiers" under "Inside one verification run" describes the repository),
   in three tiers that the selection decides. For an ordinary change, the
   targeted run, an option of `./scripts/verify.sh`: the checks that need
   no site build, the experiment check and the single-page render of the
@@ -1173,13 +1214,17 @@ checks every lesson (ADR 014 decision 4, invariant I26).
   (every product check runs locally on every run): a recorded targeted
   run becomes the finish and review evidence of an ordinary change,
   while only a run without options is a verification of the content.
-  Until that acceptance, `scripts/finish-feature.sh` and
-  `scripts/review-feature.sh` gate on the full local run as today.
-- **Removals by coverage only** (ADR 017 decision 8; F118, F119): the
-  preview test's third build, the division of `integration`, and the
-  validity domains of the check identity change only with coverage
-  evidence and a regression test each; no independent scientific check
-  is removed.
+  Since the acceptance, `scripts/finish-feature.sh`,
+  `scripts/review-feature.sh`, and `scripts/apply-triage.sh` gate on
+  `./scripts/verify.sh --reuse --targeted`.
+- **Removals by coverage only** (ADR 017 decision 8, **accepted 2026-10-15
+  and applied by F119**; F118 for the evidence): the preview test's third
+  build is consolidated into the determinism check with a regression test,
+  `integration` is divided into three parts that run every test once, and
+  `tests/integration` left the check identity with a completeness test;
+  the other inputs of the identity stay, as the audit showed they affect
+  two or more domains or certify reused pages; no independent scientific
+  check is removed.
 - **The weaker guarantee**, stated in ADR 017 for the owner: an inherited
   result was executed on an earlier commit of `main` with byte-identical
   inputs under the same checks and recorded environment, not on the
@@ -1476,11 +1521,13 @@ the features named:
   a full run is the one `build` job, at 21 to 31 minutes with thirty-two
   lessons; the roadmap's full-run gate is reached, and the interim gate
   is the owner's decision on F118's record (unresolved question 10).
-- The `build` job executes every lesson four times in a full run (the
-  preview test adds a third build); the `integration` job is the longest
-  fixed job; the check identity includes `tests/integration`; the agent
-  workflow runs the whole verification locally on every feature finish
-  and review (F118 audits, F119 applies what the audit justifies).
+- F119 applied what F118 justified (2026-10-15, ADR 017 decisions 7 and
+  8): a lesson executes three times in a full run (the third build is
+  gone), the `integration` job runs in three parts, `tests/integration` is
+  out of the check identity, and the agent workflow verifies in three
+  tiers (the targeted run for an ordinary change). The measurements after
+  the change (three consecutive one-lesson pull requests, one full run)
+  are owed.
 - Nothing of incremental `main` exists: no environment identity, no
   per-result origin, no provenance record of the site, no manual dispatch
   of a full run (F120 for the evidence, F121 if ADR 017 is accepted).

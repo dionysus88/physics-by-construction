@@ -28,23 +28,42 @@ verification_recordable() {
 }
 
 # verification_field <root> <field>
-# Prints the value of 'tree', 'workflow-tests', 'verified-at', or 'selection' in the
-# record, or nothing when there is no record.
+# Prints the value of 'tree', 'workflow-tests', 'verified-at', 'selection',
+# 'tier', or 'base' in the record, or nothing when there is no record.
 verification_field() {
   [[ -f "$1/$VERIFICATION_RECORD" ]] || return 0
   sed -n "s/^$2: //p" "$1/$VERIFICATION_RECORD" | head -n 1
 }
 
-# verification_write <root> <tree> <workflow-tests> [<selection>]
+# verification_write <root> <tree> <workflow-tests> [<selection> [<tier> [<base>]]]
 # <workflow-tests> is 'ran', 'skipped', or 'none'. <selection> is the summary
 # line of a run with a base (ADR 014 decision 5); it names the base and says
 # whether the run was selective or full, and why. Without it the run verified
-# everything.
+# everything. <tier> is the tier of the run (ADR 017 decision 7): 'full' (every
+# check, the default), 'base' (every check against a base), or 'targeted' (the
+# checks of the targeted run, which build no site); <base> says where the
+# base came from ('run <id>' or 'directory <path>').
 verification_write() {
   mkdir -p "$(dirname "$1/$VERIFICATION_RECORD")" &&
-    printf 'tree: %s\nworkflow-tests: %s\nverified-at: %s\n' \
-      "$2" "$3" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >"$1/$VERIFICATION_RECORD" &&
-    { [[ -z "${4:-}" ]] || printf 'selection: %s\n' "$4" >>"$1/$VERIFICATION_RECORD"; }
+    printf 'tree: %s\nworkflow-tests: %s\nverified-at: %s\ntier: %s\n' \
+      "$2" "$3" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "${5:-full}" >"$1/$VERIFICATION_RECORD" &&
+    { [[ -z "${4:-}" ]] || printf 'selection: %s\n' "$4" >>"$1/$VERIFICATION_RECORD"; } &&
+    { [[ -z "${6:-}" ]] || printf 'base: %s\n' "$6" >>"$1/$VERIFICATION_RECORD"; }
+}
+
+# verification_tier <root>
+# Prints the tier of the recorded pass: the 'tier' field, or for a record of
+# an earlier version 'base' when it names a selection and 'full' otherwise.
+# Prints nothing when there is no record.
+verification_tier() {
+  local tier
+
+  [[ -f "$1/$VERIFICATION_RECORD" ]] || return 0
+  tier="$(verification_field "$1" tier)"
+  if [[ -z "$tier" ]]; then
+    if [[ -n "$(verification_field "$1" selection)" ]]; then tier="base"; else tier="full"; fi
+  fi
+  printf '%s\n' "$tier"
 }
 
 # verification_forget <root>

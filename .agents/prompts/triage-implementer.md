@@ -78,9 +78,12 @@ Report:
 - checks performed
 - unresolved findings or risks
 
-Run `./scripts/verify.sh` after your last change. A pass is recorded for
-exactly the content it verified, and the script that follows reuses it; a
-change after the run costs another full run.
+Run `./scripts/verify.sh --targeted` after your last change, or the tier it
+names when it reports that the change needs the full `./scripts/verify.sh`
+or `./scripts/verify.sh --base` (ADR 017 decision 7; `docs/development.md`,
+"Verification"). A pass is recorded for exactly the content it verified,
+with its tier, and the script that follows reuses it; a change after the run
+costs another run.
 
 `scripts/apply-triage.sh` is waiting for this session to end. Ask the human to
 exit the session; the script then checks the protected artifacts and verifies

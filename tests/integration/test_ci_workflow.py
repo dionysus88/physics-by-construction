@@ -332,6 +332,30 @@ def test_a_job_that_checks_the_built_site_checks_the_one_that_was_built():
         assert order == sorted(order) and len(order) == 4, name
 
 
+def test_the_integration_parts_prepare_only_what_each_part_needs():
+    # The division of F119 (docs/verification-audit.md, "Division into
+    # independent parts"): the Quarto part needs neither the browser nor the
+    # Lean packages, the browser part the browser, the rest the Lean packages.
+    jobs = check_jobs()
+    parts = {n: j for n, j in jobs.items() if n.startswith("integration")}
+    assert sorted(parts) == [
+        "integration-browser",
+        "integration-other",
+        "integration-quarto",
+    ]
+    for name, job in parts.items():
+        assert groups_of(job) == [name]
+        assert "needs" not in job and "permissions" not in job, name
+        [prepare] = [
+            s for s in job["steps"] if s.get("uses") == "./.github/actions/prepare"
+        ]
+        given = prepare.get("with", {})
+        browser = "true" if name == "integration-browser" else "false"
+        assert given.get("browser", "false") == browser, name
+        packages = "restore" if name == "integration-other" else "none"
+        assert given.get("lean-packages", "none") == packages, name
+
+
 def test_the_lean_packages_are_saved_by_the_build_job_only():
     for name, job in check_jobs().items():
         [prepare] = [

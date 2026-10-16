@@ -22,15 +22,17 @@ most local runs.
 
 [ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md)
 decision 7, proposed by the change cycle
-`pbc-planning-change-four-workstreams` (2026-10-15) and not accepted,
-would amend decision 3 and the restatement of ADR 003 decision 1 in
-decision 5 if the owner accepts it on F118's evidence: for an ordinary
-change, the finish and review evidence of the agent workflow would be a
-recorded targeted run that performs the checks that need no site build
-and the per-lesson checks of the selected lessons, while a run without
-options still runs every product check and CI runs every check on every
-pull request and push. Until that acceptance, decisions 3 and 5 stand as
-written. F119 records the amendment here on acceptance.
+`pbc-planning-change-four-workstreams` and **accepted by the owner on
+2026-10-15 on F118's evidence, applied by F119 (Issue #185), amends
+decision 3 and the restatement of ADR 003 decision 1 in decision 5**: for
+an ordinary change, the finish and review evidence of the agent workflow
+is a recorded targeted run (`./scripts/verify.sh --targeted`) that
+performs the checks that need no site build and the single-page render of
+the selected lessons, recorded with its tier, base, and selection; a run
+without options still runs every product check locally and is the only
+verification of the content; CI runs every check on every pull request
+and push. The workflow self-tests keep the rule of decision 1 in every
+tier: they run when a workflow file changed, and always in CI.
 
 Date: 2026-10-06
 
