@@ -47,7 +47,9 @@ def test_the_flux_counts_the_charge_inside(results):
     _, found = results
 
     for _, inside, flux in found["tables"]["gauss-run"]["rows"]:
-        assert flux == inside
+        # To the four decimals of the table, and never a signed zero ("-0.0000").
+        assert float(flux) == pytest.approx(float(inside), abs=1.5e-4)
+        assert not flux.startswith("-0.0000")
 
 
 def test_the_dipole_field_on_its_axis_is_twice_the_field_across(results):

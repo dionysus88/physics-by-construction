@@ -180,7 +180,10 @@ def gauss_run(experiment: Experiment) -> None:
         inside = float(gauss_charges[distances < radius].sum())
         found = sphere_flux(field, radius=radius, nodes=64) * EPSILON_0
         worst = max(worst, abs(found - inside) / np.max(np.abs(gauss_charges)))
-        rows.append((radius, inside * 1e9, found * 1e9))
+        # A flux of exactly zero can come out as -1e-17 or +1e-17 depending on the
+        # CPU's rounding; rounded to the table's four decimals and with the sign
+        # of zero removed, both give the same row ("0.0000", never "-0.0000").
+        rows.append((radius, inside * 1e9, round(found * 1e9, 4) + 0.0))
     assert worst < GAUSS_TOLERANCE, "the flux does not count the charge inside"
 
     experiment.table(
