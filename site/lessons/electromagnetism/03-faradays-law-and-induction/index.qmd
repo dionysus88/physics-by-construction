@@ -1,0 +1,524 @@
+---
+title: "Induction: magnetic flux and the electromotive force"
+description: >-
+  The voltage induced around a loop computed as the work per charge along
+  the wire, and the magnetic flux through it computed as a surface integral,
+  apart: for a loop moving through a non-uniform field, a turning coil, and
+  a loop at rest beside a changing field, the voltage is minus the rate of
+  change of the flux.
+lesson:
+  id: faradays-law-and-induction
+  strand: electromagnetism
+  order: 3
+  difficulty: 2
+  course: electromagnetism
+  slot: EM3
+  methods: [simulation]
+  outcomes:
+    - Compute the magnetic flux through a loop as a surface integral and its rate of change by a central difference
+    - Compute the electromotive force around a loop as the line integral of the force per charge on the charges of the wire
+    - Check Faraday's law for a moving loop, a turning coil, and a loop at rest in a changing field
+    - Explain why a loop can have an induced voltage where the magnetic field on the wire is nearly zero, and none where the electric field is not
+  related: []
+  format: 2
+  preview: fig-moving-loop
+  experiment: pbc.electromagnetism.experiments.faradays_law_and_induction
+  prerequisites:
+    lessons: [electric-fields-and-potential, charged-particles-in-fields]
+    outside:
+      - "Vectors: the cross product in three dimensions"
+      - "Calculus: line integrals and integrals over a surface"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.electromagnetism import induction
+from pbc.electromagnetism.experiments import faradays_law_and_induction as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+Move a magnet in and out of a coil of wire and a current flows in the wire,
+though no battery is connected. A bicycle dynamo lights its lamp the same
+way, and so does every generator of a power station: a coil turns in a
+magnetic field, and a voltage appears between its ends. A transformer does it
+with nothing moving at all, by changing the field through a coil.
+
+Faraday found the rule that covers all of these: the voltage around a loop,
+its electromotive force, is minus the rate at which the magnetic flux through
+the loop changes. This lesson does not assume the rule. It computes the
+voltage from the force on the charges in the wire, the Lorentz force of the
+previous lesson and the induced electric field, integrated around the loop.
+It computes the flux, separately, by integrating the field over the surface
+the loop bounds, and differentiates it in time. Then it asks whether the two
+agree, for a loop that slides through a field that is not uniform, for a coil
+that turns, and for a loop at rest beside a field that grows. The surprises
+are in the last case: a loop can have a voltage where the field on its wire
+is nearly zero, and none where the electric field on it is strong.
+
+## Assumptions
+
+1. **Thin wire, flat loops.** The loop is a curve without thickness, the edge
+   of a flat rectangle. A real coil has a thickness and many turns; for a
+   coil of several turns the voltage is the sum over the turns.
+2. **No current, or a current too small to matter.** The voltage is computed
+   for an open loop, or one with a very large resistance. A current in the
+   loop would make a field of its own that opposes the change, which is the
+   content of Lenz's rule, and changes the flux.
+3. **Slow compared with light.** The wire moves far slower than light, and
+   the fields change slowly enough that the time light takes to cross the
+   loop does not matter. Then the force per charge on a charge moving with
+   the wire is $\mathbf{E} + \mathbf{u}\times\mathbf{B}$, with $\mathbf{u}$
+   the velocity of the wire there.
+4. **Given fields.** The magnetic and the induced electric field are given in
+   closed form, not computed from currents. The flux tube of the third
+   example is a model of the field inside and near a long coil, with smooth
+   edges so that its integrals are accurate.
+5. **Quadrature and a difference.** The integrals are Gauss-Legendre rules,
+   accurate for smooth fields; the rate of change of the flux is a central
+   difference, whose error falls as the square of its step.
+
+## Faraday's law {#explanation}
+
+### The electromotive force and the flux
+
+A charge carried along by the wire at the velocity $\mathbf{u}$ feels the
+force $q(\mathbf{E} + \mathbf{u}\times\mathbf{B})$. The **electromotive
+force** of the loop is the work this force does per unit charge on one trip
+around it,
+
+$$
+\mathcal{E} = \oint \left(\mathbf{E} + \mathbf{u}\times\mathbf{B}\right)\cdot \mathrm{d}\boldsymbol{\ell},
+$$
+
+and it is the voltage a meter would read across a small gap in the loop. The
+**flux** is the integral of the magnetic field over the surface that the loop
+bounds, with the normal $\hat{\mathbf{n}}$ that the sense of the loop picks
+by the right-hand rule:
+
+$$
+\Phi = \int_S \mathbf{B}\cdot\hat{\mathbf{n}}\,\mathrm{d}A .
+$$
+
+Faraday's law, in the form called the flux rule, says
+
+$$
+\mathcal{E} = -\frac{\mathrm{d}\Phi}{\mathrm{d}t}.
+$$
+
+### Why it holds: two ways for the flux to change
+
+The flux through a loop changes for two reasons, and each corresponds to one
+of the two terms of the force.
+
+**The loop moves.** In a static field a moving loop sweeps out a strip with
+each piece $\mathrm{d}\boldsymbol{\ell}$ of its edge, of area
+$\mathbf{u}\,\mathrm{d}t\times\mathrm{d}\boldsymbol{\ell}$ per time $\mathrm{d}t$.
+A magnetic field has no sources, $\nabla\cdot\mathbf{B} = 0$, so the flux
+that the loop gains is the flux through those strips,
+
+$$
+\begin{aligned}
+\frac{\mathrm{d}\Phi}{\mathrm{d}t}
+&= \oint \mathbf{B}\cdot(\mathbf{u}\times\mathrm{d}\boldsymbol{\ell}) \\
+&= -\oint (\mathbf{u}\times\mathbf{B})\cdot\mathrm{d}\boldsymbol{\ell},
+\end{aligned}
+$$
+
+the motional term. For a rectangle of height $h$ moving at $v$ along $x$
+through a field $B_z(x)$, only the two sides across the motion count, and
+$\mathcal{E} = -v\,h\,(B_z(x_{\text{front}}) - B_z(x_{\text{back}}))$.
+
+**The field changes.** A magnetic field that changes in time comes with an
+electric field that circulates around it: the Maxwell-Faraday equation
+$\nabla\times\mathbf{E} = -\partial\mathbf{B}/\partial t$, which by Stokes's
+theorem gives $\oint\mathbf{E}\cdot\mathrm{d}\boldsymbol{\ell} = -\int_S
+\partial\mathbf{B}/\partial t\cdot\hat{\mathbf{n}}\,\mathrm{d}A$ for a loop at
+rest. In terms of the potentials, $\mathbf{B} = \nabla\times\mathbf{A}$ and
+the induced field is $\mathbf{E} = -\partial\mathbf{A}/\partial t$.
+
+Neither statement is used to compute anything below. The program integrates
+the force along the wire and the field over the surface with separate rules,
+and differentiates the flux numerically; the law is what the comparison
+tests.
+
+### The flux tube
+
+The third example uses a tube of field along $z$, strongest on its axis and
+falling off with the distance $r$ from it over a width $a$,
+$B_z = B_0\,e^{-r^2/a^2}$, a smooth model of the field inside a long coil.
+Its vector potential points around the axis,
+
+$$
+A_\varphi(r) = \frac{B_0\,a^2}{2r}\left(1 - e^{-r^2/a^2}\right),
+$$
+
+and gives the field by $B_z = \frac{1}{r}\frac{\partial (r A_\varphi)}{\partial r}$.
+When $B_0$ grows at the rate $\dot B_0$, the induced electric field is
+$E_\varphi = -\partial A_\varphi/\partial t$, the same expression with
+$\dot B_0$ in place of $B_0$ and a minus sign. Outside the tube the magnetic
+field is nearly zero, yet the electric field falls only as $1/r$: a loop far
+from the tube still sits in an induced field.
+
+## Code
+
+The loop is a `Rectangle`; `flux` integrates the field over it, and `emf`
+integrates the force per charge around its edge. The two do not call each
+other. `flux_rate` is the central difference of the flux in time.
+
+```{python}
+#| echo: false
+excerpt(induction.emf)
+```
+
+```{python}
+#| echo: false
+excerpt(induction.flux)
+```
+
+```{python}
+#| echo: false
+excerpt(induction.flux_tube_fields)
+```
+
+## Worked examples
+
+A uniform field is a function that gives the same vector at every point:
+
+```{python}
+#| echo: false
+excerpt(experiment.uniform)
+```
+
+### A loop moving through a non-uniform field
+
+A field along $z$ has the profile of a bump in $x$: [0.5 T]{.given} at its
+peak, falling off over [5 cm]{.given}. A rectangular loop of
+[4 cm]{.given} along $x$ by [6 cm]{.given} along $y$ moves through it at
+[2 m/s]{.given}, centred on the peak at the time zero. The EMF is computed
+from $\mathbf{u}\times\mathbf{B}$ along the wire and compared with minus the
+rate of change of the flux, with a step of [10 μs]{.given}, at times across
+the passage.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="moving-loop")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.bump)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.loop_at)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.moving_loop_run)
+```
+
+```{python}
+#| label: moving-loop-run
+#| echo: false
+result.table("moving-loop-run")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_moving_loop)
+```
+
+```{python}
+#| label: fig-moving-loop
+#| echo: false
+#| fig-cap: "A loop passing through a bump of field. Top: the flux through it rises and falls. Bottom: the EMF from the force on the charges of the wire (line) and minus the rate of change of the flux (markers) are one curve, negative while the flux grows and positive while it falls."
+#| fig-alt: "Two stacked plots against time. The upper one shows the flux as a single smooth hump centred at time zero. The lower one shows the EMF as a solid line that dips below zero before time zero, crosses zero at the peak of the flux, and rises above zero after it, antisymmetric about zero. Open circles for minus the rate of the flux lie on the line throughout."
+#| fig-status: simulated
+result.show("fig-moving-loop")
+```
+
+[The EMF of a loop moving through a static, non-uniform magnetic field,
+computed from the force $\mathbf{u}\times\mathbf{B}$ on the charges of the
+wire, equals minus the rate of change of the flux through the
+loop.]{.claim type="numerically-verified"
+scope="a rigid rectangular loop translated through a static field, a central difference of the stated step"
+evidence="moving-loop-run"}
+At every one of the `{python} result["times"]` times the two agree to
+`{python} result["moving-gap"]` of the largest EMF, inside the chosen tolerance of
+`{python} result["faraday-tolerance"]`; what remains is the error of the central
+difference. The sign is Lenz's: while the loop enters the field and its flux
+grows, the EMF is negative, in the sense that would drive a current whose own
+field opposes the growth. At the time zero the loop is centred on the peak,
+the flux is largest, and the two sides across the motion sit in equal fields,
+so the EMF is zero. The data are simulated, and the check is the flux rule.
+
+### A coil turning in a uniform field
+
+A coil of [10 cm]{.given} by [20 cm]{.given} turns at [50 Hz]{.given} about its
+long axis in a uniform field of [0.3 T]{.given} across the axis: a generator
+of a single turn. Each point of the wire moves with the velocity
+$\boldsymbol{\omega}\times\mathbf{r}$. The EMF from the force along the wire is
+compared over one turn with minus the rate of the flux and with
+$B A \omega \sin\omega t$.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="coil")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.coil_run)
+```
+
+```{python}
+#| label: coil-run
+#| echo: false
+result.table("coil-run")
+```
+
+[The EMF of a coil turning in a uniform field, computed from the force on the
+charges of the moving wire, equals minus the rate of change of its flux and
+follows $B A\omega\sin\omega t$.]{.claim type="numerically-verified"
+scope="a flat rectangular coil of one turn, a uniform field across its axis, one turn"
+evidence="coil-run"}
+The three agree over the whole turn to `{python} result["coil-gap"]`
+of the peak of `{python} result["peak"]` V. The flux is largest when the coil
+faces the field, and then the EMF is zero: the sides of the coil move along the
+field, and $\mathbf{u}\times\mathbf{B}$ vanishes. The EMF is largest a quarter
+of a turn later, when the coil is edge-on to the field, its flux is zero, and
+the flux changes fastest. A coil of many turns multiplies this by the number of
+turns, which is how a small generator reaches a useful voltage.
+
+### A loop at rest beside a changing field
+
+A tube of field of [2 cm]{.given} width along $z$ grows at
+[10 T/s]{.given}. Three square loops lie at rest in the plane across it: one
+around the tube, one beside it, and one across its edge. Their EMF is the line
+integral of the induced electric field alone, and is compared with minus the
+rate of change of their flux.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="tube")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.tube_magnetic_at)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.tube_electric)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.tube_run)
+```
+
+```{python}
+#| label: tube-run
+#| echo: false
+result.table("tube-run")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_tube)
+```
+
+```{python}
+#| label: fig-tube
+#| echo: false
+#| fig-cap: "The induced electric field (arrows) circulates around a growing tube of magnetic field (shaded), and is still strong where the magnetic field has fallen to nothing. The three loops of the table: the large one encloses the tube, the small one beside it encloses almost none of its flux, and the third, off centre, cuts through the tube."
+#| fig-alt: "A square plot of the plane across the tube. A grey disc at the centre shades the tube of magnetic field. Arrows circle it clockwise, longest a little outside the disc and shrinking slowly with the distance. A large dashed square surrounds the disc, a small solid square sits to the right of it in the region of arrows only, and a dotted square, off centre, covers part of the disc and its centre."
+#| fig-status: simulated
+result.show("fig-tube")
+```
+
+[For a loop at rest in a changing magnetic field, the line integral of the
+induced electric field around the loop equals minus the rate of change of the
+flux through it, for a loop around the field, beside it, and across its
+edge.]{.claim type="numerically-verified"
+scope="square loops at rest near a smooth tube of field that grows at a constant rate, induced field from the vector potential"
+evidence="tube-run"}
+In each row the EMF and minus the rate of the flux agree, to the chosen tolerance of
+`{python} result["faraday-tolerance"]` of the rate of the whole flux of the tube,
+`{python} result["total-mv"]` mV. The loop around the tube picks up nearly all
+of that, though on its wire the magnetic field is practically zero: the EMF
+counts the flux inside, not the field on the wire. The loop beside the tube
+sits in an induced field nearly as strong as on the others, as the last column shows, yet
+its EMF is
+`{python} result["beside-percent"]` per cent of
+the first one's, the share of the flux of the tube that leaks into it. The field
+pushes the charges forward on one side of that loop and back on the other. The
+data are simulated, and the check is the flux rule.
+
+## Limits {#limits}
+
+- **No current.** The loops are open, or have no resistance to speak of. A
+  current would add a field of its own, opposing the change, and for a
+  superconducting loop it would keep the flux constant. The lesson computes
+  the EMF, not the current.
+- **Rigid loops.** The examples move a loop without changing its shape. A loop
+  that stretches, a sliding bar on rails, follows the same rule, as the first
+  exercise shows; a loop whose material is not a single wire, such as a disc
+  that turns, is where the flux rule needs care.
+- **Given fields, slow changes.** The fields are prescribed in closed form.
+  When they change fast enough for light to take a noticeable fraction of a
+  period to cross the loop, the fields become waves, and this description
+  with a single time is no longer exact.
+- **Smooth fields.** The field of a real coil drops sharply at its wall, and
+  a quadrature across that wall would converge slowly; the tube of the third
+  example is smooth on purpose.
+
+::: {.exercise .self-check}
+A long coil carries a current that grows, so the field inside it grows. A
+wire loop goes around the coil, far outside it, where the magnetic field is
+practically zero. Is there an EMF around the loop?
+
+::: {.choices}
+::: {.choice}
+No. The wire is where the magnetic field is zero, so nothing acts on its
+charges.
+
+::: {.feedback}
+The magnetic field on the wire is nearly zero, but the induced electric field
+is not: it circulates around the coil and falls only slowly with the distance.
+That field pushes the charges along the wire.
+:::
+:::
+
+::: {.choice correct="true"}
+Yes. The EMF is minus the rate of change of the flux inside the loop, and the
+loop encloses the growing flux of the coil.
+
+::: {.feedback}
+Correct: the loop around the tube in the third example shows it. The force on
+the charges is the induced electric field, which is there even where the
+magnetic field is not.
+:::
+:::
+
+::: {.choice}
+Only if the loop moves, since there is no $\mathbf{u}\times\mathbf{B}$ on a wire at rest.
+
+::: {.feedback}
+A loop at rest feels the induced electric field. The motional term is one of
+two ways for the flux to change, not the only one.
+:::
+:::
+:::
+
+::: {.solution}
+Yes. The flux through the loop is the flux of the coil, and it grows, so the
+EMF is minus its rate of change, whatever the size or the shape of the loop as
+long as it goes around the coil once. What pushes the charges is the induced
+electric field, which circulates around the coil and reaches the wire though
+the magnetic field there is practically zero.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**A bar sliding on rails.** Two rails [10 cm]{.given} apart lie in a uniform
+field of [0.2 T]{.given} at right angles to their plane. A bar slides along
+them at [3 m/s]{.given} and closes the loop. Compute the EMF from the force on
+the charges of the moving bar, and compare it with minus the rate of the flux
+through the growing loop and with $B L v$.
+
+::: {.hint}
+Only the bar moves. The flux is the field times an area that grows by the
+gap times the speed per unit time.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.sliding_bar)
+```
+
+The force on the charges of the bar gives `{python} result["bar-emf-mv"]` mV,
+minus the rate of the flux `{python} result["rails-rate-mv"]` mV, and $BLv$ is
+`{python} result["blv-mv"]` mV in size. The sign is negative because the loop runs
+counterclockwise about the field and its flux grows: a current would flow
+clockwise, and the field of that current would oppose the growth.
+:::
+:::
+
+::: {.exercise}
+**A generator of many turns.** A coil of [200 turns]{.given} of
+[5 cm]{.given} by [8 cm]{.given} turns at [25 Hz]{.given} in a field of
+[0.1 T]{.given}. What is the peak voltage between its ends?
+
+::: {.hint}
+Each turn has the EMF of the second example, and the turns are in series.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.many_turns)
+```
+
+One turn gives `{python} result["single"]` V at its peak, a quarter of a turn
+after it faces the field, so the coil gives `{python} result["peak-voltage"]` V,
+the formula $N B A \omega$.
+:::
+:::
+
+::: {.exercise}
+**How wide is beside?** Move the loop beside the tube of the third example
+further out, in steps of [1 cm]{.given}, and compute its EMF. How does it fall,
+and why does the induced field on the wire fall more slowly?
+
+::: {.hint}
+Compare the flux of the tube that reaches the loop with the strength of the
+induced field at its distance.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.further_out)
+```
+
+```{python}
+#| echo: false
+result.table("further-out")
+```
+
+The EMF and the rate of the flux agree in every row, and fall by orders of magnitude, from `{python} result["first-beside-emf"]` mV
+to `{python} result["last-beside-emf"]` mV, as fast as the tail of the field
+of the tube that still reaches the square. The induced field on the wire falls
+only as the inverse of the distance, from `{python} result["first-beside-field"]`
+to `{python} result["last-beside-field"]` mV/m. The field on the wire is strong, but around a loop that
+encloses almost no flux it pushes the charges forward on one side as much as it
+holds them back on the other.
+:::
+:::
+
+## Run this experiment {#reproduce-this}
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/electromagnetism/induction.py",
+        "src/pbc/electromagnetism/experiments/faradays_law_and_induction.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_electromagnetism.py",
+        "tests/unit/test_faradays_law_and_induction_experiment.py",
+    ],
+)
+```

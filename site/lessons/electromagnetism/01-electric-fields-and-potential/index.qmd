@@ -1,0 +1,486 @@
+---
+title: "Electric fields, superposition, and the potential"
+description: >-
+  The electric field of point charges computed by adding Coulomb's law
+  charge by charge, checked against minus the gradient of the potential,
+  against the closed form of a dipole far away, and against Gauss's law on a
+  sphere.
+lesson:
+  id: electric-fields-and-potential
+  strand: electromagnetism
+  order: 1
+  difficulty: 1
+  course: electromagnetism
+  slot: EM1
+  methods: [simulation]
+  outcomes:
+    - Compute the electric field of a set of point charges as a vector field, by superposition of Coulomb's law
+    - Obtain the field from the potential by a numerical gradient and measure the order of its error
+    - Check the field of a pair of charges against the closed form of a dipole, and say how fast the two agree with distance
+    - Check Gauss's law by computing the flux through a sphere around and beside the charges
+  related: []
+  format: 2
+  preview: fig-dipole-field
+  experiment: pbc.electromagnetism.experiments.electric_fields_and_potential
+  prerequisites:
+    lessons: [newtons-laws]
+    outside:
+      - "Vectors: components, the dot product, and the gradient of a function of the position"
+      - "Calculus: partial derivatives, and integrals over a surface"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.electromagnetism import fields
+from pbc.electromagnetism.experiments import electric_fields_and_potential as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+Rub a balloon on a jumper and it holds to the wall. Between the balloon and
+the wall there is nothing to see, yet a force acts across the gap, and it
+acts on every bit of charge at every place. Physics describes that by a
+field: an arrow at every point of space that says which force a small test
+charge would feel there, per unit of its charge. The field is the first
+example in the course of a vector field, and nearly everything else in
+electromagnetism is a statement about such fields.
+
+This lesson builds the electric field of charges at rest from a single law,
+Coulomb's law for one charge, and one rule, that the fields of several
+charges add. It then asks three questions of the result. Is the field the
+slope of a single number, the potential, as the theory says? What does a
+pair of opposite charges look like from far away, where the theory replaces
+it by a dipole? And does the field obey Gauss's law, which says that the
+flux out through any closed surface counts the charge inside? Each answer is
+computed by the program and compared with the closed form; none of the
+closed forms is used to compute the field.
+
+## Assumptions
+
+1. **Point charges at rest.** Every charge sits at a point and does not move.
+   A moving charge also makes a magnetic field, and a charge that
+   accelerates radiates; neither is in this lesson.
+2. **Vacuum.** The charges sit in empty space, with the permittivity
+   $\varepsilon_0$. In a material the field polarises the atoms and the
+   field inside is smaller; a dielectric constant would describe that.
+3. **Superposition.** The field of several charges is the sum of the fields
+   of each. That is a law of electromagnetism in vacuum, true to every
+   precision measured, and it fails only for fields so strong that the
+   vacuum itself responds, far beyond anything here.
+4. **No field at a charge.** The field of a point charge grows without bound
+   as the distance falls, and is not defined at the charge itself. The
+   program refuses a point that lies on a charge, and a real charge has a
+   size.
+5. **Floating-point numbers.** The numerical gradient divides a small
+   difference by a small step. Too small a step loses digits to the
+   round-off, which sets a floor below which the error no longer falls.
+
+## Fields from charges {#explanation}
+
+### Coulomb's law and superposition
+
+A charge $q_i$ at the position $\mathbf{r}_i$ makes at the point
+$\mathbf{r}$ the field
+
+$$
+\mathbf{E}_i(\mathbf{r}) = k\,q_i\,\frac{\mathbf{r} - \mathbf{r}_i}{|\mathbf{r} - \mathbf{r}_i|^3},
+\qquad k = \frac{1}{4\pi\varepsilon_0},
+$$
+
+which points away from a positive charge, towards a negative one, and falls
+with the square of the distance. A test charge $q$ at $\mathbf{r}$ feels the
+force $q\,\mathbf{E}$. For several charges the fields add as vectors,
+
+$$
+\mathbf{E}(\mathbf{r}) = \sum_i \mathbf{E}_i(\mathbf{r}).
+$$
+
+That sum is the whole computation of this lesson. The program evaluates it
+at an array of points at once, so the same function gives a single arrow or
+the field over a grid.
+
+### The potential
+
+Coulomb's field has a special property: the work it does on a test charge
+moved between two points does not depend on the path. Then there is a
+single number at every point, the potential $V$, whose slope is the field,
+
+$$
+V(\mathbf{r}) = \sum_i \frac{k\,q_i}{|\mathbf{r} - \mathbf{r}_i|},
+\qquad
+\mathbf{E} = -\nabla V .
+$$
+
+A number is easier than an arrow: the potentials of several charges add as
+numbers, and the field follows by differentiation. The program checks the
+relation by differentiating $V$ numerically. A central difference of step
+$h$ along the axis $x$,
+
+$$
+\frac{\partial V}{\partial x} \approx \frac{V(x + h) - V(x - h)}{2h},
+$$
+
+has an error that falls as $h^2$: in the Taylor expansion of $V$ about
+$x$ the terms of even order cancel in the difference, and the first term left
+after the derivative is the third derivative times $h^2/6$.
+
+### The dipole
+
+Two charges $+q$ and $-q$ a distance $d$ apart have no net charge, so from
+far away the field of one nearly cancels that of the other. What is left is
+the dipole field, set by the moment $\mathbf{p} = q\,\mathbf{d}$, the vector
+from the negative to the positive charge times $q$. With $\hat{\mathbf{n}}$
+the unit vector from the middle of the pair towards the point and $r$ the
+distance,
+
+$$
+\mathbf{E}_{\text{dipole}} = \frac{k}{r^3}\left(3\,(\mathbf{p}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}} - \mathbf{p}\right),
+\qquad
+V_{\text{dipole}} = \frac{k\,\mathbf{p}\cdot\hat{\mathbf{n}}}{r^2}.
+$$
+
+It falls with the cube of the distance, one power faster than the field of
+a single charge. The dipole is the first term of an expansion of the field
+of the pair in powers of $d/r$. The pair is symmetric about its middle, so
+the term after the dipole vanishes, and the next one is smaller by
+$(d/r)^2$: the field of the pair and the field of the dipole should differ,
+relative to the field, by an amount that falls as the square of $d/r$. That
+is the prediction the lesson tests.
+
+### Gauss's law
+
+The flux of the field out through a closed surface $S$ is the integral of
+its outward component over the surface. Gauss's law says that it counts the
+charge inside:
+
+$$
+\oint_S \mathbf{E}\cdot \mathrm{d}\mathbf{A} = \frac{Q_{\text{inside}}}{\varepsilon_0}.
+$$
+
+For one charge at the centre of a sphere it is a short calculation: the
+field is $kq/R^2$ everywhere on the sphere and the area is $4\pi R^2$, which
+gives $q/\varepsilon_0$ whatever the radius. The law says more: the charge
+need not be at the centre, a charge outside contributes nothing, and the
+surface may have any shape. The program computes the surface integral of the
+sum of Coulomb fields over a sphere, by a quadrature rule in the two angles,
+and compares it with the charge inside.
+
+## Code
+
+The field is `coulomb_field`, the sum over the charges at an array of points,
+and `coulomb_potential` is the potential. `field_from_potential` is the
+central difference, and `sphere_flux` the surface integral. The closed form of
+the dipole, `dipole_field`, is in the module only to be compared with.
+
+```{python}
+#| echo: false
+excerpt(fields.coulomb_field)
+```
+
+```{python}
+#| echo: false
+excerpt(fields.field_from_potential)
+```
+
+```{python}
+#| echo: false
+excerpt(fields.sphere_flux)
+```
+
+## Worked examples
+
+The examples compare two quantities by their relative difference, the length
+of the difference over the length of the reference:
+
+```{python}
+#| echo: false
+excerpt(experiment.relative_gap)
+```
+
+### The field is the slope of the potential
+
+Three charges of [+2 nC, −1 nC, and +0.5 nC]{.given} sit at three corners of
+a box a few centimetres across. The field at a point near them is computed in
+two ways: as the sum of the three Coulomb fields, and as minus the numerical
+gradient of the potential, with steps that halve from [1 mm]{.given}.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="gradient")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.gradient_run)
+```
+
+```{python}
+#| label: gradient-run
+#| echo: false
+result.table("gradient-run")
+```
+
+[The sum of the Coulomb fields equals minus the gradient of the summed
+potential: the two differ by an amount that falls as the square of the step
+of the difference.]{.claim type="numerically-verified"
+scope="three point charges, one point at a distance of centimetres, steps from a millimetre down"
+evidence="gradient-run"}
+Each halving of the step divides the difference by four; the fitted order is
+`{python} result["gradient-order"]`, against the two of a central difference.
+The field computed from the charges and the field computed from the potential
+are the same field, which is what $\mathbf{E} = -\nabla V$ says, and the
+remaining difference is the error of the difference formula, not of the
+physics.
+
+### A pair of charges from far away
+
+A charge of [+1 nC]{.given} and one of [−1 nC]{.given} sit
+[1 cm]{.given} apart on the axis $z$. The field of the pair is computed at
+distances from five to eighty times the separation, in four directions, and
+compared with the field of a dipole of the same moment.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="pair")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.dipole_run)
+```
+
+```{python}
+#| label: dipole-run
+#| echo: false
+result.table("dipole-run")
+```
+
+[The field of a pair of opposite charges approaches the field of a dipole
+with the same moment, and the relative difference falls as the square of the
+separation over the distance.]{.claim type="numerically-verified"
+scope="a pair of equal and opposite point charges, distances from five to eighty separations"
+evidence="dipole-run"}
+The fitted order is `{python} result["dipole-order"]`, the two that the expansion
+in $d/r$ predicts. At five separations the dipole is already within
+`{python} result["gap-near"]` per cent of the pair; at eighty it is
+within `{python} result["gap-far"]` per cent. The dipole is not a
+different kind of object; it is what a neutral pair looks like from a
+distance at which its size no longer shows.
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_dipole_field)
+```
+
+```{python}
+#| label: fig-dipole-field
+#| echo: false
+#| fig-cap: "The field of a pair of opposite charges in a plane through both, computed by superposition. Field lines leave the positive charge and end on the negative one; the equipotentials cross them at right angles, as minus the gradient of the potential must."
+#| fig-alt: "A square plot of the plane through two charges, a positive one above and a negative one below the centre. Blue curved lines run from the upper charge out and around to the lower charge, dense near the charges and spreading out far away. Thin grey closed curves, the equipotentials, surround each charge and cross the field lines at right angles. The pattern is symmetric about the line through both charges."
+#| fig-status: simulated
+result.show("fig-dipole-field")
+```
+
+The figure shows what the table measures: near the charges the lines are
+those of two separate charges, and further out the pattern takes the shape of
+a single dipole. The field is simulated, computed from Coulomb's law by
+superposition, and nothing in the drawing uses the dipole formula.
+
+### Gauss's law on a sphere
+
+Four charges, of [+1 nC, +2 nC, −0.5 nC, and +3 nC]{.given}, sit at
+distances of [0.1 m, 0.22 m, 0.3 m, and 2 m]{.given} from the origin. The flux
+of their field out through spheres about the origin is computed for radii
+that take in more of the charges as they grow.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="gauss")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.gauss_run)
+```
+
+```{python}
+#| label: gauss-run
+#| echo: false
+result.table("gauss-run")
+```
+
+[The flux of the field of point charges out through a sphere is the charge
+inside divided by $\varepsilon_0$; charges outside the sphere add nothing,
+whatever their distance.]{.claim type="numerically-verified"
+scope="four point charges, spheres that do not pass close to a charge"
+evidence="gauss-run"}
+At every radius the flux counts exactly the charges inside it: the largest
+difference is below `{python} result["gauss-tolerance"]` of the largest
+charge. The sphere of the smallest radius holds no charge and has no net flux,
+though the field on it is far from zero; the charge of the last row, at two
+metres, adds nothing to any sphere smaller than that, and is counted only by
+the largest. The data are simulated, and the check is Gauss's law.
+
+## Limits {#limits}
+
+- **Static charges in vacuum.** The lesson computes electrostatics. Moving
+  charges and changing fields need the magnetic field and the full Maxwell
+  equations, which later lessons of the course take up; a material needs its
+  polarisation.
+- **Point charges.** A real charge is spread out. Outside a spherical charge
+  the field is that of a point; inside it is not, and the field of an
+  extended body is an integral, not a sum.
+- **A sphere only.** Gauss's law holds for any closed surface. The lesson
+  checks it on spheres, where a simple quadrature is accurate; a charge close
+  to the surface makes the integrand sharp and needs many more nodes than the
+  ones used here.
+- **The numerical gradient has a floor.** Below a certain step the round-off
+  of the potential, divided by the step, grows larger than the error of the
+  formula, and the difference stops falling. The steps of the first example
+  stay well above it.
+
+::: {.exercise .self-check}
+A sphere is drawn next to a charge, so that the charge is outside it. What
+can you say about the field on the sphere and about the flux through it?
+
+::: {.choices}
+::: {.choice}
+The field on the sphere is zero, because no charge is inside.
+
+::: {.feedback}
+The field on the sphere is that of the charge outside, and it is not zero.
+Gauss's law speaks about the flux, the integral of the outward component,
+not about the field at each point.
+:::
+:::
+
+::: {.choice correct="true"}
+The field is not zero, but the flux through the sphere is zero.
+
+::: {.feedback}
+Correct: the field enters the sphere on the side towards the charge and
+leaves on the far side, and the inward and outward flux cancel exactly.
+:::
+:::
+
+::: {.choice}
+The flux is small but not zero, and falls as the charge moves further away.
+
+::: {.feedback}
+The flux of a charge outside is exactly zero at every distance; the last row
+of the Gauss example shows a charge outside every sphere but the largest that
+contributes nothing to them.
+:::
+:::
+:::
+
+::: {.solution}
+The field on the sphere is the field of the charge outside, which is not zero
+anywhere on it. Its flux is zero: every field line that enters the sphere
+leaves it again, and the sum of the outward component over the surface
+cancels. Gauss's law counts only the charge inside.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**On the axis and across it.** For the pair of charges of the second example,
+compare the strength of the field at [0.5 m]{.given} along the axis of the
+pair with the strength at the same distance on the plane midway between the
+charges. What ratio does the dipole formula predict?
+
+::: {.hint}
+On the axis, $\hat{\mathbf{n}}$ is parallel to $\mathbf{p}$; in the middle
+plane it is perpendicular to it.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.axis_and_across)
+```
+
+The field on the axis is `{python} result["on-axis"]` V/m and the field across
+it `{python} result["across"]` V/m, a ratio of `{python} result["axis-ratio"]`.
+The dipole formula gives $3\,\mathbf{p} - \mathbf{p} = 2\,\mathbf{p}$ on the
+axis and $-\mathbf{p}$ across it: the field on the axis is twice as strong,
+and points along the moment, while the field across points against it.
+:::
+:::
+
+::: {.exercise}
+**Where the field vanishes.** Charges of [+4 nC]{.given} at the origin and
+[+1 nC]{.given} at [0.3 m]{.given} along the axis $x$. Find the point between
+them where the field is zero, by computing the field along the line, and
+check it against the point where the two Coulomb fields have equal
+strength.
+
+::: {.hint}
+At that point the two strengths are equal, so the ratio of the charges is
+the ratio of the squares of their distances from the point.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.where_the_field_vanishes)
+```
+
+The field along the line changes sign at `{python} result["zero-at"]` m from the
+larger charge. Equal strength needs $x/(0.3 - x) = 2$, the square root of the
+ratio of the charges, which gives `{python} result["balance"]` m. The point is
+closer to the smaller charge, where its weaker field is not yet outweighed.
+:::
+:::
+
+::: {.exercise}
+**A charge close to the sphere.** Put a single charge at [0.99 m]{.given} from
+the origin and compute the flux through the unit sphere about the origin, with
+few and with many nodes of the quadrature. Why does it need so many more than
+the charges of the example?
+
+::: {.hint}
+Look at how sharp the field is on the part of the sphere nearest the charge.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.near_the_sphere)
+```
+
+```{python}
+#| echo: false
+result.table("near-flux")
+```
+
+With few nodes the flux is far from the charge inside: sixteen nodes in the
+polar angle give `{python} result["near-first"]` of $q/\varepsilon_0$. It
+reaches `{python} result["near-last"]` only with the largest number in the
+table. A charge a centimetre inside the sphere makes a field that is
+concentrated in a spot a few centimetres across on the surface, and the rule
+needs enough nodes to resolve that spot, where the charges of the example are
+all far from every sphere. The law holds; the quadrature has to see it.
+:::
+:::
+
+## Run this experiment {#reproduce-this}
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/electromagnetism/fields.py",
+        "src/pbc/electromagnetism/experiments/electric_fields_and_potential.py",
+        "src/pbc/verification/estimates.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_electromagnetism.py",
+        "tests/unit/test_electric_fields_and_potential_experiment.py",
+    ],
+)
+```
