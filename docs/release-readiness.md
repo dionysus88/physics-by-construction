@@ -664,8 +664,8 @@ The owner asked for the 38-lesson run to be the recorded figure: **35 min
 the interim gate of 60 minutes approved for up to 45 lessons. The spread
 between the runs is larger than the growth with the lesson count: the build
 job took 18 min 14 s on one run of 35 lessons and 27 min 16 s on one of 38,
-which is the runner-class difference of F120
-(`docs/incremental-main-evidence.md`), not the six lessons. The growth with the
+which is the runner-class difference found by F120 (its evidence document is
+published with that feature), not the six lessons. The growth with the
 lessons is therefore not separable from the runner spread in these three
 runs; read the 60-minute gate against the upper figure. The number of
 executions of each lesson in the build was not measured separately here.
