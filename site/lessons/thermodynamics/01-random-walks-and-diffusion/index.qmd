@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-msd
+  experiment: pbc.thermodynamics.experiments.random_walks_and_diffusion
   prerequisites:
     lessons: [kinematics]
     outside:
@@ -28,8 +29,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.thermodynamics import diffusion
+from pbc.thermodynamics.experiments import random_walks_and_diffusion as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -164,9 +168,6 @@ averages the squared distance over the walkers.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.thermodynamics import diffusion
-
 excerpt(diffusion.random_walks)
 ```
 
@@ -186,13 +187,6 @@ excerpt(diffusion.predicted_diffusion_coefficient)
 
 ## Worked examples
 
-```{python}
-#| echo: false
-import numpy as np
-
-from pbc.authoring import table
-```
-
 ### The mean squared displacement grows with time
 
 The walkers take steps of
@@ -201,61 +195,33 @@ for [200]{.given} steps and records $\langle r^2\rangle$ after every step; six
 runs with different seeds are made.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.msd_run)
+```
+
+```{python}
 #| label: msd-run
-from pbc.abm.gas import mean_and_error
-from pbc.thermodynamics.diffusion import (
-    diffusion_coefficient,
-    mean_squared_displacement,
-    predicted_diffusion_coefficient,
-    random_walks,
-)
+#| echo: false
+result.table("msd-run")
+```
 
-STEP = 0.1  # step length, m
-TAU = 0.5  # time between steps, s
-N_WALKERS = 500
-N_STEPS = 200
-SEEDS = range(6)
-
-times = TAU * np.arange(N_STEPS + 1)
-runs = [
-    random_walks(N_WALKERS, N_STEPS, STEP, np.random.default_rng(seed))
-    for seed in SEEDS
-]
-msds = np.array([mean_squared_displacement(paths) for paths in runs])
-msd = msds.mean(axis=0)
-
-predicted_d = predicted_diffusion_coefficient(STEP, TAU)
-checkpoints = [N_STEPS // 4, N_STEPS // 2, N_STEPS]
-table(
-    [
-        (n, times[n], msd[n], 4.0 * predicted_d * times[n])
-        for n in checkpoints
-    ],
-    [
-        ("steps", "", "d"),
-        ("time", "s", ".1f"),
-        ("measured <r²>", "m²", ".3f"),
-        ("predicted 4 D t", "m²", ".3f"),
-    ],
-    "The mean squared displacement averaged over six runs of the walkers, at three times, against the prediction of the step rule.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.draw_msd)
 ```
 
 ```{python}
 #| label: fig-msd
+#| echo: false
 #| fig-cap: "The mean squared displacement of the walkers grows in a straight line with time, along the line the step rule predicts. The spread between the six runs is too small to see at this scale."
 #| fig-alt: "Line plot of the mean squared displacement in square metres against time in seconds. The measured curve rises almost straight from the origin, and a dashed straight line from the origin lies on top of it."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(times, msd, color="#00429d", label="walkers")
-ax.plot(times, 4.0 * predicted_d * times, color="#93003a", linestyle="--",
-        label="step rule: 4 D t")
-ax.set_xlabel("time (s)")
-ax.set_ylabel(r"$\langle r^2\rangle$ (m$^2$)")
-ax.legend()
-plt.show()
+result.show("fig-msd")
 ```
 
 The table and the figure show one thing: the squared distance is proportional
@@ -270,37 +236,20 @@ $\langle r^2\rangle$. The mean over the runs and its standard error are
 compared with the prediction.
 
 ```{python}
-#| label: diffusion-check
-estimates = np.array(
-    [diffusion_coefficient(times, row) for row in msds]
-)
-mean_d, error_d = mean_and_error(estimates)
-off = abs(mean_d - predicted_d) / error_d
-wrong = abs(mean_d - 2.0 * predicted_d) / error_d
+#| echo: false
+excerpt(experiment.diffusion_check)
+```
 
-table(
-    [(seed, value) for seed, value in zip(SEEDS, estimates)],
-    [("seed", "", "d"), ("D", "m²/s", ".5f")],
-    "The diffusion coefficient measured in each of the six runs.",
-)
+```{python}
+#| label: diffusion-check
+#| echo: false
+result.table("diffusion-check")
 ```
 
 ```{python}
 #| label: diffusion-summary
-table(
-    [
-        ("step rule", mean_d, error_d, predicted_d, off),
-        ("a coefficient twice as large", mean_d, error_d, 2.0 * predicted_d, wrong),
-    ],
-    [
-        ("compared with", "", ""),
-        ("mean D", "m²/s", ".5f"),
-        ("standard error", "m²/s", ".5f"),
-        ("prediction", "m²/s", ".5f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "The mean of the six measured coefficients, its standard error, and its distance in standard errors from the step rule and from a wrong prediction.",
-)
+#| echo: false
+result.table("diffusion-summary")
 ```
 
 [The diffusion coefficient measured from the mean squared displacement agrees
@@ -308,10 +257,10 @@ with $\ell^2/(4\tau)$ within the tolerance of four standard errors, and a
 prediction twice as large is rejected.]{.claim type="numerically-verified"
 scope="equal steps in the plane, six runs of five hundred walkers, four standard
 errors" evidence="diffusion-check diffusion-summary"}
-The measured coefficient is `{python} f"{mean_d:.5f}"` $\mathrm{m^2/s}$ with a standard
-error of `{python} f"{error_d:.5f}"` $\mathrm{m^2/s}$, `{python} f"{off:.1f}"` standard errors from
-the prediction of `{python} f"{predicted_d:.5f}"` $\mathrm{m^2/s}$. The wrong prediction is
-`{python} f"{wrong:.0f}"` standard errors away, so the check can tell the two
+The measured coefficient is `{python} result["mean-d"]` $\mathrm{m^2/s}$ with a standard
+error of `{python} result["error-d"]` $\mathrm{m^2/s}$, `{python} result["off"]` standard errors from
+the prediction of `{python} result["predicted-d"]` $\mathrm{m^2/s}$. The wrong prediction is
+`{python} result["wrong"]` standard errors away, so the check can tell the two
 apart.
 
 ### The Gaussian spread
@@ -322,29 +271,14 @@ that the prediction says contains half of the walkers after the last step, and
 count.
 
 ```{python}
+#| echo: false
+excerpt(experiment.radial_check)
+```
+
+```{python}
 #| label: radial-check
-from pbc.thermodynamics.diffusion import fraction_within, predicted_fraction_within
-
-t_end = times[-1]
-radii = np.sqrt(4.0 * predicted_d * t_end * -np.log(1.0 - np.array([0.25, 0.5, 0.75])))
-rows = []
-for radius in radii:
-    measured = np.array([fraction_within(paths[-1], radius) for paths in runs])
-    mean_f, error_f = mean_and_error(measured)
-    predicted_f = predicted_fraction_within(radius, predicted_d, t_end)
-    rows.append((radius, mean_f, error_f, predicted_f, abs(mean_f - predicted_f) / error_f))
-
-table(
-    rows,
-    [
-        ("radius", "m", ".2f"),
-        ("measured fraction", "", ".3f"),
-        ("standard error", "", ".3f"),
-        ("predicted fraction", "", ".3f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "The fraction of walkers within three radii after the last step, over six runs, against the Gaussian prediction.",
-)
+#| echo: false
+result.table("radial-check")
 ```
 
 [The fraction of walkers within a radius agrees with
@@ -352,7 +286,7 @@ $1 - \exp(-R^2/4Dt)$ at three radii within four standard errors.]{.claim
 type="numerically-verified" scope="the last step of the walk, six runs, four
 standard errors" evidence="radial-check"}
 The largest difference is
-`{python} f"{max(row[4] for row in rows):.1f}"` standard errors. The two checks use
+`{python} result["largest-difference"]` standard errors. The two checks use
 the same $D$, so together they say that the walkers spread by the law and in the
 shape that the step rule predicts.
 
@@ -424,23 +358,13 @@ The coefficient depends on the step through its square.
 The prediction is $\ell^2/(4\tau)$, so doubling $\ell$ multiplies it by four.
 
 ```{python}
-doubled = [
-    random_walks(N_WALKERS, N_STEPS, 2.0 * STEP, np.random.default_rng(seed))
-    for seed in SEEDS
-]
-doubled_d = np.array(
-    [diffusion_coefficient(times, mean_squared_displacement(p)) for p in doubled]
-)
-mean_2, error_2 = mean_and_error(doubled_d)
-table(
-    [(mean_2 / mean_d, 4.0, error_2 / mean_d)],
-    [
-        ("measured ratio", "", ".2f"),
-        ("predicted ratio", "", ".1f"),
-        ("standard error of the ratio", "", ".2f"),
-    ],
-    "The measured diffusion coefficient of the doubled step in units of the first, with the predicted ratio.",
-)
+#| echo: false
+excerpt(experiment.doubled_step)
+```
+
+```{python}
+#| echo: false
+result.table("doubled-step")
 ```
 
 The ratio is within a few standard errors of the prediction.
@@ -456,38 +380,30 @@ In one dimension $\langle x^2\rangle = 2Dt$ and $\langle x^2\rangle = \ell^2 t/\
 so $D = \ell^2/(2\tau)$, twice the value in the plane for the same step.
 
 ```{python}
-line = [
-    diffusion_coefficient(
-        times,
-        mean_squared_displacement(
-            random_walks(N_WALKERS, N_STEPS, STEP, np.random.default_rng(seed), dimension=1)
-        ),
-        dimension=1,
-    )
-    for seed in SEEDS
-]
-mean_1, error_1 = mean_and_error(np.array(line))
-predicted_1 = predicted_diffusion_coefficient(STEP, TAU, dimension=1)
-table(
-    [(mean_1, error_1, predicted_1, abs(mean_1 - predicted_1) / error_1)],
-    [
-        ("measured D", "m²/s", ".5f"),
-        ("standard error", "m²/s", ".5f"),
-        ("predicted D", "m²/s", ".5f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "The diffusion coefficient of walkers on a line, over six runs, against the prediction.",
-)
+#| echo: false
+excerpt(experiment.on_a_line)
+```
+
+```{python}
+#| echo: false
+result.table("on-a-line")
 ```
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/thermodynamics/diffusion.py"],
-    tests=["tests/unit/test_thermodynamics.py"],
+    code=[
+        "src/pbc/thermodynamics/diffusion.py",
+        "src/pbc/thermodynamics/experiments/random_walks_and_diffusion.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_thermodynamics.py",
+        "tests/unit/test_random_walks_and_diffusion_experiment.py",
+    ],
 )
 ```

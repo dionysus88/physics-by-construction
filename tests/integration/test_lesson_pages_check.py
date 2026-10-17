@@ -137,6 +137,9 @@ def test_the_selected_lesson_renders_alone_in_a_clone_and_no_site_is_built(
     assert result.returncode == 0, output(result)
     assert "The locked environment of the clone" in result.stdout
     assert f"Rendered {KINEMATICS}/index.qmd in " in result.stdout
+    # Then its experiment, with a reader's commands, writes what the page shows.
+    assert "The learner environment of the clone" in result.stdout
+    assert f"Ran the experiment of {KINEMATICS} in " in result.stdout
     assert "no site was built" in result.stdout
     # Rendered in a clone, which is gone: the tree holds no page and no build.
     assert not (tree / "site" / "_site").exists()
@@ -156,6 +159,41 @@ def test_a_page_that_does_not_render_fails_the_check(tree, tmp_path):
     assert result.returncode != 0
     assert f"the page {KINEMATICS}/index.qmd does not render" in result.stderr
     assert "broken cell" in result.stderr
+
+
+def test_an_experiment_that_does_not_write_what_its_page_shows_fails(tree, tmp_path):
+    # The experiment computes another number in the learner environment than
+    # in the render: the comparison with the rendered page must catch it.
+    experiment = tree / "src" / "pbc" / "mechanics" / "experiments" / "kinematics.py"
+    text = experiment.read_text()
+    old = 'experiment.number("g", g)'
+    assert old in text
+    experiment.write_text(
+        "import os\n"
+        + text.replace(
+            old, 'experiment.number("g", 9.8 if "UV_NO_SYNC" in os.environ else g)'
+        )
+    )
+    select(tree, [KINEMATICS], "targeted")
+    result = check(tree, tmp_path)
+    assert result.returncode != 0
+    assert f"the experiment of {KINEMATICS} does not write what its page" in (
+        result.stderr
+    )
+    assert "the number g = '9.8' is not on the page" in result.stderr
+
+
+def test_a_lesson_without_an_experiment_fails(tree, tmp_path):
+    page = tree / KINEMATICS / "index.qmd"
+    page.write_text(
+        page.read_text().replace(
+            "  experiment: pbc.mechanics.experiments.kinematics\n", ""
+        )
+    )
+    select(tree, [KINEMATICS], "targeted")
+    result = check(tree, tmp_path)
+    assert result.returncode != 0
+    assert "declares no 'lesson.experiment'" in result.stderr
 
 
 def test_a_changed_proof_runs_the_lean_build_of_the_checkout(tree, tmp_path):

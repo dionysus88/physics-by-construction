@@ -21,6 +21,7 @@ lesson:
   related: []
   format: 2
   preview: fig-profiles
+  experiment: pbc.mechanics.experiments.inverse_physics
   prerequisites:
     lessons: [harmonic-oscillator, gravitational-wave-strain]
     outside:
@@ -29,8 +30,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.data.inverse import profile
+from pbc.mechanics.experiments import inverse_physics as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -84,48 +88,31 @@ numbers say it: the bias, the root-mean-square error against the stated
 standard error, and the coverage.
 
 ```{python}
-#| label: recovery
-import numpy as np
-
-from pbc.authoring import excerpt, reproduce_this, table
-from pbc.data.fit import fit_curve
-from pbc.data.inverse import profile, recover, verdict
-
-
-def damped(t, amplitude, decay, omega, phase):
-    return amplitude * np.exp(-decay * t) * np.cos(omega * t + phase)
-
-
-NAMES = ["amplitude", "decay", "omega", "phase"]
-TRUTH = [1.0, 0.35, 5.0, 0.4]
-SIGMA = 0.05
-t = np.linspace(0.0, 6.0, 120)
-report = recover(damped, t, TRUTH, sigma=SIGMA, trials=200, seed=11, names=NAMES)
-table(
-    [
-        (name, truth, mean, rms, stated, 100 * cover)
-        for name, truth, mean, rms, stated, cover in zip(
-            report.names, report.truth, report.mean, report.rms_error,
-            report.mean_stderr, report.coverage, strict=True,
-        )
-    ],
-    columns=[
-        ("parameter", "", "s"),
-        ("truth", "", ".3f"),
-        ("mean estimate", "", ".3f"),
-        ("scatter of the estimates", "", ".4f"),
-        ("stated standard error", "", ".4f"),
-        ("interval holds the truth", "%", ".0f"),
-    ],
-    caption="Recovery of the four parameters of a damped oscillation from 200 noisy copies. The scatter is the root-mean-square error of one estimate.",
-)
+#| echo: false
+excerpt(experiment.damped)
 ```
 
-[Over `{python} f"{report.trials}"` synthetic data sets the fit recovers every
+```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.recovery)
+```
+
+```{python}
+#| label: recovery
+#| echo: false
+result.table("recovery")
+```
+
+[Over `{python} result["trials"]` synthetic data sets the fit recovers every
 parameter of the damped oscillation with a bias below
-`{python} f"{np.max(np.abs(report.bias) / np.abs(report.truth)):.1%}"` of its value, its stated standard
+`{python} result["largest-bias"]` of its value, its stated standard
 errors are the size of the scatter of the estimates, and its intervals of two standard errors
-hold the truth in at least `{python} f"{100 * report.coverage.min():.0f}"` percent of the trials.]{.claim type="numerically-verified"
+hold the truth in at least `{python} result["least-coverage"]` percent of the trials.]{.claim type="numerically-verified"
 scope="damped oscillation, 120 samples, Gaussian noise of known size, fits started within 20 percent of the truth"
 evidence="recovery"}
 Recovery on synthetic data is a necessary check and not a sufficient one. It
@@ -155,38 +142,39 @@ pair on the line $k/m = \omega^2$: the data constrain one combination, and a
 single number of the pair is not a result.
 
 ```{python}
+#| echo: false
+excerpt(experiment.spring_mass)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment, region="tied")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.tied_parameters)
+```
+
+```{python}
 #| label: tied-parameters
-def spring_mass(t, k, m):
-    """Free oscillation of a mass on a spring: only k/m reaches the motion."""
-    return np.cos(np.sqrt(k / m) * t)
-
-
-K_TRUE, M_TRUE = 4.0, 1.0
-rng = np.random.default_rng(2)
-y_free = spring_mass(t, K_TRUE, M_TRUE) + rng.normal(0.0, SIGMA, t.size)
-tied = fit_curve(spring_mass, t, y_free, [4.5, 1.1], sigma=SIGMA, names=["k", "m"], bounds=([1e-3, 1e-3], [np.inf, np.inf]))
-k_grid = np.linspace(1.0, 10.0, 37)
-bound = ([1e-3, 1e-3], [np.inf, np.inf])
-profile_k = profile(spring_mass, t, y_free, [K_TRUE, M_TRUE], "k", k_grid, sigma=SIGMA, names=["k", "m"], bounds=bound)
-print("reasons against the fit:")
-for reason in verdict(tied):
-    print(" -", reason)
-print(f"profile of k: rise of the chi-square over the whole range = {np.ptp(profile_k.chi2):.2f}")
+#| echo: false
+print(result.output("tied-parameters"), end="")
 ```
 
 The helper reports it in two ways. The scaled Jacobian of the fit has a
-singular value of ratio `{python} f"{tied.singular_ratio:.0e}"` between the
+singular value of ratio `{python} result["tied-singular-ratio"]` between the
 smallest and the largest, so a combination of $k$ and $m$ is not constrained,
 and the standard errors of both are infinite. The profile says the same
 without a linear approximation: with $m$ refitted at every $k$ from
-`{python} f"{k_grid[0]:g}"` to `{python} f"{k_grid[-1]:g}"`, the chi-square never rises by more than
-`{python} f"{np.ptp(profile_k.chi2):.2f}"`, so the data are as happy with a
-spring constant of `{python} f"{k_grid[0]:g}"` as of `{python} f"{k_grid[-1]:g}"`.
+`{python} result["k-low"]` to `{python} result["k-high"]`, the chi-square never rises by more than
+`{python} result["k-rise"]`, so the data are as happy with a
+spring constant of `{python} result["k-low"]` as of `{python} result["k-high"]`.
 
 [A free oscillation fitted with the mass and the spring constant as separate
 parameters is reported as not identified: the helper flags both parameters, and
 the profile of the spring constant stays within
-`{python} f"{np.ptp(profile_k.chi2):.1f}"` of its minimum over a tenfold range, so
+`{python} result["k-rise-1"]` of its minimum over a tenfold range, so
 no interval for either exists.]{.claim type="numerically-verified"
 scope="free oscillation of a mass on a spring, noise of 0.05, 120 samples"
 evidence="tied-parameters"}
@@ -195,35 +183,26 @@ known force, or the amplitude of a forced oscillation, or a second mass added.
 It is a change to the experiment, not to the fit.
 
 ```{python}
+#| echo: false
+excerpt(experiment.frequency_profile)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_profiles)
+```
+
+```{python}
 #| label: fig-profiles
+#| echo: false
 #| fig-cap: "Chi-square against one parameter, the others refitted at each value, relative to the minimum. The angular frequency of the damped oscillation has a narrow bowl; the spring constant of the free oscillation, where the mass can compensate, has a flat profile with no interval. The dotted line marks one above the minimum."
 #| fig-alt: "Two panels sharing a logarithmic vertical axis of chi-square above its minimum. The left panel, angular frequency, shows a narrow V-shaped bowl whose two arms rise steeply and cross a dotted horizontal line at one, a little either side of the minimum. The right panel, spring constant from one to ten, shows a flat line along the very bottom of the axis that never approaches the dotted line."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-from pbc.authoring import FIGURE_COLOURS
-from pbc.data.plotting import label_status
-
-rng = np.random.default_rng(1)
-y_damped = damped(t, *TRUTH) + rng.normal(0.0, SIGMA, t.size)
-w_grid = np.linspace(4.95, 5.05, 41)
-profile_w = profile(damped, t, y_damped, TRUTH, "omega", w_grid, sigma=SIGMA, names=NAMES)
-fig, (left, right) = plt.subplots(1, 2, figsize=(7.6, 3.6), sharey=True, constrained_layout=True)
-left.semilogy(profile_w.grid, np.maximum(profile_w.chi2 - profile_w.chi2.min(), 1e-3), color=FIGURE_COLOURS[0])
-left.set_xlabel("angular frequency (rad/s)")
-left.set_ylabel("chi-square above its minimum")
-left.set_title("Determined")
-right.semilogy(profile_k.grid, np.maximum(profile_k.chi2 - profile_k.chi2.min(), 1e-3), color=FIGURE_COLOURS[1])
-right.set_xlabel("spring constant (N/m)")
-right.set_title("Not determined")
-for ax in (left, right):
-    ax.axhline(1.0, color="0.4", linestyle=":")
-label_status(fig, "simulated")
-plt.show()
+result.show("fig-profiles")
 ```
 
 The left panel is the contrast: a parameter that the data bound, with an
-interval from `{python} f"{profile_w.low:.3f}"` to `{python} f"{profile_w.high:.3f}"` radians per second
+interval from `{python} result["omega-low"]` to `{python} result["omega-high"]` radians per second
 at one above the minimum.
 
 ### A model that is wrong
@@ -235,44 +214,40 @@ standard errors, and the curve passes through the points to the eye. The
 residuals say otherwise.
 
 ```{python}
+#| echo: false
+excerpt(experiment.wrong_model)
+```
+
+```{python}
 #| label: wrong-model
-envelope = np.clip(1.0 - t / 5.0, 0.0, None)  # linear loss: dry friction
-rng = np.random.default_rng(5)
-y_dry = envelope * np.cos(5.0 * t + 0.4) + rng.normal(0.0, SIGMA, t.size)
-wrong = fit_curve(damped, t, y_dry, TRUTH, sigma=SIGMA, names=NAMES)
-right_fit = fit_curve(damped, t, y_damped, TRUTH, sigma=SIGMA, names=NAMES)
-print("wrong model, reasons against:")
-for reason in verdict(wrong):
-    print(" -", reason)
-print("right model, reasons against:", verdict(right_fit) or "none")
+#| echo: false
+print(result.output("wrong-model"), end="")
 ```
 
 The fit of the wrong model has a reduced chi-square of
-`{python} f"{wrong.reduced_chi2:.1f}"` against `{python} f"{right_fit.reduced_chi2:.1f}"` for the right one, and
+`{python} result["wrong-chi2"]` against `{python} result["right-chi2"]` for the right one, and
 the lag-one autocorrelation of its residuals is far outside what independent noise gives.
 Both are consequences of one thing: the residuals still hold a smooth signal.
 The size of the standard errors says nothing here, because they are the
 errors of the parameters *if* the model is right.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_residuals)
+```
+
+```{python}
 #| label: fig-residuals
+#| echo: false
 #| fig-cap: "Residuals of two fits of the same kind of data, in units of the noise. With the right model (grey) they scatter about zero. With the exponential decay fitted to a linear loss (coloured) they swing in a slow pattern, which independent noise does not."
 #| fig-alt: "Line plot of residuals in units of the noise against time over six seconds. A grey curve scatters irregularly about zero within a band of about two units. A coloured curve makes slow swings of several samples each, away from zero and back, and reaches the largest excursions, about three units, near the start and in the last second."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(7.0, 3.4), constrained_layout=True)
-ax.plot(t, right_fit.residuals / SIGMA, color="0.55", label="right model")
-ax.plot(t, wrong.residuals / SIGMA, color=FIGURE_COLOURS[0], label="wrong model")
-ax.axhline(0.0, color="0.3", lw=0.6)
-ax.set_xlabel("time (s)")
-ax.set_ylabel("residual (noise units)")
-ax.legend()
-label_status(fig, "simulated")
-plt.show()
+result.show("fig-residuals")
 ```
 
 [A fit of the exponentially damped oscillation to data with a linear loss
 converges with small standard errors and a reduced chi-square of
-`{python} f"{wrong.reduced_chi2:.1f}"`, and the verdict of the helper lists structure
+`{python} result["wrong-chi2"]`, and the verdict of the helper lists structure
 in its residuals; the same fit to data of the right model lists none.]{.claim type="numerically-verified"
 scope="one seeded data set of each kind, noise of 0.05, 120 samples"
 evidence="wrong-model"}
@@ -290,53 +265,21 @@ A chirp of known chirp mass, the size of the fitted signal, is added to
 stretches of the file where no event is, and the same fit is run on each.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="strain")
+```
+
+```{python}
 #| label: primary-fit
-from pbc.data import SAMPLES_DIR
-from pbc.data.gwinjection import inject_and_fit
-from pbc.data.gwosc import FILES, PUBLISHED_CHIRP_MASS_SOURCE, PUBLISHED_REDSHIFT, read_strain
-from pbc.data.gwstrain import (
-    correlation_with_control,
-    cut_segment,
-    fit_chirp,
-    make_whitener,
-    noise_sigma,
-)
-
-BAND = (35.0, 350.0)
-WINDOW = (-0.2, 0.0)
-gw_strains = {
-    det: read_strain(SAMPLES_DIR / "gw150914-strain" / file)
-    for det, file in FILES.items()
-}
-gw_rate = gw_strains["H1"].sample_rate
-gw_wide = {det: cut_segment(s, 2.0) for det, s in gw_strains.items()}
-gw_white = {
-    det: make_whitener(gw_strains[det], gw_wide[det], BAND)(gw_wide[det].strain)
-    for det in gw_strains
-}
-gw_corr = correlation_with_control(gw_white["H1"], gw_white["L1"], gw_wide["H1"].time, gw_rate)
-gw_delays = {"H1": 0.0, "L1": gw_corr["lag"]}
-
-gw_seg = {det: cut_segment(s, 0.75) for det, s in gw_strains.items()}
-gw_time = gw_seg["H1"].time
-gw_whiteners = {det: make_whitener(gw_strains[det], gw_seg[det], BAND) for det in gw_strains}
-gw_data = {det: gw_whiteners[det](gw_seg[det].strain) for det in gw_strains}
-gw_sigma = noise_sigma(gw_data["H1"], gw_time, (0.3, 0.65))
-gw_fit = fit_chirp(
-    gw_time, gw_data, gw_whiteners, gw_delays,
-    window=WINDOW, sigma=gw_sigma, mc_grid=np.arange(22.0, 50.0, 1.0),
-)
-gw_inside = (gw_time >= WINDOW[0]) & (gw_time <= WINDOW[1])
-gw_peak = {det: float(np.max(np.abs(gw_fit.models[det][gw_inside]))) for det in gw_strains}
-gw_published = PUBLISHED_CHIRP_MASS_SOURCE * (1 + PUBLISHED_REDSHIFT)
-gw_reasons = verdict(gw_fit.fit)
+#| echo: false
+excerpt(experiment.strain_fit)
 ```
 
 The reasons against taking this fit as evidence, from the same helper:
-`{python} "; ".join(gw_reasons) if gw_reasons else "none"`. The fit gives a
-chirp mass of `{python} f"{gw_fit.mc:.1f}"` solar masses with a profile interval of
-`{python} f"{gw_fit.mc_low:.1f}"` to `{python} f"{gw_fit.mc_high:.1f}"`, and a reduced
-chi-square of `{python} f"{gw_fit.reduced_chi2:.2f}"`.
+`{python} result["gw-reasons"]`. The fit gives a
+chirp mass of `{python} result["gw-mc"]` solar masses with a profile interval of
+`{python} result["gw-mc-low"]` to `{python} result["gw-mc-high"]`, and a reduced
+chi-square of `{python} result["gw-chi2"]`.
 
 Both reasons deserve a reading. The first is the tie of the chirp mass with the
 coalescence time that the gravitational-wave lesson described: the interval of
@@ -348,91 +291,66 @@ on a stretch of the whitened strain with no event, and then runs the injection.
 
 ```{python}
 #| label: noise-correlation
-from pbc.data.inverse import residual_autocorrelation
-
-quiet = (np.abs(gw_time) > 0.3) & (np.abs(gw_time) < 0.65)
-gw_noise_rho = residual_autocorrelation(gw_data["H1"][quiet])[0]
+#| echo: false
+excerpt(experiment.noise_correlation)
 ```
 
 The lag-one autocorrelation of the whitened Hanford noise away from the event
-is `{python} f"{gw_noise_rho:.2f}"`, close to that of the residuals, so the helper's
+is `{python} result["gw-noise-rho"]`, close to that of the residuals, so the helper's
 second reason is in large part the band-pass and not a missing piece of the
 model. It does mean that the samples are not independent, which the stated
 interval assumes.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="injection")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.injection)
+```
+
+```{python}
 #| label: injection
-TRUTH_MC, TRUTH_TC = 35.0, 0.03
-CENTRES = [-12.0, -8.0, 8.0, 12.0]  # seconds from the event: no event there
-injections = inject_and_fit(
-    gw_strains, CENTRES, truth_mc=TRUTH_MC, truth_tc=TRUTH_TC, delays=gw_delays,
-    peak=gw_peak, band=BAND, window=WINDOW, mc_grid=np.arange(24.0, 48.0, 1.0),
-)
-inj_mc = np.array([inj.mc for inj in injections])
-inj_half = float(np.mean([(inj.high - inj.low) / 2 for inj in injections]))
-inj_rms = float(np.sqrt(np.mean((inj_mc - TRUTH_MC) ** 2)))
-inj_worst = float(np.max(np.abs(inj_mc - TRUTH_MC)))
-inj_covered = sum(inj.covers(TRUTH_MC) for inj in injections)
-table(
-    [
-        (inj.centre, inj.mc, inj.low, inj.high, "yes" if inj.covers(TRUTH_MC) else "no")
-        for inj in injections
-    ],
-    columns=[
-        ("noise taken around", "s from the event", ".0f"),
-        ("recovered chirp mass", "solar masses", ".1f"),
-        ("stated interval, low", "solar masses", ".1f"),
-        ("stated interval, high", "solar masses", ".1f"),
-        ("holds the truth", "", "s"),
-    ],
-    caption=f"A chirp of {TRUTH_MC:g} solar masses, of the size of the fitted signal, added to four stretches of strain without an event.",
-)
+#| echo: false
+result.table("injection")
 ```
 
 The injected chirp is recovered: the estimates lie within
-`{python} f"{inj_worst:.1f}"` solar masses of the truth. But the stated
-intervals, `{python} f"{inj_half:.1f}"` solar masses wide on average on each side, hold the truth in
-only `{python} f"{inj_covered}"` of `{python} f"{len(injections)}"` stretches, while the
-root-mean-square error of the estimates is `{python} f"{inj_rms:.1f}"` solar masses. The interval
+`{python} result["inj-worst"]` solar masses of the truth. But the stated
+intervals, `{python} result["inj-half"]` solar masses wide on average on each side, hold the truth in
+only `{python} result["inj-covered"]` of `{python} result["injections"]` stretches, while the
+root-mean-square error of the estimates is `{python} result["inj-rms"]` solar masses. The interval
 of the profile assumes independent noise, which the real noise is not, and here it
 is too small. The scatter of the injections points more directly at the uncertainty
 due to the noise, but four stretches are a demonstration and not an estimate: they
 show that the interval is too small, not how large it should be.
 
 ```{python}
+#| echo: false
+excerpt(experiment.band_spread)
+```
+
+```{python}
 #| label: band-spread
-gw_bands = [(35.0, 350.0), (35.0, 250.0), (30.0, 300.0)]
-gw_band_mc = []
-for band in gw_bands:
-    if band == BAND:
-        gw_band_mc.append(gw_fit.mc)
-        continue
-    whiten = {det: make_whitener(gw_strains[det], gw_seg[det], band) for det in gw_strains}
-    series = {det: whiten[det](gw_seg[det].strain) for det in gw_strains}
-    other = fit_chirp(
-        gw_time, series, whiten, gw_delays, window=WINDOW,
-        sigma=noise_sigma(series["H1"], gw_time, (0.3, 0.65)),
-        mc_grid=np.arange(26.0, 48.0, 2.0),
-    )
-    gw_band_mc.append(other.mc)
-gw_spread = (min(gw_band_mc), max(gw_band_mc))
-gw_half = (gw_fit.mc_high - gw_fit.mc_low) / 2
-gw_excess = gw_fit.mc - gw_published
+#| echo: false
+excerpt(experiment.run, region="band-spread")
 ```
 
 The noise is one source of uncertainty, and the choice of analysis is another.
 Repeating the fit with three bands, as the earlier lesson did, gives chirp masses
-from `{python} f"{gw_spread[0]:.0f}"` to `{python} f"{gw_spread[1]:.0f}"` solar masses.
+from `{python} result["spread-low"]` to `{python} result["spread-high"]` solar masses.
 
 [The fit of the Newtonian chirp to the measured strain gives a detector-frame
-chirp mass of `{python} f"{gw_fit.mc:.0f}"` solar masses with a profile interval of
-`{python} f"{gw_half:.1f}"` on each side. A known chirp of `{python} f"{TRUTH_MC:g}"` solar
+chirp mass of `{python} result["gw-mc-whole"]` solar masses with a profile interval of
+`{python} result["gw-half"]` on each side. A known chirp of `{python} result["truth-mc"]` solar
 masses added to four stretches of strain without an event is recovered with a
-root-mean-square error of `{python} f"{inj_rms:.1f}"` solar masses where the stated
-intervals averaged `{python} f"{inj_half:.1f}"`, and the choice of band moves the fitted
-value between `{python} f"{gw_spread[0]:.0f}"` and `{python} f"{gw_spread[1]:.0f}"`; the
-estimate is `{python} f"{gw_excess:.0f}"` solar masses above the published detector-frame
-value of `{python} f"{gw_published:.0f}"`.]{.claim type="experimentally-supported"
+root-mean-square error of `{python} result["inj-rms"]` solar masses where the stated
+intervals averaged `{python} result["inj-half"]`, and the choice of band moves the fitted
+value between `{python} result["spread-low"]` and `{python} result["spread-high"]`; the
+estimate is `{python} result["gw-excess"]` solar masses above the published detector-frame
+value of `{python} result["gw-published"]`.]{.claim type="experimentally-supported"
 scope="Newtonian-order chirp, window of 0.2 s before the event time, four off-source stretches, three bands, noise estimated from the file"
 evidence="injection band-spread primary-fit gw150914-strain"}
 The uncertainty to quote for the measured value is therefore not the interval
@@ -444,29 +362,20 @@ to the published value and which this lesson does not measure.
 #### What the fit cannot say
 
 The fit has two parameters, the chirp mass and the coalescence time, and the
-singular ratio of `{python} f"{gw_fit.fit.singular_ratio:.1e}"` of the helper shows how close to tied they
+singular ratio of `{python} result["gw-singular-ratio"]` of the helper shows how close to tied they
 are. A different identifiability limit sits in the model itself. At leading
 order the chirp depends on the masses only through $\mathcal{M}$, so every
 pair of masses with that chirp mass fits equally well:
 
 ```{python}
-#| label: degenerate-masses
-from pbc.mechanics import chirp
+#| echo: false
+excerpt(experiment.degenerate_masses)
+```
 
-mass_rows = []
-for q in (1.0, 0.8, 0.5, 0.25):
-    # m1 + m2 from the chirp mass at a given ratio q = m2 / m1.
-    total_mass = gw_fit.mc * (1 + q) ** (6 / 5) / q ** (3 / 5)
-    heavier = total_mass / (1 + q)
-    mass_rows.append((q, heavier, q * heavier, float(chirp.chirp_mass(heavier, q * heavier))))
-table(
-    mass_rows,
-    columns=[
-        ("mass ratio", "", ".2f"), ("heavier mass", "solar masses", ".0f"),
-        ("lighter mass", "solar masses", ".0f"), ("chirp mass", "solar masses", ".1f"),
-    ],
-    caption="Pairs of masses with the chirp mass of the fit: the leading-order chirp is the same for all of them.",
-)
+```{python}
+#| label: degenerate-masses
+#| echo: false
+result.table("degenerate-masses")
 ```
 
 The four pairs differ in the heavier mass by a large factor and give the same
@@ -533,23 +442,13 @@ with `mean_stderr`.
 
 ::: {.solution}
 ```{python}
-t_short = np.linspace(0.0, 0.8, 30)
-short = recover(damped, t_short, TRUTH, sigma=0.2, trials=100, seed=4, names=NAMES)
-rows = [
-    (label, rms / value, stated, rms, 100 * cover)
-    for label, value, cover, rms, stated in zip(short.names, short.truth, short.coverage, short.rms_error, short.mean_stderr, strict=True)
-]
-table(
-    rows,
-    columns=[
-        ("parameter", "", "s"),
-        ("scatter over value", "", ".2f"),
-        ("stated error", "", ".3f"),
-        ("scatter", "", ".3f"),
-        ("coverage", "%", ".0f"),
-    ],
-    caption="Fits of a record shorter than one decay time: the stated error against the scatter of 100 trials.",
-)
+#| echo: false
+excerpt(experiment.short_record)
+```
+
+```{python}
+#| echo: false
+result.table("short-record")
 ```
 
 The decay is the worst: in a record shorter than one decay time the
@@ -572,25 +471,25 @@ The combined model concatenates the two runs; each has its own $\omega$. Use
 
 ::: {.solution}
 ```{python}
-def two_runs(index, k, m):
-    first = np.cos(np.sqrt(k / m) * t)
-    second = np.cos(np.sqrt(k / (m + 0.5)) * t)
-    return np.where(index < t.size, first[np.minimum(index, t.size - 1).astype(int)], second[np.maximum(index - t.size, 0).astype(int)])
+#| echo: false
+excerpt(experiment.two_runs)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.joint_fit)
+```
 
-index = np.arange(2 * t.size, dtype=float)
-rng = np.random.default_rng(8)
-y_two = two_runs(index, K_TRUE, M_TRUE) + rng.normal(0.0, SIGMA, index.size)
-joint = fit_curve(two_runs, index, y_two, [4.5, 1.1], sigma=SIGMA, names=["k", "m"], bounds=([1e-3, 1e-3], [np.inf, np.inf]))
-print("identifiable:", joint.identifiable)
-print(f"k = {joint.value('k'):.2f} +/- {joint.stderr[0]:.2f}, m = {joint.value('m'):.2f} +/- {joint.stderr[1]:.2f}")
+```{python}
+#| echo: false
+print(result.output("joint-fit"), end="")
 ```
 
 Changing the experiment gave the fit what it lacked.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -601,11 +500,14 @@ reproduce_this(
         "src/pbc/data/gwinjection.py",
         "src/pbc/data/gwstrain.py",
         "src/pbc/mechanics/chirp.py",
+        "src/pbc/mechanics/experiments/inverse_physics.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_inverse.py",
         "tests/unit/test_gwstrain.py",
         "tests/unit/test_data_analysis.py",
+        "tests/unit/test_inverse_physics_experiment.py",
     ],
 )
 ```

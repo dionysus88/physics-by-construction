@@ -56,7 +56,7 @@ with open(os.environ['PBC_TEST_LOG'], 'a') as log:
     log.write('%(id)s\\n')
 ```
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| label: reproduce
@@ -92,10 +92,16 @@ def lesson_text(
     related: tuple[str, ...] = (),
 ) -> str:
     method = {"mechanics": "simulation", "agents-llm": "llm-agents", "lean": "lean"}
+    experiment = {
+        "mechanics": "pbc.mechanics.experiments.kinematics",
+        "agents-llm": "pbc.mechanics.experiments.agent_experiment",
+        "lean": "./scripts/check-lean.sh",
+    }
     return (
         f'---\ntitle: "{title or id.upper()}"\n'
         f"lesson:\n  id: {id}\n  strand: {strand}\n  order: {order}\n"
         f"  difficulty: 1\n  course: mechanics\n  methods: [{method[strand]}]\n"
+        f"  experiment: {experiment[strand]}\n"
         '  outcomes:\n    - "Do the first thing"\n    - "Do the second thing"\n'
         f"  related: [{', '.join(related)}]\n"
         f"  prerequisites:\n    lessons: [{', '.join(prerequisites)}]\n"
@@ -334,7 +340,13 @@ def test_every_page_names_the_commit_of_the_run_and_never_that_of_the_base(run: 
     for id, strand in (("a", "mechanics"), ("b", "mechanics"), ("c", "lean")):
         text = html(out, id, strand)
         assert f"{REPOSITORY}/tree/{RUN_COMMIT.sha}" in text
-        assert f"quarto render site/{directory(id, strand)}/index.qmd" in text
+        # The section ends in the experiment of the lesson, never in a render.
+        shown = re.sub(r"<[^>]+>", "", text)
+        if strand == "lean":
+            assert "lake build" in shown
+        else:
+            assert "python -m pbc.mechanics.experiments.kinematics results" in shown
+        assert "quarto render" not in shown
         # The page that is restored from the store was not executed.
     assert run.executed == ["b"]
 
@@ -350,7 +362,15 @@ def site_with_a_lesson(tmp_path: Path) -> Path:
 
 def region(kind: str = "header", page: str = "lessons/mechanics/02-b/index.qmd"):
     """A built page with the marker of one region, as pandoc writes it."""
-    payload = {"page": f"site/{page}", "code": [], "tests": []}
+    payload = {
+        "page": f"site/{page}",
+        "code": [],
+        "tests": [],
+        "experiment": "pbc.mechanics.experiments.kinematics",
+        "kind": "run",
+        "lean_modules": [],
+        "live": "",
+    }
     text = marker(kind, page, payload if kind == "reproduce" else {})
     attributes = re.search(r"\{\.pbc-context ([^}]*)\}", text).group(1)
     data = re.sub(r"pbc-", "data-pbc-", attributes)

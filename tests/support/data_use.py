@@ -181,7 +181,10 @@ def _targets(node: ast.AST) -> Iterator[str]:
 class DataUse:
     """The names of a lesson that are derived from data."""
 
-    def __init__(self, codes: Iterable[str]):
+    def __init__(self, codes: Iterable[str], inert: Iterable[str] = ()):
+        """``inert`` names never become data, as a module does not: the
+        record of a lesson's experiment receives every result, and what it
+        hands back is decided where it was recorded."""
         self._trees: list[ast.AST] = []
         self._unparsed: list[str] = []
         for code in codes:
@@ -207,6 +210,7 @@ class DataUse:
                         self._everything |= is_source(module)
                 elif dotted == "pbc" or dotted.startswith("pbc."):
                     self._aliases[name] = dotted
+        self._imported |= set(inert)
         self._derived: set[str] = set()
         # Names bound together (``fig, ax = ...``) share what happens to one.
         self._siblings: dict[str, set[str]] = {}

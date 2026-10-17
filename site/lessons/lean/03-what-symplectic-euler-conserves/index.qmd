@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-modified-energy
+  experiment: pbc.mechanics.experiments.symplectic_euler_conserved_energy
   prerequisites:
     lessons: [numerical-integrators, proving-what-the-simulation-showed]
     outside:
@@ -29,8 +30,10 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header
+from pbc.mechanics.experiments import symplectic_euler_conserved_energy as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -176,70 +179,43 @@ period. The cell measures the energy of the spring and the modified energy
 along the run.
 
 ```{python}
-import numpy as np
+#| echo: false
+excerpt(experiment, region="setup")
+```
 
-from pbc.authoring import table
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.integrators import symplectic_euler_step
-from pbc.mechanics.oscillator import angular_frequency, energy, spring
+```{python}
+#| echo: false
+excerpt(experiment.modified_energy)
+```
 
-mass = 0.5  # kg
-k = 2.0  # N/m
-period = 2 * np.pi / angular_frequency(mass, k)
-steps_per_period = 16
-dt = period / steps_per_period
-n_steps = 3 * steps_per_period
+```{python}
+#| echo: false
+excerpt(experiment.three_periods)
+```
 
-run = simulate(
-    State(t=0.0, x=1.0, v=0.0),
-    newton(mass, spring(k)),
-    dt,
-    n_steps,
-    step=symplectic_euler_step,
-)
-spring_energy = energy(run, mass, k)
-
-
-def modified_energy(trajectory):
-    """The energy of the spring minus k dt x v / 2, at every instant (J)."""
-    cross = np.sum(trajectory.x * trajectory.v, axis=1)
-    return energy(trajectory, mass, k) - 0.5 * k * dt * cross
-
-
-modified = modified_energy(run)
-drift = np.max(np.abs(modified / modified[0] - 1))
-swing = spring_energy.max() / spring_energy.min() - 1
-
-table(
-    [
-        ("energy of the spring", spring_energy.min(), spring_energy.max()),
-        ("modified energy", modified.min(), modified.max()),
-    ],
-    [("quantity", "", ""), ("smallest", "J", ".4f"), ("largest", "J", ".4f")],
-    "The energy of the spring and the modified energy over the run, symplectic Euler.",
-)
+```{python}
+#| echo: false
+result.table("three-periods")
 ```
 
 The modified energy is the same at every step to round-off (the relative
-change over the run is `{python} f"{drift:.0e}"`), while the energy of the
-spring swings by a relative `{python} f"{swing:.2f}"` between its smallest and
+change over the run is `{python} result["drift"]`), while the energy of the
+spring swings by a relative `{python} result["swing"]` between its smallest and
 largest value. That is the theorem on a run, and the swing is the cross term
 at work.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_modified_energy)
+```
+
+```{python}
 #| label: fig-modified-energy
+#| echo: false
 #| fig-cap: "The energy of the spring swings above and below its start under symplectic Euler, while the modified energy stays on the line."
 #| fig-alt: "Plot of energy in joules against time in seconds over three periods. One curve, the energy of the spring, oscillates up and down with the period of the motion. A second curve, the modified energy, is a flat horizontal line."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(run.t, spring_energy, color="#93003a", label="energy of the spring")
-ax.plot(run.t, modified, color="#00429d", linestyle="--", label="modified energy")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("energy (J)")
-ax.legend()
-plt.show()
+result.show("fig-modified-energy")
 ```
 
 ### The same quantity under explicit Euler
@@ -248,14 +224,13 @@ The theorem is about the rule of symplectic Euler. Under explicit Euler the
 same quantity, and the energy of the spring too, are not conserved.
 
 ```{python}
-from pbc.mechanics.dynamics import euler_step
+#| echo: false
+excerpt(experiment.explicit_euler)
+```
 
-explicit = simulate(
-    State(t=0.0, x=1.0, v=0.0), newton(mass, spring(k)), dt, n_steps, step=euler_step
-)
-explicit_modified = modified_energy(explicit)
-growth = explicit_modified[-1] / explicit_modified[0]
-print(f"modified energy after three periods of explicit Euler, relative to the start: {growth:.2f}")
+```{python}
+#| echo: false
+print(result.output("explicit-euler"), end="")
 ```
 
 The modified energy of explicit Euler grows with the energy. The quantity is
@@ -269,23 +244,13 @@ value of the modified energy over the unit circle in $(x, v)$ for several
 step sizes.
 
 ```{python}
-angles = np.linspace(0, 2 * np.pi, 3601)
-rows = []
-for per_period in (64, 16, 4, 3):
-    step = period / per_period
-    x, v = np.cos(angles), np.sin(angles)
-    value = 0.5 * mass * v**2 + 0.5 * k * x**2 - 0.5 * k * step * x * v
-    rows.append((per_period, k * step**2 / (4 * mass), value.min()))
+#| echo: false
+excerpt(experiment.positive_or_not)
+```
 
-table(
-    rows,
-    [
-        ("steps per period", "", "d"),
-        ("k dt^2 / 4m", "", ".3f"),
-        ("smallest modified energy on the circle", "J", ".4f"),
-    ],
-    "The smallest value of the modified energy on the unit circle in position and velocity, for four step sizes.",
-)
+```{python}
+#| echo: false
+result.table("positive-or-not")
 ```
 
 While the ratio $k\,\Delta t^2/4m$ is below one the minimum is positive, which
@@ -342,20 +307,18 @@ $v' = v - (k/m)\,x\,\Delta t$ turns the whole expression back into the
 quantity before the step. The cell checks it on a random state.
 
 ```{python}
-# the value of c, checked on a random state
-rng = np.random.default_rng(3)
-x0, v0 = rng.normal(size=2)
-v1 = v0 - k / mass * x0 * dt
-x1 = x0 + dt * v1
+#| echo: false
+excerpt(experiment.quantity)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.the_value_of_c)
+```
 
-def quantity(x, v, c):
-    return 0.5 * mass * v**2 + 0.5 * k * x**2 + c * x * v
-
-
-c = -0.5 * k * dt
-print(f"change of the quantity over a step with c = -k dt / 2: "
-      f"{quantity(x1, v1, c) - quantity(x0, v0, c):.1e}")
+```{python}
+#| echo: false
+print(result.output("the-value-of-c"), end="")
 ```
 :::
 :::
@@ -370,12 +333,18 @@ $\omega^2\Delta t^2 < 4$ reads $N > \pi$, so four steps per period are
 enough and three are not, however large $m$ and $k$ are.
 
 ```{python}
-print(f"pi = {np.pi:.4f}: the number of steps per period must exceed it")
+#| echo: false
+excerpt(experiment.fewest_steps)
+```
+
+```{python}
+#| echo: false
+print(result.output("fewest-steps"), end="")
 ```
 :::
 :::
 
-## Reproduce this
+## Check this proof {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -385,7 +354,13 @@ reproduce_this(
         "lean/PhysicsByConstruction/Mechanics/SymplecticEuler.lean",
         "src/pbc/mechanics/integrators.py",
         "src/pbc/mechanics/oscillator.py",
+        "src/pbc/mechanics/experiments/symplectic_euler_conserved_energy.py",
+        "src/pbc/experiment.py",
     ],
-    tests=["tests/unit/test_integrators.py", "tests/unit/test_oscillator.py"],
+    tests=[
+        "tests/unit/test_integrators.py",
+        "tests/unit/test_oscillator.py",
+        "tests/unit/test_symplectic_euler_conserved_energy_experiment.py",
+    ],
 )
 ```

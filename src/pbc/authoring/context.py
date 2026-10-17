@@ -2,7 +2,7 @@
 
 A lesson page shows things that do not follow from the lesson's own inputs: the
 header (previous and next lesson, prerequisites, related lessons, course, slot)
-reads the front matter of every lesson, and the "Reproduce this" section and
+reads the front matter of every lesson, and the last section (the experiment) and
 the code and Lean excerpts name the commit the page was built from. A page
 taken from the store of an earlier run would show the navigation and the commit
 of that run.
@@ -34,7 +34,7 @@ from pbc.authoring.website import PAGE_FILE, project_root
 
 MARKER_CLASS = "pbc-context"
 KINDS = ("header", "reproduce", "excerpt", "lean-excerpt", "lean-evidence")
-# A lesson page that has markers has a header and a "Reproduce this" section.
+# A lesson page that has markers has a header and a last section.
 REQUIRED = ("header", "reproduce")
 LESSONS_DIRECTORY = "lessons"
 SPLIT = "<!--pbc-context-split-->"

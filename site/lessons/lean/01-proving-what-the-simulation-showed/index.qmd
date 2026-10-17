@@ -21,6 +21,7 @@ lesson:
   related: []
   format: 2
   preview: fig-theorem-pipeline
+  experiment: pbc.mechanics.experiments.proving_what_the_simulation_showed
   prerequisites:
     lessons: [kinematics, harmonic-oscillator]
     outside:
@@ -33,8 +34,10 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header
+from pbc.mechanics.experiments import proving_what_the_simulation_showed as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -255,27 +258,17 @@ Between a statement on paper and a theorem on this page there are five steps,
 and the lesson depends on each:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_theorem_pipeline)
+```
+
+```{python}
 #| label: fig-theorem-pipeline
+#| echo: false
 #| fig-cap: "From a statement to a page. The hypotheses are part of the statement and are written out, not assumed. Lean accepts the file only if the proof builds, CI records the commit and the versions that built it, and the page reads its listings from that file. The machine checks the proof and the build record; the page is generated from that file and checked by the site build. Whether the statement is the right one to prove is a judgement of the author and the reader."
 #| fig-status: conceptual
 #| fig-alt: "A row of five boxes joined by arrows: statement, hypotheses, Lean, CI record, page. A bracket under the statement and hypotheses boxes is labelled judged by a person. A bracket under the Lean and CI record boxes is labelled checked by a machine."
-import matplotlib.pyplot as plt
-
-from pbc.authoring import diagrams
-
-fig, ax = diagrams.canvas(6.4, 2.6, (-0.2, 12.8), (-1.2, 2.4))
-steps = ("statement", "hypotheses", "Lean", "CI record", "page")
-for i, name in enumerate(steps):
-    x = 1.1 + 2.6 * i
-    diagrams.state_box(ax, (x, 1.2), name, width=2.0, height=0.9, colour=0 if i < 2 else 1)
-    if i:
-        diagrams.arrow(ax, (x - 2.6 + 1.05, 1.2), (x - 1.05, 1.2), colour="#57606a")
-diagrams.line(ax, [(0.0, 0.3), (0.0, 0.0), (4.8, 0.0), (4.8, 0.3)], colour=0)
-diagrams.text(ax, (2.4, -0.45), "judged by a person", colour=0)
-diagrams.line(ax, [(5.3, 0.3), (5.3, 0.0), (10.0, 0.0), (10.0, 0.3)], colour=1)
-diagrams.text(ax, (7.65, -0.45), "checked by a machine", colour=1)
-fig.tight_layout()
-plt.show()
+result.show("fig-theorem-pipeline")
 ```
 
 The diagram is a sketch of the process, and nothing in it is computed. It
@@ -356,45 +349,30 @@ at the level of round-off is shown as a bound, because another machine would
 print other digits there.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="throw")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.shown)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.exact_residual)
+```
+
+```{python}
 #| label: exact-residual
-import numpy as np
-
-from pbc.authoring import table
-from pbc.mechanics import kinematics
-
-FLOOR = 1e-12  # m^2/s^2, far above the round-off of this arithmetic
-
-
-def shown(value):
-    """A residual as a number, or as the bound it is below."""
-    return f"{value:.1e}" if abs(value) > FLOOR else f"below {FLOOR:.0e}"
-
-
-a = -9.81  # m/s^2
-start = kinematics.State(t=0.0, x=0.0, v=20.0)
-times = np.linspace(0.0, 4.0, 9)
-exact = kinematics.constant_acceleration(start, a, times)
-
-residual = exact.v**2 - start.v**2 - 2 * a * (exact.x - start.x)
-table(
-    [
-        (t, x, v, shown(r))
-        for t, x, v, r in zip(times, exact.x, exact.v, residual, strict=True)
-    ],
-    [
-        ("t", "s", ".2f"),
-        ("x", "m", ".2f"),
-        ("v", "m/s", ".2f"),
-        ("v^2 - v0^2 - 2 a (x - x0)", "m^2/s^2", ""),
-    ],
-    "The residual of Torricelli's identity along the exact motion of a throw upward at 20 m/s.",
-)
+#| echo: false
+result.table("exact-residual")
 ```
 
 [Along the exact motion the residual of the identity is zero to
 round-off.]{.claim type="numerically-verified" scope="one throw, nine instants,
 doubles" evidence="exact-residual"} Its largest absolute value in the
-table is `{python} shown(np.max(np.abs(residual)))` $\mathrm{m}^2/\mathrm{s}^2$, and the first row is
+table is `{python} result["exact-residual"]` $\mathrm{m}^2/\mathrm{s}^2$, and the first row is
 zero identically, as the theorem predicts for $t = 0$. The numbers are not the
 proof: they are the same statement, seen on a few of the infinitely many
 instants that the theorem covers.
@@ -430,21 +408,14 @@ $$
 The cell checks the derivation against the simulation.
 
 ```{python}
-#| label: euler-residual
-fall_dt = 0.25  # s
-fall = kinematics.simulate(start, lambda t: a, fall_dt, 16)
-euler_residual = fall.v**2 - start.v**2 - 2 * a * (fall.x - start.x)
-predicted = a**2 * fall.t * fall_dt
+#| echo: false
+excerpt(experiment.euler_residual)
+```
 
-table(
-    list(zip(fall.t, euler_residual, predicted, strict=True))[::4],
-    [
-        ("t", "s", ".2f"),
-        ("residual on the simulated motion", "m^2/s^2", ".3f"),
-        ("a^2 t dt", "m^2/s^2", ".3f"),
-    ],
-    "The residual of the identity on the explicit Euler fall, and the value the derivation gives, to three decimals.",
-)
+```{python}
+#| label: euler-residual
+#| echo: false
+result.table("euler-residual")
 ```
 
 [On the explicit Euler fall under constant acceleration, the residual of the
@@ -452,7 +423,7 @@ identity is $a^2\,t\,\Delta t$.]{.claim type="numerically-verified"
 scope="constant acceleration, explicit Euler, any step; derived above and
 recomputed here for one step size" evidence="euler-residual"} The two columns
 agree at every step of the run: the largest difference over all
-`{python} len(fall.t)` instants is `{python} shown(np.max(np.abs(euler_residual - predicted)))`
+`{python} result["instants"]` instants is `{python} result["euler-residual-gap"]`
 $\mathrm{m}^2/\mathrm{s}^2$.
 
 A theorem has the hypotheses it states and not the ones that are
@@ -468,70 +439,41 @@ Euler for three periods and compares the measured energy after $n$ steps with
 the conclusion of `euler_energy_after_steps`, $(1 + k\,\Delta t^2/m)^n E_0$.
 
 ```{python}
-#| label: energy-factor
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.oscillator import angular_frequency, energy, spring
-
-mass = 0.5  # kg
-k = 2.0  # N/m
-period = 2 * np.pi / angular_frequency(mass, k)
-released = State(t=0.0, x=1.0, v=0.0)
-oscillator = newton(mass, spring(k))
-
-steps_per_period = 64
-n_steps = 3 * steps_per_period
-dt = period / steps_per_period
-run = simulate(released, oscillator, dt, n_steps)
-measured = energy(run, mass, k)
-factor = 1 + k / mass * dt**2
-proved = factor ** np.arange(n_steps + 1) * measured[0]
-
-relative = np.abs(measured / proved - 1)
-rows = [
-    (n, measured[n], proved[n])
-    for n in range(0, n_steps + 1, steps_per_period)
-]
-table(
-    rows,
-    [
-        ("steps", "", "d"),
-        ("energy measured", "J", ".4f"),
-        ("energy from the theorem", "J", ".4f"),
-    ],
-    "The energy of the simulated oscillator after whole periods, and the energy the theorem predicts, to four decimals.",
-)
+#| echo: false
+excerpt(experiment, region="oscillator")
 ```
 
-The factor per step is `{python} f"{factor:.6f}"`. The measured energy and the
+```{python}
+#| echo: false
+excerpt(experiment.energy_factor)
+```
+
+```{python}
+#| label: energy-factor
+#| echo: false
+result.table("energy-factor")
+```
+
+The factor per step is `{python} result["factor"]`. The measured energy and the
 predicted one agree at every step of the run, not only in the rows shown: the
-largest relative difference is `{python} shown(np.max(relative))`.
+largest relative difference is `{python} result["relative"]`.
 
 [The energy of the simulated oscillator follows the factor of the theorem at
 every step.]{.claim type="numerically-verified" scope="one oscillator, one step
 size, doubles" evidence="energy-factor"}
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_proved_energy_growth)
+```
+
+```{python}
 #| label: fig-proved-energy-growth
+#| echo: false
 #| fig-cap: "The simulated energy (solid) and the energy the theorem predicts (dashed) lie on each other for three time steps; the coarser the step, the faster the energy grows."
 #| fig-alt: "Plot of the energy divided by the initial energy against time in seconds, with a logarithmic vertical axis. Three solid curves rise from the same point at time zero, one for each of three time steps; the coarsest rises steepest. Over each solid curve lies a dashed curve of the prediction of the theorem, so that the two cannot be told apart."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for n, colour in ((32, "#93003a"), (64, "#00429d"), (128, "#555555")):
-    step = period / n
-    steps = 3 * n
-    simulated = energy(simulate(released, oscillator, step, steps), mass, k)
-    theorem = (1 + k / mass * step**2) ** np.arange(steps + 1) * simulated[0]
-    time = step * np.arange(steps + 1)
-    ax.semilogy(time, simulated / simulated[0], color=colour, linestyle="-", linewidth=3,
-                label=f"simulated, {n} steps per period")
-    ax.semilogy(time, theorem / simulated[0], color="white", linestyle="--", linewidth=1.2,
-                label="_nolegend_")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("energy / initial energy")
-ax.legend(loc="upper left")
-plt.show()
+result.show("fig-proved-energy-growth")
 ```
 
 The simulated curves lie on the predicted ones, which were computed from the
@@ -620,32 +562,24 @@ not `v`. The theorem says nothing about the rule, and the ratio is not
 constant, as the cell shows: it depends on the state.
 
 ```{python}
+#| echo: false
+excerpt(experiment.symplectic_step)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.spring_energy)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.symplectic_ratios)
+```
+
+```{python}
 #| label: symplectic-ratios
-def symplectic_step(x, v):
-    v_new = v - k / mass * x * dt
-    return x + dt * v_new, v_new
-
-
-def spring_energy(x, v):
-    return 0.5 * mass * v**2 + 0.5 * k * x**2
-
-
-x, v = 1.0, 0.0
-ratios = []
-for _ in range(steps_per_period):
-    x_new, v_new = symplectic_step(x, v)
-    ratios.append(spring_energy(x_new, v_new) / spring_energy(x, v))
-    x, v = x_new, v_new
-
-table(
-    [
-        ("symplectic Euler, smallest over one period", min(ratios)),
-        ("symplectic Euler, largest over one period", max(ratios)),
-        ("explicit Euler, at every step", factor),
-    ],
-    [("rule", "", ""), ("energy after a step / energy before", "", ".4f")],
-    "The ratio of the energies after and before a step for the two rules, to four decimals.",
-)
+#| echo: false
+result.table("symplectic-ratios")
 ```
 
 The ratio swings above and below one, so the energy of this rule oscillates
@@ -684,7 +618,7 @@ the number of steps, as in `euler_energy_after_steps`.
 :::
 :::
 
-## Reproduce this
+## Check this proof {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -694,7 +628,13 @@ reproduce_this(
         "lean/PhysicsByConstruction/Mechanics/EulerOscillator.lean",
         "src/pbc/mechanics/kinematics.py",
         "src/pbc/mechanics/oscillator.py",
+        "src/pbc/mechanics/experiments/proving_what_the_simulation_showed.py",
+        "src/pbc/experiment.py",
     ],
-    tests=["tests/unit/test_kinematics.py", "tests/unit/test_oscillator.py"],
+    tests=[
+        "tests/unit/test_kinematics.py",
+        "tests/unit/test_oscillator.py",
+        "tests/unit/test_proving_what_the_simulation_showed_experiment.py",
+    ],
 )
 ```

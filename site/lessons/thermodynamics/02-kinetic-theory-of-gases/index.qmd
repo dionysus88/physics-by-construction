@@ -19,6 +19,7 @@ lesson:
   related: [random-walks-and-diffusion]
   format: 2
   preview: fig-speed-distribution
+  experiment: pbc.thermodynamics.experiments.kinetic_theory_of_gases
   prerequisites:
     lessons: [particles-in-a-box]
     outside:
@@ -29,8 +30,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.thermodynamics import kinetic
+from pbc.thermodynamics.experiments import kinetic_theory_of_gases as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -151,9 +155,6 @@ change.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.thermodynamics import kinetic
-
 excerpt(kinetic.speed_cdf)
 ```
 
@@ -172,13 +173,6 @@ excerpt(kinetic.fractions_below)
 
 ## Worked examples
 
-```{python}
-#| echo: false
-import numpy as np
-
-from pbc.authoring import table
-```
-
 ### The speeds of the relaxed gas at the quantiles of the model
 
 Six runs of the gas of the first lesson, each from its own seed, relaxed and
@@ -186,38 +180,19 @@ then measured. For each run the quantile speeds are computed at that run's
 temperature.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.quantile_check)
+```
+
+```{python}
 #| label: quantile-check
-from pbc.abm.gas import mean_and_error, measure
-from pbc.thermodynamics.kinetic import fractions_below, speed_quantile
-
-MASS = 1.0  # the mass of a disc in pbc.abm.gas, kg
-SEEDS = range(6)
-PROBABILITIES = np.array([0.1, 0.25, 0.5, 0.75, 0.9])
-
-measurements = [measure(seed) for seed in SEEDS]
-fractions = np.array(
-    [
-        fractions_below(m.speeds, speed_quantile(PROBABILITIES, m.kt, MASS))
-        for m in measurements
-    ]
-)
-means = fractions.mean(axis=0)
-errors = fractions.std(axis=0, ddof=1) / np.sqrt(len(measurements))
-distances = np.abs(means - PROBABILITIES) / errors
-
-table(
-    [
-        (p, mean, error, distance)
-        for p, mean, error, distance in zip(PROBABILITIES, means, errors, distances)
-    ],
-    [
-        ("predicted fraction", "", ".2f"),
-        ("measured fraction", "", ".3f"),
-        ("standard error", "", ".3f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "The fraction of the speeds below the quantile speed of the Maxwell distribution at the temperature of each run, averaged over six runs, at five predicted fractions.",
-)
+#| echo: false
+result.table("quantile-check")
 ```
 
 [The speeds of the relaxed gas follow the Maxwell distribution at its own
@@ -225,7 +200,7 @@ temperature: the measured fraction below each of five quantile speeds agrees wit
 the predicted fraction within four standard errors.]{.claim
 type="numerically-verified" scope="a dilute gas of hard discs in two dimensions,
 six seeds, five quantiles, four standard errors" evidence="quantile-check"}
-The largest difference is `{python} f"{distances.max():.1f}"` standard errors, over
+The largest difference is `{python} result["largest-distance"]` standard errors, over
 five points of the curve, from the tenth to the ninetieth percentile.
 
 ### A wrong temperature is seen
@@ -235,60 +210,35 @@ with the distribution at a temperature that is ten per cent too high, the kind o
 error a mistaken definition of the temperature would make.
 
 ```{python}
-#| label: wrong-temperature
-SCALE = 1.1
-wrong = np.array(
-    [
-        fractions_below(m.speeds, speed_quantile(PROBABILITIES, SCALE * m.kt, MASS))
-        for m in measurements
-    ]
-)
-wrong_means = wrong.mean(axis=0)
-wrong_errors = wrong.std(axis=0, ddof=1) / np.sqrt(len(measurements))
-wrong_distances = np.abs(wrong_means - PROBABILITIES) / wrong_errors
-
-table(
-    [
-        (p, mean, distance)
-        for p, mean, distance in zip(PROBABILITIES, wrong_means, wrong_distances)
-    ],
-    [
-        ("predicted fraction", "", ".2f"),
-        ("measured fraction", "", ".3f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "The same comparison against the distribution at a temperature ten per cent too high.",
-)
+#| echo: false
+excerpt(experiment.wrong_temperature)
 ```
 
-The wrong curve fails at `{python} f"{int((wrong_distances > 4.0).sum())}"` of the
-five points, by up to `{python} f"{wrong_distances.max():.0f}"` standard errors, so
+```{python}
+#| label: wrong-temperature
+#| echo: false
+result.table("wrong-temperature")
+```
+
+The wrong curve fails at `{python} result["wrong-failures"]` of the
+five points, by up to `{python} result["wrong-largest"]` standard errors, so
 the check has the power to tell a ten per cent error in the temperature from the
 right value. A smaller error may not be seen.
 
 ### The curve and the mean speed
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_speed_distribution)
+```
+
+```{python}
 #| label: fig-speed-distribution
+#| echo: false
 #| fig-cap: "The distribution function of the measured speeds follows the Maxwell distribution function at the temperature of the gas; the two curves are close all along, and the checks above say how close."
 #| fig-alt: "Line plot of the fraction of discs slower than a speed against the speed in metres per second. A solid curve of the measured speeds rises from zero in an S shape towards one, and a dashed curve of the Maxwell distribution function lies close along it."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-from pbc.thermodynamics.kinetic import speed_cdf
-
-pooled = np.concatenate([m.speeds.ravel() for m in measurements])
-kt = float(np.mean([m.kt for m in measurements]))
-v = np.linspace(0.0, pooled.max(), 300)
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(v, fractions_below(pooled, v), color="#00429d", label="gas")
-ax.plot(v, speed_cdf(v, kt, MASS), color="#93003a", linestyle="--",
-        label="Maxwell distribution")
-ax.set_xlabel("speed (m/s)")
-ax.set_ylabel("fraction of discs slower")
-ax.legend()
-plt.show()
+result.show("fig-speed-distribution")
 ```
 
 The pooled speeds of the six runs are used for the picture only, which the fifth
@@ -296,38 +246,19 @@ assumption allows for a picture and not for a standard error. The figure and the
 table agree: the gas follows the curve.
 
 ```{python}
+#| echo: false
+excerpt(experiment.mean_speed_check)
+```
+
+```{python}
 #| label: mean-speed-check
-from pbc.thermodynamics.kinetic import mean_speed, most_probable_speed
-
-ratios = np.array(
-    [np.mean(m.speeds) / mean_speed(m.kt, MASS) for m in measurements]
-)
-ratio_mean, ratio_error = mean_and_error(ratios)
-
-table(
-    [
-        (
-            mean_speed(kt, MASS),
-            most_probable_speed(kt, MASS),
-            ratio_mean,
-            ratio_error,
-            abs(ratio_mean - 1.0) / ratio_error,
-        )
-    ],
-    [
-        ("mean speed", "m/s", ".3f"),
-        ("most probable speed", "m/s", ".3f"),
-        ("measured mean / predicted mean", "", ".4f"),
-        ("standard error", "", ".4f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "The two characteristic speeds at the mean temperature of the six runs, and the ratio of the measured mean speed to the predicted one.",
-)
+#| echo: false
+result.table("mean-speed-check")
 ```
 
 The mean speed is larger than the most probable speed, as the long tail of the
 density requires, and the measured mean agrees with the predicted one: their ratio
-is `{python} f"{ratio_mean:.4f}"`, `{python} f"{abs(ratio_mean - 1.0) / ratio_error:.1f}"`
+is `{python} result["ratio-mean"]`, `{python} result["ratio-distance"]`
 standard errors from one.
 
 ## Limits {#limits}
@@ -382,19 +313,13 @@ rises by a factor of four. The shape of the distribution at the new temperature 
 the same curve in units of $\sqrt{k_BT/m}$.
 
 ```{python}
-from pbc.abm.gas import SPEED
+#| echo: false
+excerpt(experiment.hot_gas)
+```
 
-hot = measure(0, speed=2.0 * SPEED)
-cold = measurements[0]
-median = speed_quantile(np.array([0.5]), hot.kt, MASS)
-table(
-    [(hot.kt / cold.kt, fractions_below(hot.speeds, median)[0])],
-    [
-        ("temperature ratio", "", ".2f"),
-        ("fraction below the predicted median", "", ".3f"),
-    ],
-    "The temperature of the hot gas in units of that of the first gas, and the fraction of its speeds below the median of the model at its own temperature.",
-)
+```{python}
+#| echo: false
+result.table("hot-gas")
 ```
 
 One seed is one run, so the fraction differs from one half by about the spread
@@ -411,18 +336,18 @@ Without relaxation the speeds are still the narrow band of the start, so the
 fractions below the quantile speeds are far from the predicted ones.
 
 ```{python}
-start = measure(0, relax=0.0, duration=0.5)
-raw = fractions_below(start.speeds, speed_quantile(PROBABILITIES, start.kt, MASS))
-table(
-    list(zip(PROBABILITIES, raw)),
-    [("predicted fraction", "", ".2f"), ("measured fraction", "", ".3f")],
-    "The fraction of the speeds below each quantile of the model, for a gas measured during its first half second.",
-)
+#| echo: false
+excerpt(experiment.before_relaxation)
+```
+
+```{python}
+#| echo: false
+result.table("before-relaxation")
 ```
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -430,10 +355,13 @@ reproduce_this(
     code=[
         "src/pbc/thermodynamics/kinetic.py",
         "src/pbc/abm/gas.py",
+        "src/pbc/thermodynamics/experiments/kinetic_theory_of_gases.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_thermodynamics.py",
         "tests/unit/test_gas.py",
+        "tests/unit/test_kinetic_theory_of_gases_experiment.py",
     ],
 )
 ```

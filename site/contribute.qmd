@@ -13,7 +13,7 @@ Open an issue in the
 [repository on GitHub](https://github.com/taspinar/physics-by-construction/issues).
 Say which page it is on, quote the sentence, number, or figure that is wrong,
 and say what you expected. If a listing does not run on your machine, add
-your operating system and the output of `./scripts/preflight.sh`.
+your operating system, the output of `uv --version`, and the command that failed with its output.
 
 To correct a scientific statement, use the **Scientific correction** form: it
 asks for the page, the statement, the correction, a source with its licence,

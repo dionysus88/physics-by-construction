@@ -26,6 +26,9 @@ from pbc.authoring import selection as selecting
 
 CHECK = "site-checks-reproduction"
 REPRODUCTION = "test_reproduce_commands_regenerate_the_page_within_the_time_budget"
+# The experiment check of ADR 016 decision 4, in the same check and under the
+# same selection.
+EXPERIMENT = "test_the_experiment_regenerates_the_figures_and_numbers_of_the_page"
 
 
 @pytest.fixture(scope="module")
@@ -111,7 +114,11 @@ def test_a_run_without_a_selection_that_selects_no_test_still_fails(clone: Path)
     assert "no reproduction to run" not in result.stdout
 
 
-def test_a_selection_of_one_lesson_runs_its_reproduction(clone: Path):
+def test_a_selection_of_one_lesson_runs_its_reproduction_and_its_experiment(
+    clone: Path,
+):
+    # A run with a base checks the experiments of the lessons it executed
+    # and of no other.
     lesson = lessons()[0]
     select(clone, [lesson])
 
@@ -120,7 +127,22 @@ def test_a_selection_of_one_lesson_runs_its_reproduction(clone: Path):
     assert result.returncode == 0, output(result)
     collected = [line for line in result.stdout.splitlines() if "::" in line]
     page = Path(lesson).relative_to(SITE_SOURCE.name).as_posix() + "/index.html"
-    assert collected == [f"tests/e2e/test_lessons.py::{REPRODUCTION}[{page}]"]
+    assert collected == [
+        f"tests/e2e/test_lessons.py::{REPRODUCTION}[{page}]",
+        f"tests/e2e/test_lessons.py::{EXPERIMENT}[{page}]",
+    ]
+
+
+def test_a_run_without_a_selection_checks_the_experiment_of_every_lesson(
+    clone: Path,
+):
+    select(clone, None)
+
+    result = run_check(clone, "--collect-only", "-q", "-k", EXPERIMENT)
+
+    assert result.returncode == 0, output(result)
+    collected = [line for line in result.stdout.splitlines() if "::" in line]
+    assert len(collected) == len(lessons())
 
 
 def test_a_selection_of_one_lesson_fails_when_it_does_not_reproduce(clone: Path):
@@ -131,5 +153,6 @@ def test_a_selection_of_one_lesson_fails_when_it_does_not_reproduce(clone: Path)
     result = run_check(clone)
 
     assert result.returncode == pytest.ExitCode.TESTS_FAILED, output(result)
-    assert "1 error" in result.stdout or "1 failed" in result.stdout
+    # Its reproduction and its experiment, and nothing else.
+    assert "2 errors" in result.stdout or "2 failed" in result.stdout
     assert "no reproduction to run" not in result.stdout

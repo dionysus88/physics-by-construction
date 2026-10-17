@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-doppler
+  experiment: pbc.waves.experiments.sound_and_the_doppler_effect
   prerequisites:
     lessons: [wave-equation, interference-and-resonance]
     outside:
@@ -27,10 +28,11 @@ lesson:
 
 ```{python}
 #| echo: false
-import numpy as np
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.waves import modes, sound
+from pbc.waves.experiments import sound_and_the_doppler_effect as experiment
 
-from pbc.authoring import lesson_header
-
+result = experiment.run()
 lesson_header()
 ```
 
@@ -178,9 +180,6 @@ of emission is `emission_time`.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.waves import modes, sound
-
 excerpt(sound.pipe_frequency)
 ```
 
@@ -196,22 +195,6 @@ excerpt(modes.measured_frequency)
 
 ## Worked examples
 
-```{python}
-#| echo: false
-import matplotlib.pyplot as plt
-
-from pbc.authoring import table
-from pbc.waves.modes import measured_frequency, spectrum_peaks, triangle
-from pbc.waves.sound import (
-    SPEED_OF_SOUND,
-    observer_shift,
-    pipe_frequency,
-    received_signal,
-    source_shift,
-)
-from pbc.waves.wave import grid, solve
-```
-
 ### The notes of an open and of a closed pipe
 
 The pipe is [0.8 m]{.given} long. The pressure inside it starts as a
@@ -223,49 +206,19 @@ that is open at both ends and once for one closed at its right end. The grid has
 and the Courant number is one half.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.pipe_run)
+```
+
+```{python}
 #| label: pipe-run
-LENGTH = 0.8  # pipe length, m
-SOUND = SPEED_OF_SOUND  # speed of sound, m/s
-cells = 160
-dx = LENGTH / cells
-dt = 0.5 * dx / SOUND
-xs = grid(LENGTH, cells)
-pulse = triangle(xs, length=LENGTH, at=0.2 * LENGTH)
-steps = round(0.4 / dt)
-stride = 4  # the field is recorded every fourth step
-PIPE_TOLERANCE = 1e-3  # a chosen tolerance on the relative difference
-
-pipes = {
-    "open at both ends": dict(left="fixed", right="fixed", closed=False, probe=0.45),
-    "closed at the right end": dict(left="fixed", right="free", closed=True, probe=0.6),
-}
-pipe_rows = []
-worst_pipe = 0.0
-for name, setup in pipes.items():
-    result = solve(
-        pulse, np.zeros_like(xs),
-        c=SOUND, dx=dx, dt=dt, n_steps=steps, every=stride,
-        left=setup["left"], right=setup["right"],
-    )
-    signal = result.u[:, round(setup["probe"] * cells)]
-    found = spectrum_peaks(signal, stride * dt, count=3, floor=0.05)
-    for n, f in zip((1, 2, 3), found):
-        expected = pipe_frequency(n, length=LENGTH, c=SOUND, closed_end=setup["closed"])
-        worst_pipe = max(worst_pipe, abs(f / expected - 1.0))
-        pipe_rows.append((name, n, expected, f, (f / expected - 1.0) * 100))
-assert worst_pipe < PIPE_TOLERANCE, "a resonance is not where the formula puts it"
-
-table(
-    pipe_rows,
-    [
-        ("pipe", "", ""),
-        ("resonance", "", "d"),
-        ("analytic", "Hz", ".1f"),
-        ("simulated", "Hz", ".1f"),
-        ("difference", "%", ".4f"),
-    ],
-    "The first three resonances of a pipe of the stated length, open at both ends and closed at one, against the analytic frequencies, and the percentage difference.",
-)
+#| echo: false
+result.table("pipe-run")
 ```
 
 [The first three resonances of a simulated pipe agree with
@@ -273,11 +226,11 @@ $n c/2L$ for the pipe open at both ends and with $(2n-1)c/4L$ for the pipe
 closed at one end.]{.claim type="numerically-verified"
 scope="a uniform pipe, ideal ends, one hundred sixty cells, a record of four tenths of a second"
 evidence="pipe-run"}
-The largest difference is `{python} f"{worst_pipe * 100:.4f}"` per cent, inside the
-chosen tolerance of `{python} f"{PIPE_TOLERANCE * 100:.1f}"` per cent. The lowest
-resonance of the closed pipe is `{python} f"{pipe_rows[3][3]:.1f}"` Hz, half that of
-the open one at `{python} f"{pipe_rows[0][3]:.1f}"` Hz, and its next resonance is
-`{python} f"{pipe_rows[4][3] / pipe_rows[3][3]:.2f}"` times the lowest, the odd
+The largest difference is `{python} result["worst-pipe"]` per cent, inside the
+chosen tolerance of `{python} result["pipe-tolerance"]` per cent. The lowest
+resonance of the closed pipe is `{python} result["closed-lowest"]` Hz, half that of
+the open one at `{python} result["open-lowest"]` Hz, and its next resonance is
+`{python} result["closed-ratio"]` times the lowest, the odd
 multiple that a closed pipe has in place of the even one. The data are simulated, and the
 check is the analytic frequency.
 
@@ -289,64 +242,28 @@ and the largest pressure anywhere in the pipe during that time is
 recorded, for many values of $\Omega$. The grid has forty cells.
 
 ```{python}
-#| label: sweep-run
-cells = 40
-dx = LENGTH / cells
-dt = 0.5 * dx / SOUND
-xs = grid(LENGTH, cells)
-steps = round(0.1 / dt)
-push = np.zeros_like(xs)
-push[-2] = 1e6  # a push on the node next to the closed end, in m / s^2
-frequencies = np.arange(60.0, 820.0, 8.0)
-response = []
-for f in frequencies:
-    omega = 2 * np.pi * f
-    driven = solve(
-        np.zeros_like(xs), np.zeros_like(xs),
-        c=SOUND, dx=dx, dt=dt, n_steps=steps, every=5,
-        left="fixed", right="free",
-        forcing=lambda t: push * np.cos(omega * t),
-    )
-    response.append(np.max(np.abs(driven.u)))
-response = np.array(response)
-local = [
-    i for i in range(1, len(response) - 1)
-    if response[i] > response[i - 1]
-    and response[i] >= response[i + 1]
-    and response[i] > 0.05 * response.max()  # a peak, not a ripple
-]
-peak_frequencies = frequencies[local][:4]
-closed = np.array([
-    pipe_frequency(n, length=LENGTH, c=SOUND, closed_end=True) for n in (1, 2, 3, 4)
-])
-SPACING = float(frequencies[1] - frequencies[0])
-assert len(peak_frequencies) == 4
-assert np.all(np.abs(peak_frequencies - closed) <= SPACING), "a peak is off a resonance"
+#| echo: false
+excerpt(experiment.sweep_run)
+```
 
-table(
-    [(n, a, p, p - a) for n, a, p in zip((1, 2, 3, 4), closed, peak_frequencies)],
-    [
-        ("resonance", "", "d"),
-        ("analytic", "Hz", ".1f"),
-        ("peak of the sweep", "Hz", ".0f"),
-        ("difference", "Hz", ".1f"),
-    ],
-    "The four peaks of the response of the closed pipe to a sweep of the driving frequency in steps of the stated spacing, against the analytic resonances.",
-)
+```{python}
+#| label: sweep-run
+#| echo: false
+result.table("sweep-run")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_sweep)
 ```
 
 ```{python}
 #| label: fig-sweep
+#| echo: false
 #| fig-cap: "The largest pressure in a closed pipe during a tenth of a second of driving, against the driving frequency. Peaks stand at the analytic resonances, marked by dashed lines, and the response between them is small."
 #| fig-alt: "Line plot of the response against driving frequency from sixty to nine hundred hertz. Four sharp peaks rise from a low background, near one hundred, three hundred twenty, five hundred forty and seven hundred fifty hertz. Dashed vertical lines mark the analytic resonances through the tops of the peaks."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(frequencies, response, color="#00429d")
-for f in closed:
-    ax.axvline(f, color="#93003a", linestyle="--", linewidth=0.8)
-ax.set_xlabel("driving frequency (Hz)")
-ax.set_ylabel("largest pressure in the pipe (arbitrary units)")
-plt.show()
+result.show("fig-sweep")
 ```
 
 [A pipe driven at a range of frequencies answers at its resonances, the
@@ -354,9 +271,9 @@ frequencies of its modes.]{.claim type="numerically-verified"
 scope="a closed pipe, forty cells, a tenth of a second of driving, steps of the stated spacing"
 evidence="sweep-run"}
 Each of the four peaks of the sweep lies within one step of the sweep,
-`{python} f"{SPACING:.0f}"` Hz, of the analytic resonance, which is all that a
+`{python} result["spacing"]` Hz, of the analytic resonance, which is all that a
 sweep with steps of that size can say. The width of a peak is set by the
-length of the drive, `{python} f"{1 / 0.1:.0f}"` Hz, since a driver that acts for
+length of the drive, `{python} result["drive-resolution"]` Hz, since a driver that acts for
 a time $T$ cannot tell two frequencies apart by less than about $1/T$; in a real
 pipe the loss sets the width instead.
 
@@ -371,79 +288,53 @@ a half to two seconds after the start, which holds hundreds of periods, and
 the frequency is counted from the zero crossings.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="doppler")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.at_rest)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.source_moving)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.observer_moving)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.heard)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.doppler_run)
+```
+
+```{python}
 #| label: doppler-run
-F0 = 440.0  # frequency of the tone, Hz
-START = 300.0  # starting distance, m
-times = np.linspace(1.5, 2.0, 100_000)
+#| echo: false
+result.table("doppler-run")
+```
 
-
-def at_rest(t):
-    return np.zeros_like(t)
-
-
-def source_moving(speed):
-    return lambda t: -START + speed * t
-
-
-def observer_moving(speed):
-    return lambda t: START - speed * t
-
-
-def heard(source, observer):
-    return measured_frequency(
-        received_signal(times, F0, source, observer, SOUND), times
-    )
-
-
-speeds = np.array([-120.0, -60.0, -30.0, 30.0, 60.0, 120.0])
-from_source = np.array([heard(source_moving(v), at_rest) for v in speeds])
-from_observer = np.array([heard(at_rest, observer_moving(v)) for v in speeds])
-formula_source = np.array([source_shift(F0, SOUND, v) for v in speeds])
-formula_observer = np.array([observer_shift(F0, SOUND, v) for v in speeds])
-DOPPLER_TOLERANCE = 1e-4  # a chosen tolerance on the relative difference
-gap_source = np.max(np.abs(from_source / formula_source - 1.0))
-gap_observer = np.max(np.abs(from_observer / formula_observer - 1.0))
-assert max(gap_source, gap_observer) < DOPPLER_TOLERANCE
-
-table(
-    [
-        (v, a, b, c_, d)
-        for v, a, b, c_, d in zip(
-            speeds, from_source, formula_source, from_observer, formula_observer
-        )
-    ],
-    [
-        ("speed towards", "m/s", ".0f"),
-        ("moving source, computed", "Hz", ".2f"),
-        ("moving source, formula", "Hz", ".2f"),
-        ("moving listener, computed", "Hz", ".2f"),
-        ("moving listener, formula", "Hz", ".2f"),
-    ],
-    "The frequency heard from a tone of the stated frequency, for a source and for a listener that move at the stated speed, towards (positive) or away (negative), computed from the moment of emission and from the formula.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.draw_doppler)
 ```
 
 ```{python}
 #| label: fig-doppler
+#| echo: false
 #| fig-cap: "The ratio of the heard frequency to the emitted one against the speed of the source (blue) or of the listener (red) as a fraction of the speed of sound. The curves are the formulas and the markers are computed from the moment of emission. They coincide at small speeds and part at large ones."
 #| fig-alt: "Plot of the frequency ratio against the speed as a fraction of the speed of sound, from minus point four to plus point four. Two rising curves, one for the source that bends upward faster at positive speed, one for the listener that is a straight line. Markers lie on both curves. A dotted line shows the first-order straight line, one plus the speed fraction, tangent to both at zero."
 #| fig-status: simulated
-v = np.linspace(-0.4, 0.4, 161) * SOUND
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(v / SOUND, [source_shift(F0, SOUND, s) / F0 for s in v],
-        color="#00429d", label="source: formula")
-ax.plot(v / SOUND, [observer_shift(F0, SOUND, s) / F0 for s in v],
-        color="#93003a", label="listener: formula")
-ax.plot(v / SOUND, 1 + v / SOUND, color="gray", linestyle=":",
-        label="first order")
-ax.plot(speeds / SOUND, from_source / F0, "o", color="#00429d",
-        label="source: computed")
-ax.plot(speeds / SOUND, from_observer / F0, "s", color="#93003a",
-        label="listener: computed")
-ax.set_xlabel("speed towards, in units of the speed of sound")
-ax.set_ylabel("heard frequency over emitted")
-ax.legend(fontsize=8)
-plt.show()
+result.show("fig-doppler")
 ```
 
 [The frequency heard from a moving source follows $f_0 c/(c - v_s)$, and the
@@ -452,10 +343,10 @@ relative difference below the tolerance.]{.claim type="numerically-verified"
 scope="a tone, motion on a line through still air at speeds up to a third of the speed of sound"
 evidence="doppler-run"}
 The largest relative difference between the computed and the formula value is
-`{python} f"{max(gap_source, gap_observer):.1e}"`, inside the chosen tolerance of
-`{python} f"{DOPPLER_TOLERANCE:.0e}"`. At the largest speed shown the two cases differ:
-the source gives `{python} f"{from_source[-1]:.1f}"` Hz and the listener
-`{python} f"{from_observer[-1]:.1f}"` Hz, though the relative speed of the
+`{python} result["doppler-gap"]`, inside the chosen tolerance of
+`{python} result["doppler-tolerance"]`. At the largest speed shown the two cases differ:
+the source gives `{python} result["source-fastest"]` Hz and the listener
+`{python} result["observer-fastest"]` Hz, though the relative speed of the
 two is the same. The medium
 decides which of the two moves. At small speeds the two curves and the straight
 line of the first order are the same within the thickness of the line, as the
@@ -539,17 +430,15 @@ Use the formula for a moving source, with a negative speed for a motion away.
 
 ::: {.solution}
 ```{python}
-siren = 700.0
-approaching = source_shift(siren, SOUND, 25.0)
-receding = source_shift(siren, SOUND, -25.0)
-drop = approaching - receding
+#| echo: false
+excerpt(experiment.siren)
 ```
 
-The pedestrian hears `{python} f"{approaching:.1f}"` Hz as the ambulance
-approaches and `{python} f"{receding:.1f}"` Hz after it has passed, a drop of
-`{python} f"{drop:.1f}"` Hz. The ratio of the two pitches is
-`{python} f"{approaching / receding:.3f}"`, about
-`{python} f"{12 * np.log2(approaching / receding):.1f}"` semitones.
+The pedestrian hears `{python} result["approaching"]` Hz as the ambulance
+approaches and `{python} result["receding"]` Hz after it has passed, a drop of
+`{python} result["drop"]` Hz. The ratio of the two pitches is
+`{python} result["pitch-ratio"]`, about
+`{python} result["semitones"]` semitones.
 :::
 :::
 
@@ -564,15 +453,14 @@ Solve the formula of the lowest resonance for the length.
 
 ::: {.solution}
 ```{python}
-closed_length = SOUND / (4 * 440.0)
-open_length = SOUND / (2 * 440.0)
-check = pipe_frequency(1, length=closed_length, c=SOUND, closed_end=True)
+#| echo: false
+excerpt(experiment.pipes_for_a)
 ```
 
-The closed pipe is `{python} f"{closed_length * 100:.1f}"` cm long and the open
-one `{python} f"{open_length * 100:.1f}"` cm: twice as long, because a closed pipe
+The closed pipe is `{python} result["closed-length-cm"]` cm long and the open
+one `{python} result["open-length-cm"]` cm: twice as long, because a closed pipe
 holds a quarter of a wavelength and an open one half. The formula for the
-closed pipe returns `{python} f"{check:.1f}"` Hz for the length found. A real
+closed pipe returns `{python} result["check"]` Hz for the length found. A real
 pipe is a little shorter, by the end correction that the model leaves out.
 :::
 :::
@@ -588,30 +476,21 @@ Look at the shape of the modes of the pipe at its middle.
 
 ::: {.solution}
 ```{python}
-cells = 160
-dx = LENGTH / cells
-dt = 0.5 * dx / SOUND
-xs = grid(LENGTH, cells)
-centred = solve(
-    triangle(xs, length=LENGTH, at=LENGTH / 2), np.zeros_like(xs),
-    c=SOUND, dx=dx, dt=dt, n_steps=round(0.4 / dt), every=4,
-)
-found = spectrum_peaks(centred.u[:, round(0.17 * cells)], 4 * dt, count=2, floor=0.05)
-second = pipe_frequency(2, length=LENGTH, c=SOUND, closed_end=False)
-nearest = float(np.min(np.abs(found - second)))
+#| echo: false
+excerpt(experiment.plucked_in_the_middle)
 ```
 
-The two strongest peaks are at `{python} ", ".join(f"{p:.1f}" for p in found)` Hz,
+The two strongest peaks are at `{python} result["middle-peaks"]` Hz,
 the first and the third multiples of the lowest resonance
-`{python} f"{pipe_frequency(1, length=LENGTH, c=SOUND, closed_end=False):.1f}"` Hz,
-and none lies near the second resonance at `{python} f"{second:.1f}"` Hz: the
-nearest peak is `{python} f"{nearest:.0f}"` Hz away.
+`{python} result["open-first"]` Hz,
+and none lies near the second resonance at `{python} result["second"]` Hz: the
+nearest peak is `{python} result["nearest"]` Hz away.
 The even modes have a node at the middle of the pipe, so a profile that is
 symmetric about it cannot excite them.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -620,7 +499,12 @@ reproduce_this(
         "src/pbc/waves/wave.py",
         "src/pbc/waves/modes.py",
         "src/pbc/waves/sound.py",
+        "src/pbc/waves/experiments/sound_and_the_doppler_effect.py",
+        "src/pbc/experiment.py",
     ],
-    tests=["tests/unit/test_waves.py"],
+    tests=[
+        "tests/unit/test_waves.py",
+        "tests/unit/test_sound_and_the_doppler_effect_experiment.py",
+    ],
 )
 ```

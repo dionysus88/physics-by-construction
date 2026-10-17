@@ -25,7 +25,12 @@ assert the state after F119:
   lesson executes three times in a full run** (build 1, build 2, and its
   reproduction) where it executed four; in a selective run an executed
   lesson executes three times and an unchanged lesson is rendered from the
-  store twice.
+  store twice. Since F117 (ADR 016 decision 4) the experiment check adds a
+  fourth execution of an executed lesson's science, without a render: its
+  experiment, in one learner environment of a fresh clone, in the check
+  `site-checks-reproduction` of the group `build`. Its cost per lesson is
+  measured with the first full run on `main` after the switch
+  (`docs/release-readiness.md`).
 - The `integration` job is divided into the three parts of "Division into
   independent parts": the checks `check-tests-quarto`, `check-tests-browser`,
   and `check-tests-other` of `scripts/verify.conf`, in three jobs of

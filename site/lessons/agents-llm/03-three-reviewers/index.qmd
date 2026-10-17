@@ -14,6 +14,7 @@ lesson:
   course: mechanics
   slot: AI4
   preview: fig-review-evidence
+  experiment: pbc.mechanics.experiments.scientific_review
   methods: [simulation, llm-agents]
   outcomes:
     - Give each of several review agents its own bounded list of checks over the same code
@@ -29,7 +30,9 @@ lesson:
 ```{python}
 #| echo: false
 from pbc.authoring import lesson_header
+from pbc.mechanics.experiments import scientific_review as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -123,17 +126,8 @@ The allowlists of the three reviewers, as the models see them:
 
 ```{python}
 #| echo: false
-from pbc.agents.display import AllowlistDisplay, RunDisplay
-from pbc.agents.review_lab import (
-    CLAIM,
-    MAX_STEPS,
-    REVIEWERS,
-    TOLERANCE,
-    ReviewDisplay,
-    replay_fixtures,
-    resolve,
-    verdicts,
-)
+from pbc.agents.display import AllowlistDisplay
+from pbc.agents.review_lab import REVIEWERS, resolve, verdicts
 from pbc.authoring import excerpt, reproduce_this
 ```
 
@@ -168,7 +162,7 @@ excerpt(resolve)
 Piece 1 is the stepper of the course. Piece 2 is a variant that looks like it:
 it moves the particle with the old velocity, so the two updates are in the
 wrong order. Both claim the order and the bounded energy of
-`{python} f"{CLAIM}"`.
+`{python} result["claim"]`.
 
 ```{python}
 #| echo: false
@@ -193,16 +187,23 @@ The cell replays the three recordings. The model's messages are the recorded
 ones; each tool result is computed by this build, now.
 
 ```{python}
-replays = replay_fixtures()
-RunDisplay(*replays["physics"])
+#| echo: false
+excerpt(experiment.run, region="replay")
 ```
 
 ```{python}
-RunDisplay(*replays["numerics"])
+#| echo: false
+result.display("physics-run")
 ```
 
 ```{python}
-RunDisplay(*replays["evidence"])
+#| echo: false
+result.display("numerics-run")
+```
+
+```{python}
+#| echo: false
+result.display("evidence-run")
 ```
 
 ### Where they agree, and where they do not
@@ -211,13 +212,8 @@ This is the part of the page that is decided. Every line is built from the
 recomputed results of the tools, and no text of a reviewer is in it.
 
 ```{python}
-review = ReviewDisplay({name: transcript for name, (_, transcript) in replays.items()})
-growth = next(
-    v.measured
-    for v in review.verdicts
-    if v.candidate == 2 and v.check == "bounded-energy"
-)
-review
+#| echo: false
+result.display("review")
 ```
 
 The numerics reviewer ran three checks and passed both pieces, and was right
@@ -228,7 +224,7 @@ By the rule, the failure stands.
 
 That is the reason to want several reviewers, and the reason not to count
 them. Had the numerics reviewer been the only one, the review would have passed a
-method whose energy grows by a factor of `{python} f"{growth:.1e}"` over a
+method whose energy grows by a factor of `{python} result["growth"]` over a
 hundred periods.
 
 ### A reviewer cannot talk its way past the build
@@ -238,56 +234,36 @@ plays a reviewer that calls the check on piece 2 and then says the piece
 passes every check; the verdict is read from the result of the call.
 
 ```{python}
-from pbc.agents import ModelMessage, ToolCall, run
+#| echo: false
+excerpt(experiment.Boaster)
+```
 
-physics = REVIEWERS[0]
+```{python}
+#| echo: false
+excerpt(experiment.boasting_reviewer)
+```
 
-
-class Boaster:
-    model = "a reviewer that does not tell the truth"
-    secrets = ()
-
-    def __init__(self):
-        self.messages = [
-            ModelMessage(
-                "I will check the energy.",
-                (ToolCall("1", "check_bounded_energy", {"candidate": 2}),),
-            ),
-            ModelMessage("Piece 2 passes every check, with a wide margin."),
-        ]
-
-    def complete(self, system, conversation, tools):
-        return self.messages.pop(0)
-
-
-transcript = run(Boaster(), physics.allowlist, physics.system, physics.task, MAX_STEPS)
-print("what it said: ", transcript.steps[-1].message.text)
-for v in verdicts(physics, transcript):
-    print(f"what it ran:   {v.check} on piece {v.candidate}:",
-          "passed" if v.passed else "FAILED", f"(measured {v.measured:.1e}, tolerance {v.tolerance})")
+```{python}
+#| echo: false
+print(result.output("boasting-reviewer"), end="")
 ```
 
 ### The replay keeps the page honest
 
 The replay compares every recomputed result with the recorded one, to a
-relative and absolute difference of `{python} f"{TOLERANCE:g}"`. If a check
+relative and absolute difference of `{python} result["tolerance"]`. If a check
 of the contract changes, a recording is no longer a recording of what the code
 does. Here the tolerance of the exact checks is made tighter than round-off,
 and the physics reviewer is replayed.
 
 ```{python}
-from pbc.agents import ReplayMismatch
-from pbc.agents.review_lab import replay_reviewer
-from pbc.verification import checks
+#| echo: false
+excerpt(experiment.stricter_check)
+```
 
-original = checks.EXACT
-checks.EXACT = 1e-30
-try:
-    replay_reviewer(physics, replays["physics"][0])
-except ReplayMismatch as mismatch:
-    print(mismatch)
-finally:
-    checks.EXACT = original
+```{python}
+#| echo: false
+print(result.output("stricter-check"), end="")
 ```
 
 The build would fail with that message. The maintainer then runs the reviewers
@@ -300,32 +276,17 @@ three step counts. The figure shows what the build recomputed, with a fresh
 scan of the same two pieces.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_review_evidence)
+```
+
+```{python}
 #| label: fig-review-evidence
+#| echo: false
 #| fig-status: simulated
 #| fig-cap: "Error against the exact oscillator over two periods, against the number of time steps per period, for pieces 1 and 2. Lines are a fresh scan; dots are the values the evidence reviewer asked for, recomputed by this build."
 #| fig-alt: "A log-log chart of error against steps per period, from 20 to 800. Two lines fall with a slope close to minus one; the line of piece 2 lies above that of piece 1. Dots mark 50, 100 and 200 steps for each piece, on the lines."
-import matplotlib.pyplot as plt
-import numpy as np
-
-from pbc.agents.review_lab import CANDIDATES
-from pbc.verification import oscillator_error
-
-counts = np.array([20, 40, 80, 160, 320, 640])
-colors = {1: "#00429d", 2: "#93003a"}
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for piece, build in CANDIDATES.items():
-    ax.loglog(counts, [oscillator_error(build, n) for n in counts],
-              color=colors[piece], label=f"piece {piece}")
-    asked = {}
-    for step in replays["evidence"][1].steps:
-        for call, result in zip(step.message.tool_calls, step.results, strict=True):
-            if result.ok and call.name == "oscillator_error" and call.arguments["candidate"] == piece:
-                asked[call.arguments["steps_per_period"]] = result.content["error"]
-    ax.loglog(list(asked), list(asked.values()), "o", color=colors[piece])
-ax.set_xlabel("time steps per period")
-ax.set_ylabel("error")
-ax.legend()
-plt.show()
+result.show("fig-review-evidence")
 ```
 
 Both lines fall with a slope near $-1$: both are first-order methods, which is
@@ -367,11 +328,13 @@ with its own list of tools?
 
 ::: {.solution}
 ```{python}
-from pbc.verification import verify
+#| echo: false
+excerpt(experiment.every_check)
+```
 
-for piece, build in CANDIDATES.items():
-    for finding in verify(build, CLAIM):
-        print(f"piece {piece}  {'pass' if finding.passed else 'FAIL'}  {finding.check:18} {finding.detail}")
+```{python}
+#| echo: false
+print(result.output("every-check"), end="")
 ```
 
 Only `bounded-energy` fails, for piece 2. The physics reviewer has it in its
@@ -389,14 +352,13 @@ reports and what it means.
 
 ::: {.solution}
 ```{python}
-from pbc.agents.review_lab import Verdict
+#| echo: false
+excerpt(experiment.a_conflict)
+```
 
-found = [
-    Verdict("physics", 1, "limits", 7e-15, 1e-12, True),
-    Verdict("evidence", 1, "limits", 3e-3, 1e-12, False),
-]
-resolution = resolve(found, 1)
-print("rejected:", resolution.rejected, "| conflicts:", resolution.conflicts)
+```{python}
+#| echo: false
+print(result.output("a-conflict"), end="")
 ```
 
 The failed check stands, so the piece is rejected, and the check is reported as
@@ -407,7 +369,7 @@ to be looked at before anything is concluded about the piece.
 :::
 :::
 
-## Reproduce this
+## Replay this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -416,10 +378,13 @@ reproduce_this(
         "src/pbc/agents/review_lab.py",
         "src/pbc/verification/checks.py",
         "src/pbc/verification/faulty.py",
+        "src/pbc/mechanics/experiments/scientific_review.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_review_lab.py",
         "tests/integration/test_review_replay.py",
+        "tests/unit/test_scientific_review_experiment.py",
     ],
 )
 ```

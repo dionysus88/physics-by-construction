@@ -159,6 +159,27 @@ def test_a_part_that_does_not_exist_fails_the_build(lines, region):
         excerpt(dynamics.euler_step, lines=lines, region=region)
 
 
+def test_a_region_of_a_module_shows_the_values_an_experiment_starts_from():
+    from pbc.mechanics.experiments import kinematics as experiment
+
+    shown = excerpt(experiment, region="setup")
+
+    file = (REPOSITORY_ROOT / shown.path).read_text().splitlines(keepends=True)
+    assert shown.name == "pbc.mechanics.experiments.kinematics:"
+    assert shown.source == "".join(file[shown.first_line - 1 : shown.last_line])
+    assert file[shown.first_line - 2].strip() == "# region: setup"
+    assert "launch = State(" in shown.source
+
+
+def test_a_module_is_shown_by_a_part_of_it_only():
+    from pbc.mechanics.experiments import kinematics as experiment
+
+    with pytest.raises(TypeError, match="region or lines"):
+        excerpt(experiment)
+    with pytest.raises(ValueError, match="interface"):
+        excerpt(experiment, region="setup", interface=True)
+
+
 def test_a_note_marks_its_line_and_is_plain_text_in_the_page():
     shown = excerpt(
         dynamics.euler_step,
@@ -269,29 +290,53 @@ def test_directory_inside_another_checkout_has_no_commit(checkout: Path):
 # --- reproduce this -----------------------------------------------------------
 
 
+_FRONT_MATTER = """\
+---
+title: "Sample"
+lesson:
+  id: sample
+  methods: {methods}
+  experiment: {experiment}
+{extra}---
+
+A lesson.
+"""
+
+
+def _write_lesson(directory: Path, methods: str, experiment: str, extra: str = ""):
+    (directory / "index.qmd").write_text(
+        _FRONT_MATTER.format(methods=methods, experiment=experiment, extra=extra)
+    )
+
+
 @pytest.fixture
 def lesson_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """The directory of a lesson page in a website project; cells run there."""
     directory = tmp_path / "site" / "lessons" / "mechanics" / "02-sample"
     directory.mkdir(parents=True)
     (tmp_path / "site" / "_quarto.yml").write_text("project:\n  type: website\n")
-    (directory / "index.qmd").write_text("A lesson.\n")
+    _write_lesson(directory, "[simulation]", EXPERIMENT)
     monkeypatch.chdir(directory)
     return directory
 
 
 CODE = "src/pbc/mechanics/kinematics.py"
 TESTS = "tests/unit/test_kinematics.py"
+EXPERIMENT = "pbc.mechanics.experiments.kinematics"
+# What renders or previews the website; no footer names it (ADR 016).
+SITE_BUILD = ("quarto", "render", "preview", "build-site.sh", "verify.sh")
 
 
-def test_reproduction_names_the_page_it_is_called_from(lesson_directory: Path):
+def test_reproduction_names_the_page_and_ends_in_its_experiment(
+    lesson_directory: Path,
+):
     reproduction = reproduce_this(code=[CODE], tests=[TESTS])
 
     assert reproduction.page == "site/lessons/mechanics/02-sample/index.qmd"
-    assert reproduction.output == "site/_site/lessons/mechanics/02-sample/index.html"
+    assert reproduction.heading == "Run this experiment"
     assert reproduction.commands[-2:] == (
-        f"uv run --locked pytest {TESTS}",
-        "uv run --locked quarto render site/lessons/mechanics/02-sample/index.qmd",
+        "uv sync --locked --no-dev",
+        f"uv run --locked --no-dev python -m {EXPERIMENT} results",
     )
 
 
@@ -299,13 +344,38 @@ def test_commands_check_out_the_built_commit(lesson_directory: Path):
     reproduction = reproduce_this(code=[CODE])
     sha = build_commit().sha
 
-    assert reproduction.commands[:4] == (
+    assert reproduction.commands[:3] == (
         f"git clone {repository_url()}.git",
         "cd physics-by-construction",
         f"git checkout {sha}",
-        "uv sync --locked",
     )
     assert f"/tree/{sha}" in reproduction.markdown()
+
+
+@pytest.mark.parametrize(
+    "methods, extra",
+    [
+        ("[simulation]", ""),
+        ("[simulation, llm-agents]", ""),
+        ("[lean]", "  lean-modules: [PhysicsByConstruction.Mechanics.Kinematics]\n"),
+    ],
+    ids=["run", "replay", "proof"],
+)
+def test_no_footer_renders_or_previews_the_website(
+    lesson_directory: Path, methods: str, extra: str
+):
+    experiment = (
+        "pbc.mechanics.experiments.agent_experiment"
+        if "llm-agents" in methods
+        else EXPERIMENT
+    )
+    _write_lesson(lesson_directory, methods, experiment, extra)
+
+    text = reproduce_this(code=[CODE], tests=[TESTS]).markdown()
+
+    for word in SITE_BUILD:
+        assert word not in text
+    assert "Reproduce this" not in text
 
 
 def test_the_summary_is_short_and_the_full_listing_is_in_a_closed_details(
@@ -319,48 +389,100 @@ def test_the_summary_is_short_and_the_full_listing_is_in_a_closed_details(
     # First view: the commit and one command; the files and the other
     # commands are only in the listing.
     assert build_commit().sha in summary
-    assert reproduction.commands[-1] in summary
+    assert reproduction.experiment_command in summary
     assert "git clone" not in summary and CODE not in summary
     for command in reproduction.commands:
         assert command in details
     assert CODE in details and TESTS in details
+    assert "results/results.json" in details
+    assert "[the setup page](../../../reproduce.html)" in details
 
 
-def test_a_page_that_shows_lean_proofs_runs_the_lean_check_before_rendering(
+def test_a_proof_lesson_checks_its_modules_with_lake_and_needs_no_python_tools(
     lesson_directory: Path,
 ):
-    lean_file = "lean/PhysicsByConstruction/Mechanics/Kinematics.lean"
-
-    with_lean = reproduce_this(code=[lean_file, CODE])
-    without = reproduce_this(code=[CODE])
-
-    commands = with_lean.commands
-    assert commands.index("uv sync --locked") < commands.index(
-        "./scripts/check-lean.sh"
+    modules = "[PhysicsByConstruction.Mechanics.Kinematics]"
+    _write_lesson(
+        lesson_directory, "[lean]", EXPERIMENT, f"  lean-modules: {modules}\n"
     )
-    assert commands.index("./scripts/check-lean.sh") < len(commands) - 1
-    assert commands[-1].startswith("uv run --locked quarto render ")
-    assert "./scripts/check-lean.sh" not in without.commands
-    assert "a Lean file the page shows" in with_lean.markdown()
-    assert "check-lean.sh" not in without.markdown()
+
+    reproduction = reproduce_this(code=[CODE])
+    text = reproduction.markdown()
+    summary = text.split("<details")[0]
+
+    assert reproduction.heading == "Check this proof"
+    assert reproduction.commands[-3:] == (
+        "cd lean",
+        "lake exe cache get",
+        "lake build PhysicsByConstruction.Mechanics.Kinematics",
+    )
+    # The figures of the page come from its experiment, before the proofs.
+    assert reproduction.experiment_command in reproduction.commands
+    assert "lake build PhysicsByConstruction.Mechanics.Kinematics" in summary
+    assert "check-lean.sh" not in text and "jq" not in text
+    assert "elan" in text
+
+
+def test_a_proof_lesson_that_computes_nothing_runs_no_python(lesson_directory: Path):
+    modules = "  lean-modules: [PhysicsByConstruction.Mechanics.Kinematics]\n"
+    _write_lesson(lesson_directory, "[lean]", "./scripts/check-lean.sh", modules)
+
+    reproduction = reproduce_this(code=[])
+
+    assert not any(command.startswith("uv ") for command in reproduction.commands)
+    assert reproduction.commands[-1].startswith("lake build ")
+
+
+def test_an_agent_lesson_replays_and_names_the_live_run_apart(lesson_directory: Path):
+    _write_lesson(
+        lesson_directory,
+        "[simulation, llm-agents]",
+        "pbc.mechanics.experiments.agent_experiment",
+    )
+
+    reproduction = reproduce_this(code=[CODE])
+    text = reproduction.markdown()
+    main, live = text.split("::: {.not-verified role=note}")
+
+    assert reproduction.heading == "Replay this experiment"
+    assert reproduction.live == "pbc.agents.projectile_lab"
+    # The replay needs no model, no key, and no extra.
+    assert "OPENAI_API_KEY" not in main and "--extra" not in main
+    assert "no model" in main
+    # The live run is labelled, optional, and names its credential and extra.
+    assert "**Not verified.**" in live and "Optional" in live
+    assert 'export OPENAI_API_KEY="..."' in live
+    assert "uv sync --locked --no-dev --extra openai" in live
+    assert "python -m pbc.agents.projectile_lab" in live
+
+
+def test_the_marker_gives_back_the_same_section(lesson_directory: Path):
+    reproduction = reproduce_this(code=[CODE], tests=[TESTS])
+    page = "lessons/mechanics/02-sample/index.qmd"
+
+    again = type(reproduction).from_payload(
+        page, reproduction.payload(), reproduction.commit, reproduction.repository
+    )
+
+    assert again == reproduction
 
 
 def test_uncommitted_changes_are_stated_on_the_page(lesson_directory: Path):
+    from dataclasses import replace
+
     reproduction = reproduce_this(code=[CODE])
     clean = BuildCommit(sha="abc123", dirty=False)
     dirty = BuildCommit(sha="abc123", dirty=True)
 
-    def text(commit: BuildCommit) -> str:
-        return type(reproduction)(
-            page=reproduction.page,
-            code=reproduction.code,
-            tests=reproduction.tests,
-            commit=commit,
-            repository=reproduction.repository,
-        ).markdown()
+    assert "uncommitted changes" in replace(reproduction, commit=dirty).markdown()
+    assert "uncommitted changes" not in replace(reproduction, commit=clean).markdown()
 
-    assert "uncommitted changes" in text(dirty)
-    assert "uncommitted changes" not in text(clean)
+
+def test_a_lesson_without_an_experiment_has_no_section(lesson_directory: Path):
+    (lesson_directory / "index.qmd").write_text("A lesson.\n")
+
+    with pytest.raises(ValueError, match=r"declares no 'lesson\.experiment'"):
+        reproduce_this(code=[CODE])
 
 
 @pytest.mark.parametrize(

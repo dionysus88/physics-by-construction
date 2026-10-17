@@ -6,7 +6,10 @@ Proposed with the planning of the change cycle
 `pbc-planning-change-four-workstreams`; accepted when that planning is
 approved. Implements requirements decision 33 ("Learner instructions
 without a website build") and the amended "UX expectations" and "Runtime
-and deployment constraints" of the requirements. F117 delivers it.
+and deployment constraints" of the requirements. F117 (Issue 202) delivered it:
+the experiment entry points, the footer by kind, the setup page, and the
+experiment check; the full-run measurement follows the merge
+(`docs/release-readiness.md`).
 
 Supersedes the learner-facing reproduction contract: the consequence of
 [ADR 002](002-regenerate-artifacts-and-display-by-reference.md) that the

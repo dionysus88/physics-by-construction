@@ -40,21 +40,28 @@ showed. The plan for the rest is in
 | `scripts/` | Verification and build scripts, and the development workflow |
 | `docs/` | Requirements, architecture, roadmap, decisions, and the [authoring guide](docs/authoring.md) |
 
-## Build and verify
+## Run an experiment
 
-Complete the one-time setup in
-[docs/development.md](docs/development.md#one-time-setup): Git, uv, elan, jq,
-and a browser build for the site checks. Then one command checks everything
-and builds the site:
+Every lesson has an experiment: a program that computes the figures and
+numbers of its page. Running one needs Git and uv and nothing else:
 
 ```bash
-./scripts/verify.sh
+git clone https://github.com/taspinar/physics-by-construction.git
+cd physics-by-construction
+uv sync --locked --no-dev
+uv run --locked --no-dev python -m pbc.mechanics.experiments.kinematics results
 ```
 
-It lints and tests the Python code, builds every Lean proof against Mathlib,
-builds the site, checks the built pages, and builds the site a second time to
-confirm the output is byte-identical. The built site is in `site/_site/`.
-The same command runs in CI on every pull request.
+The last command writes the figures of the first lesson and its numbers into
+`results/`; the last section of every lesson gives its own command. The
+[setup page](https://taspinar.github.io/physics-by-construction/reproduce.html)
+says what each kind of lesson needs: the replay of an agent lesson, the
+optional live run, and the optional Lean toolchain for the proofs.
+
+CI verifies everything on every pull request with `./scripts/verify.sh`: the
+tests, every Lean proof, every lesson's experiment, and the site it builds
+and checks. What that command runs, and the setup it needs, is the
+maintainers' reference in [docs/development.md](docs/development.md).
 
 ## Contributing
 

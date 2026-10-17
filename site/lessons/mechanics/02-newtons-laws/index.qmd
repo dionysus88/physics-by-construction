@@ -18,6 +18,7 @@ lesson:
     - Check a fall with linear drag against its exact solution
   related: []
   format: 2
+  experiment: pbc.mechanics.experiments.newtons_laws
   preview: fig-throw-with-linear-drag
   prerequisites:
     lessons: [kinematics]
@@ -28,10 +29,11 @@ lesson:
 
 ```{python}
 #| echo: false
-import numpy as np
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import drag, dynamics
+from pbc.mechanics.experiments import newtons_laws as experiment
 
-from pbc.authoring import lesson_header
-
+result = experiment.run()
 lesson_header()
 ```
 
@@ -147,29 +149,17 @@ force does not stay the same during a fall. The sketch shows three moments
 of one fall.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_forces_on_a_falling_particle)
+```
+
+```{python}
 #| label: fig-forces-on-a-falling-particle
+#| echo: false
 #| fig-cap: "Forces on a falling particle. The weight stays the same; the drag grows with the velocity, so the net force shrinks to zero."
 #| fig-status: conceptual
 #| fig-alt: "Sketch of the same falling particle at three moments, from left to right: just released, speeding up, and at terminal speed. A solid arrow for the weight points down and has the same length each time. A dashed arrow for the drag points up and is absent at release, medium in the middle, and as long as the weight on the right. A dotted arrow for the velocity points down and grows in the same way as the drag."
-import matplotlib.pyplot as plt
-
-from pbc.authoring.diagrams import INK, arrow, canvas, circle, text
-
-weight_colour, drag_colour, velocity_colour = 0, 1, 2
-fig, ax = canvas(6.4, 3.8, (0, 10), (-0.1, 5.6))
-moments = ((1.8, "just released", 0.0), (5.0, "speeding up", 0.5), (8.2, "terminal speed", 1.0))
-for x, moment, share in moments:
-    circle(ax, (x, 3.2), 0.12, colour=INK, filled=True)
-    text(ax, (x, 5.2), moment)
-    arrow(ax, (x, 3.0), (x, 1.4), colour=weight_colour)
-    if share:
-        arrow(ax, (x, 3.4), (x, 3.4 + 1.6 * share), colour=drag_colour, linestyle="--")
-        arrow(ax, (x + 0.6, 3.2), (x + 0.6, 3.2 - 1.6 * share), colour=velocity_colour, linestyle=":")
-text(ax, (1.8, 1.05), "weight", colour=weight_colour)
-text(ax, (4.7, 4.75), "drag", colour=drag_colour, ha="right")
-text(ax, (5.8, 2.9), "velocity", colour=velocity_colour, ha="left")
-text(ax, (5.0, 0.3), "weight (solid) is the same every time; drag (dashed) grows with the velocity (dotted)")
-plt.show()
+result.show("fig-forces-on-a-falling-particle")
 ```
 
 The arrow lengths are drawn by eye, not measured. At release the net force
@@ -208,8 +198,8 @@ $$
 
 The **time constant** $\tau$ is the time in which the remaining difference to
 the terminal velocity shrinks by the factor $e$; after $3\tau$ a fraction
-`{python} f"{np.exp(-3):.3f}"` of it is left, after $5\tau$ a fraction
-`{python} f"{np.exp(-5):.4f}"`. Integrating once more, with
+`{python} result["exp-3"]` of it is left, after $5\tau$ a fraction
+`{python} result["exp-5"]`. Integrating once more, with
 $\int_0^t e^{-s/\tau}\,\mathrm{d}s = \tau\,(1 - e^{-t/\tau})$, gives the
 position,
 
@@ -277,9 +267,6 @@ The state carries vectors now. Lists and numbers are converted, so that
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import drag, dynamics
-
 excerpt(dynamics.State)
 ```
 
@@ -360,95 +347,53 @@ that down is positive and $\mathbf{g}$ is the vector `[g]`. The mass and the
 drag constant set the time constant $\tau = m/b$, which the cell computes.
 
 ```{python}
-from scipy.constants import g  # standard gravity, m/s^2
-
-from pbc.authoring import table
-from pbc.mechanics.drag import fall_with_linear_drag, linear_drag
-from pbc.mechanics.dynamics import State, newton, simulate, weight
-
-mass = 0.5  # kg
-b = 0.25  # drag constant, kg/s
-tau = mass / b  # time constant, s
-terminal_speed = g * tau  # m/s
-down = [g]  # the gravitational acceleration, on a line with down positive
-
-rest = State(t=0.0, x=0.0, v=0.0)
-falling = newton(mass, weight(mass, down), linear_drag(b))
-dt = 0.1  # time step, s
-n_steps = 100
-
-euler = simulate(rest, falling, dt, n_steps)
-exact = fall_with_linear_drag(rest, mass, b, down, euler.t)
-
-table(
-    [
-        (euler.t[i], euler.v[i, 0], exact.v[i, 0], euler.x[i, 0], exact.x[i, 0])
-        for i in range(0, n_steps + 1, 10)
-    ],
-    columns=[
-        ("t", "s", ".1f"),
-        ("v Euler", "m/s", ".3f"),
-        ("v exact", "m/s", ".3f"),
-        ("x Euler", "m", ".3f"),
-        ("x exact", "m", ".3f"),
-    ],
-    caption="Velocity and distance fallen, simulated and exact, every tenth "
-    "step; to three decimals.",
-)
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-The time constant is $\tau$ = `{python} f"{tau:.1f}"` s and the terminal
-speed `{python} f"{terminal_speed:.3f}"` m/s. Both velocities rise towards
+```{python}
+#| echo: false
+excerpt(experiment.falling_particle)
+```
+
+```{python}
+#| echo: false
+result.table("falling-particle")
+```
+
+The time constant is $\tau$ = `{python} result["tau"]` s and the terminal
+speed `{python} result["terminal-speed"]` m/s. Both velocities rise towards
 it, and after five time constants the exact one is within
-`{python} f"{100 * np.exp(-5):.1f}"` per cent of it. The simulated velocity
+`{python} result["per-cent-left"]` per cent of it. The simulated velocity
 runs ahead of the exact one. The derivation says why: after $n$ steps the
 computed difference to the terminal velocity is $(1 - \Delta t/\tau)^n$ times
-the initial one, and $1 - \Delta t/\tau$ = `{python} f"{1 - dt / tau:.2f}"`
-is smaller than $e^{-\Delta t/\tau}$ = `{python} f"{np.exp(-dt / tau):.4f}"`,
+the initial one, and $1 - \Delta t/\tau$ = `{python} result["euler-factor"]`
+is smaller than $e^{-\Delta t/\tau}$ = `{python} result["exact-factor"]`,
 so the computed velocity loses its initial difference a little faster at
 every step. The cell checks the formula directly:
 
 ```{python}
-n = np.arange(n_steps + 1)
-predicted = terminal_speed * (1 - (1 - dt / tau) ** n)
-formula_gap = np.max(np.abs(euler.v[:, 0] - predicted))
+#| echo: false
+excerpt(experiment.formula_gap)
 ```
 
 The largest difference between the simulation and the formula for $v_n$ is
-`{python} f"{formula_gap:.1e}"` m/s, which is round-off. The program does
+`{python} result["formula-gap"]` m/s, which is round-off. The program does
 exactly what the analysis of the method says it does, which is a stronger
 statement than "the error is small".
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_fall_with_linear_drag)
+```
+
+```{python}
 #| label: fig-fall-with-linear-drag
+#| echo: false
 #| fig-cap: "Velocity of the falling particle: the coarse explicit Euler steps stay on the same side of the exact curve and close in on the terminal speed (dotted) a little faster than the exact solution does."
 #| fig-status: simulated
 #| fig-alt: "Line plot of velocity in metres per second against time in seconds. The exact curve rises from zero and bends over towards a dotted horizontal line, the terminal speed, which it approaches without crossing. The explicit Euler points start on the exact curve and lie slightly above it, the gap largest early on and closing later."
-import matplotlib.pyplot as plt
-
-fine = np.linspace(0.0, euler.t[-1], 201)
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.axhline(terminal_speed, color="#555555", linestyle=":", label="terminal speed")
-ax.plot(
-    fine,
-    fall_with_linear_drag(rest, mass, b, down, fine).v[:, 0],
-    color="#00429d",
-    label="exact",
-)
-ax.plot(
-    euler.t,
-    euler.v[:, 0],
-    color="#93003a",
-    linestyle="--",
-    marker="o",
-    markersize=3,
-    label=f"explicit Euler, time step {dt} s",
-)
-ax.set_xlabel("time (s)")
-ax.set_ylabel("velocity (m/s)")
-ax.legend()
-plt.show()
+result.show("fig-fall-with-linear-drag")
 ```
 
 The figure shows what the formula predicted: the simulated curve never crosses
@@ -463,46 +408,22 @@ repeats the fall over the same duration with ever more steps and compares the
 velocity and the position at the end with the exact ones.
 
 ```{python}
-duration = dt * n_steps
-step_counts = [n_steps * 2**k for k in range(6)]
+#| echo: false
+excerpt(experiment.final_errors)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.convergence)
+```
 
-def final_errors(n):
-    """Errors of the last simulated velocity and position, for n steps."""
-    end = simulate(rest, falling, duration / n, n)
-    reference = fall_with_linear_drag(rest, mass, b, down, end.t[-1])
-    return end.v[-1, 0] - reference.v[0, 0], end.x[-1, 0] - reference.x[0, 0]
-
-
-errors = np.array([final_errors(n) for n in step_counts])
-orders = np.log2(errors[:-1, 1] / errors[1:, 1])
-
-table(
-    [
-        (
-            n,
-            duration / n,
-            errors[i, 0],
-            errors[i, 1],
-            orders[i - 1] if i else None,
-        )
-        for i, n in enumerate(step_counts)
-    ],
-    columns=[
-        ("steps", "", "d"),
-        ("time step", "s", ".6f"),
-        ("v error", "m/s", ".6f"),
-        ("x error", "m", ".6f"),
-        ("observed order", "", ".3f"),
-    ],
-    caption="Error of the final velocity and position of the falling "
-    "particle for each time step, and the observed order of the position "
-    "error.",
-)
+```{python}
+#| echo: false
+result.table("convergence")
 ```
 
 Both errors halve with the step, and the observed order of the position
-error reaches `{python} f"{orders[-1]:.3f}"` at the smallest step. Unlike the
+error reaches `{python} result["last-order"]` at the smallest step. Unlike the
 constant acceleration of the first lesson, where the ratio was exactly two,
 the order here approaches one gradually, because the dropped terms contain
 higher powers of $\Delta t / \tau$ as well.
@@ -516,63 +437,32 @@ loop stops at the first state below the ground. For comparison the cell also
 evaluates the drag-free motion, the parabola of the first lesson.
 
 ```{python}
-start = State(t=0.0, x=[0.0, 0.0], v=[12.0, 15.0])
-plane = [0.0, -g]
-thrown = newton(mass, weight(mass, plane), linear_drag(b))
-
-
-def on_the_ground(state):
-    return state.x[1] < 0.0
-
-
-flight = simulate(start, thrown, 0.01, 10_000, until=on_the_ground)
-exact_flight = fall_with_linear_drag(start, mass, b, plane, flight.t)
-# The drag-free motion over its own, longer flight: back at the ground when
-# the vertical velocity has reversed, at t = 2 v_y / g.
-free_time = np.linspace(0.0, 2 * start.v[1] / g, 200)[:, None]
-without_drag = start.x + start.v * free_time + 0.5 * np.array(plane) * free_time**2
-
-largest_gap = np.max(np.linalg.norm(flight.x - exact_flight.x, axis=1))
+#| echo: false
+excerpt(experiment.on_the_ground)
 ```
 
-The particle is back at the ground after `{python} f"{flight.t[-1]:.2f}"` s,
-`{python} f"{flight.x[-1, 0]:.2f}"` m away, and the largest distance between
+```{python}
+#| echo: false
+excerpt(experiment.throw)
+```
+
+The particle is back at the ground after `{python} result["flight-time"]` s,
+`{python} result["flight-range"]` m away, and the largest distance between
 the simulated and the exact position along the way is
-`{python} f"{largest_gap:.3f}"` m.
+`{python} result["largest-gap"]` m.
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_throw_with_linear_drag)
+```
 
 ```{python}
 #| label: fig-throw-with-linear-drag
+#| echo: false
 #| fig-cap: "Linear drag turns the symmetric parabola into a path that peaks earlier and falls more steeply; the explicit Euler points sit on the exact drag curve."
 #| fig-status: simulated
 #| fig-alt: "Plot of height against horizontal distance, both in metres. The drag-free parabola is symmetric and reaches furthest. The exact curve with linear drag rises less high, peaks earlier, and comes down more steeply, landing well short of the parabola. The explicit Euler points lie on the drag curve to within the thickness of the line."
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(
-    without_drag[:, 0],
-    without_drag[:, 1],
-    color="#555555",
-    linestyle=":",
-    label="without drag",
-)
-ax.plot(
-    exact_flight.x[:, 0],
-    exact_flight.x[:, 1],
-    color="#00429d",
-    label="linear drag, exact",
-)
-ax.plot(
-    flight.x[::10, 0],
-    flight.x[::10, 1],
-    color="#93003a",
-    linestyle="none",
-    marker="o",
-    markersize=3,
-    label="linear drag, explicit Euler",
-)
-ax.set_ylim(bottom=0.0)
-ax.set_xlabel("horizontal distance (m)")
-ax.set_ylabel("height (m)")
-ax.legend()
-plt.show()
+result.show("fig-throw-with-linear-drag")
 ```
 
 With drag the path is no longer a parabola: it rises less, peaks earlier, and
@@ -648,7 +538,7 @@ constant.
 
 ::: {.exercise}
 **Too large a step.** The time constant of the falling particle is
-`{python} f"{tau:.0f}"` s. Predict what explicit Euler computes for the
+`{python} result["tau-whole"]` s. Predict what explicit Euler computes for the
 velocity with a time step of 3 s and with one of 5 s, then run both for ten
 steps and look at the sequence of computed velocities.
 
@@ -660,18 +550,14 @@ the overshoot halving every step. With $\Delta t = 5$ s the factor is
 $-1.5$: the same alternation, but growing by half every step, without bound.
 
 ```{python}
+#| echo: false
+excerpt(experiment.large_steps)
+```
+
+```{python}
 #| label: large-step-velocity
-runs = {step: simulate(rest, falling, step, 10) for step in (3.0, 5.0)}
-table(
-    [(i, runs[3.0].v[i, 0], runs[5.0].v[i, 0]) for i in range(11)],
-    columns=[
-        ("step", "", "d"),
-        ("v, time step 3 s", "m/s", ".1f"),
-        ("v, time step 5 s", "m/s", ".1f"),
-    ],
-    caption="Computed velocity of the falling particle for two large time "
-    "steps.",
-)
+#| echo: false
+result.table("large-step-velocity")
 ```
 
 The first column settles at the terminal speed, the wrong way round but
@@ -693,13 +579,12 @@ From $v(t) = v_T\,(1 - e^{-t/\tau})$, the speed is $0.99\,v_T$ when
 $e^{-t/\tau} = 0.01$, that is at $t = \tau \ln 100$.
 
 ```{python}
-predicted = tau * np.log(100)
-fine_fall = simulate(rest, falling, 0.001, 12_000)
-reached = fine_fall.t[np.argmax(fine_fall.v[:, 0] >= 0.99 * terminal_speed)]
+#| echo: false
+excerpt(experiment.time_to_terminal_speed)
 ```
 
-The exact solution gives `{python} f"{predicted:.3f}"` s and the simulation
-`{python} f"{reached:.3f}"` s. The simulation reaches the mark slightly
+The exact solution gives `{python} result["predicted"]` s and the simulation
+`{python} result["reached"]` s. The simulation reaches the mark slightly
 early, as expected: the computed velocity runs ahead of the exact one. With a
 step of [1 ms]{.given} the difference is of the order of the time step
 itself.
@@ -720,25 +605,25 @@ The interface takes any function of time, position, and velocity, so the
 spring is one line. Nothing else changes.
 
 ```{python}
-k = 2.0  # spring constant, N/m
-omega = np.sqrt(k / mass)
-period = 2 * np.pi / omega
-
-
-def spring(t, x, v):
-    return -k * x
-
-
-released = State(t=0.0, x=1.0, v=0.0)
-oscillation = simulate(released, newton(mass, spring), 0.01, round(period / 0.01))
-end = oscillation.t[-1]
+#| echo: false
+excerpt(experiment, region="spring")
 ```
 
-The period is `{python} f"{period:.3f}"` s and the simulation ends at
-`{python} f"{end:.2f}"` s. The simulated position is then
-`{python} f"{oscillation.x[-1, 0]:.4f}"` m, the exact one
-`{python} f"{np.cos(omega * end):.4f}"` m, and the largest excursion so far is
-`{python} f"{np.max(np.abs(oscillation.x[:, 0])):.4f}"` m.
+```{python}
+#| echo: false
+excerpt(experiment.spring)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.one_period)
+```
+
+The period is `{python} result["period"]` s and the simulation ends at
+`{python} result["end"]` s. The simulated position is then
+`{python} result["end-position"]` m, the exact one
+`{python} result["exact-end-position"]` m, and the largest excursion so far is
+`{python} result["largest-excursion"]` m.
 
 The particle comes back further out than it started, and the excursion keeps
 growing in later periods. Explicit Euler uses the rates at the start of the
@@ -749,12 +634,21 @@ They plug into the same `simulate` through its `step` argument.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/mechanics/dynamics.py", "src/pbc/mechanics/drag.py"],
-    tests=["tests/unit/test_dynamics.py", "tests/unit/test_drag.py"],
+    code=[
+        "src/pbc/mechanics/dynamics.py",
+        "src/pbc/mechanics/drag.py",
+        "src/pbc/mechanics/experiments/newtons_laws.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_dynamics.py",
+        "tests/unit/test_drag.py",
+        "tests/unit/test_newtons_laws_experiment.py",
+    ],
 )
 ```

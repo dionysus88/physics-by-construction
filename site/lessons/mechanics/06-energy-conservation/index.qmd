@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-pendulum-swings
+  experiment: pbc.mechanics.experiments.energy_conservation
   prerequisites:
     lessons: [numerical-integrators]
     outside:
@@ -29,8 +30,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import energy, pendulum
+from pbc.mechanics.experiments import energy_conservation as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -292,32 +296,17 @@ The three behaviours that the runs below measure can be told apart before
 any run, by what the energy does as the run gets longer:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_energy_bands)
+```
+
+```{python}
 #| label: fig-energy-bands
+#| echo: false
 #| fig-cap: "Three ways in which the energy of a simulation can stray, drawn as a sketch against the length of the run. Drift grows without limit, a band oscillates inside fixed bounds however long the run, and a slow loss falls steadily. Only a growth that never stops is a failure of the whole run; a band is a bounded error."
 #| fig-status: conceptual
 #| fig-alt: "Sketch of the energy minus its starting value against time. A grey horizontal band surrounds zero. One straight line rises steadily and leaves the band. One dashed curve oscillates up and down inside the band for the whole time. One dash-dotted straight line falls slowly."
-import matplotlib.pyplot as plt
-import numpy as np
-
-from pbc.authoring import FIGURE_COLOURS, diagrams
-
-t = np.linspace(0.0, 10.0, 400)
-fig, ax = diagrams.canvas(6.4, 3.2, (-1.4, 15.6), (-2.6, 2.8))
-ax.set_aspect("auto")
-ax.fill_between([0, 10], [-0.5, -0.5], [0.5, 0.5], color="#eaecf0", zorder=0)
-diagrams.arrow(ax, (0, -2.2), (0, 2.6), colour="#1f2328", width=1.0)
-diagrams.arrow(ax, (0, -2.2), (10.8, -2.2), colour="#1f2328", width=1.0)
-diagrams.line(ax, [(0, 0), (10, 0)], colour="#57606a", linestyle=":", width=1.0)
-diagrams.text(ax, (10.9, -2.2), "time", ha="left")
-diagrams.text(ax, (-0.2, 2.65), "energy minus its start", ha="left", va="bottom")
-ax.plot(t, 0.22 * t, color=FIGURE_COLOURS[0], linestyle="-", linewidth=1.6)
-ax.plot(t, 0.36 * np.sin(2.3 * t), color=FIGURE_COLOURS[1], linestyle="--", linewidth=1.6)
-ax.plot(t, -0.09 * t, color=FIGURE_COLOURS[2], linestyle="-.", linewidth=1.6)
-diagrams.text(ax, (10.3, 2.2), "drift: grows with\nthe length of the run", ha="left", colour=0)
-diagrams.text(ax, (10.3, 0.4), "band: oscillates,\ndoes not grow", ha="left", colour=1)
-diagrams.text(ax, (10.3, -1.0), "slow loss", ha="left", colour=2)
-diagrams.text(ax, (0.2, -1.5), "grey band: where the energy of a bounded method stays", ha="left", colour="#57606a")
-plt.show()
+result.show("fig-energy-bands")
 ```
 
 The sketch is not data; it fixes what the word "drift" will mean when the
@@ -381,9 +370,6 @@ energy, so it is a fraction and has no unit.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import energy, pendulum
-
 excerpt(energy.kinetic_energy)
 ```
 
@@ -479,111 +465,65 @@ columns of the table are the series of the explanation, with one and with two
 terms.
 
 ```{python}
-#| label: period-table
-import numpy as np
-from scipy.constants import g
-
-from pbc.authoring import table
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.energy import energy_drift, mechanical_energy
-from pbc.mechanics.integrators import INTEGRATORS
-from pbc.mechanics.pendulum import (
-    pendulum_force,
-    pendulum_period,
-    pendulum_potential,
-    small_angle_period,
-)
-
-mass = 1.0  # kg
-length = 1.0  # m
-pendulum = newton(mass, pendulum_force(mass, length))
-potential = pendulum_potential(mass, length)
-t0 = small_angle_period(length)
-euler, symplectic_euler, verlet, rk4 = INTEGRATORS
-
-
-def released(degrees):
-    """At rest at the given angle from the vertical."""
-    return State(t=0.0, x=[length * np.radians(degrees)], v=[0.0])
-
-
-def run(integrator, degrees, steps_per_period, n_swings):
-    """n_swings of the pendulum released at the angle, with the small-angle
-    period divided into steps_per_period steps."""
-    swing = pendulum_period(length, np.radians(degrees))
-    n_steps = round(n_swings * swing / t0 * steps_per_period)
-    return simulate(released(degrees), pendulum, t0 / steps_per_period, n_steps, step=integrator.step)
-
-
-def forward_crossings(trajectory):
-    """The times at which the bob passes the bottom moving forward."""
-    s, t = trajectory.x[:, 0], trajectory.t
-    before = np.where((s[:-1] < 0) & (s[1:] >= 0))[0]
-    fraction = -s[before] / (s[before + 1] - s[before])
-    return t[before] + fraction * (t[before + 1] - t[before])
-
-
-rows = []
-for degrees in (10, 45, 90, 135, 170):
-    angle = np.radians(degrees)
-    exact = pendulum_period(length, angle)
-    measured = np.mean(np.diff(forward_crossings(run(rk4, degrees, 200, 3))))
-    rows.append(
-        (degrees, exact, exact / t0, measured, t0 * (1 + angle**2 / 16), t0 * (1 + angle**2 / 16 + 11 * angle**4 / 3072))
-    )
-
-table(
-    rows,
-    columns=[
-        ("amplitude", "degrees", "d"),
-        ("exact period", "s", ".4f"),
-        ("T / T0", "", ".4f"),
-        ("simulated period", "s", ".4f"),
-        ("one-term series", "s", ".4f"),
-        ("two-term series", "s", ".4f"),
-    ],
-    caption="Period of the pendulum from the elliptic integral, from a simulation, and from the series, to four decimals.",
-)
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-The small-angle period is `{python} f"{t0:.4f}"` s. [The simulation reproduces
+```{python}
+#| echo: false
+excerpt(experiment.released)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.run_swings)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.forward_crossings)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.period_table)
+```
+
+```{python}
+#| label: period-table
+#| echo: false
+result.table("period-table")
+```
+
+The small-angle period is `{python} result["t0"]` s. [The simulation reproduces
 the exact period to the four digits shown at every amplitude]{.claim
 type="numerically-verified" scope="classical Runge-Kutta method, all five
 amplitudes of the table"
 evidence="period-table"}, so the force model and the period
 formula agree, and the amplitude dependence is real and large: at a right
-angle the period is `{python} f"{pendulum_period(length, np.pi / 2) / t0:.2f}"`
+angle the period is `{python} result["right-angle"]`
 times the small-angle one, and near the top it is
-`{python} f"{rows[-1][2]:.1f}"` times as long. The
+`{python} result["largest-ratio"]` times as long. The
 series is good where it is derived to be: at the smallest amplitude the
 one-term series is already within
-`{python} f"{abs(rows[0][4] - rows[0][1]):.1e}"` s of the exact period, the
+`{python} result["one-term-gap"]` s of the exact period, the
 second term takes it to
-`{python} f"{abs(rows[0][5] - rows[0][1]):.1e}"` s, and at the largest
+`{python} result["two-term-gap"]` s, and at the largest
 amplitude both are far off, as an expansion in a small amplitude must be.
 The shape of the swing changes with the period:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_pendulum_swings)
+```
+
+```{python}
 #| label: fig-pendulum-swings
+#| echo: false
 #| fig-cap: "The swing of the pendulum stays a cosine only at small amplitude. A larger amplitude lengthens the period and flattens the tops, as the bob lingers where it is slow; the curves are normalised by their amplitude and plotted against the small-angle period."
 #| fig-alt: "Line plot of the angle divided by the amplitude against time in small-angle periods, over three periods. The curve for the smallest amplitude is a cosine that completes a period at one. The curve for the middle amplitude has a longer period and flatter tops. The curve for the largest amplitude has a much longer period, with wide flat tops near plus and minus one and fast passages through zero."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for degrees, style in ((10, "-"), (120, "--"), (170, ":")):
-    trajectory = run(rk4, degrees, 200, 3)
-    ax.plot(
-        trajectory.t / t0,
-        np.degrees(trajectory.x[:, 0] / length) / degrees,
-        color="#00429d",
-        linestyle=style,
-        label=f"released at {degrees}°",
-    )
-ax.set_xlabel("time (small-angle periods)")
-ax.set_ylabel("angle / amplitude")
-ax.legend(loc="upper right")
-plt.show()
+result.show("fig-pendulum-swings")
 ```
 
 The figure is the simulation of the table, from the same runs; the legend
@@ -598,51 +538,41 @@ each of the four methods at [100 steps per small-angle period]{.given} and
 reports the drift of the energy.
 
 ```{python}
-amplitude = 120  # degrees
-swing = pendulum_period(length, np.radians(amplitude))
-runs = {integrator.name: run(integrator, amplitude, 100, 20) for integrator in INTEGRATORS}
-n_steps = len(runs["velocity Verlet"].t) - 1
-
-rows = []
-for integrator in INTEGRATORS:
-    energies = mechanical_energy(runs[integrator.name], mass, potential)
-    rows.append((integrator.name, energy_drift(energies), energies[-1] / energies[0]))
-
-table(
-    rows,
-    columns=[("method", "", ""), ("energy drift", "", ".1e"), ("energy at the end / initial", "", ".4f")],
-    caption="Drift of the energy over twenty swings at the amplitude of the example, and the energy at the end relative to the start.",
-)
+#| echo: false
+excerpt(experiment, region="example")
 ```
 
-The period of this swing is `{python} f"{swing:.4f}"` s, or
-`{python} f"{swing / t0:.4f}"` small-angle periods, and the run takes
-`{python} n_steps` steps of `{python} f"{t0 / 100:.5f}"` s.
+```{python}
+#| echo: false
+excerpt(experiment.twenty_swings)
+```
+
+```{python}
+#| echo: false
+result.table("twenty-swings")
+```
+
+The period of this swing is `{python} result["swing"]` s, or
+`{python} result["swing-in-t0"]` small-angle periods, and the run takes
+`{python} result["n-steps"]` steps of `{python} result["step"]` s.
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_pendulum_energy)
+```
 
 ```{python}
 #| label: fig-pendulum-energy
+#| echo: false
 #| fig-cap: "Explicit Euler lets the energy grow without limit, the two symplectic methods keep it in a band that repeats every swing, and the classical Runge-Kutta method loses a little at every step. Each panel has its own vertical scale, so the sizes of the bands are in the table, not in the figure."
 #| fig-alt: "Four panels of relative energy against time in swings. Explicit Euler: a rising curve on a logarithmic axis. Symplectic Euler: an oscillation around the initial value that repeats every swing without drifting. Velocity Verlet: a much narrower oscillation that repeats without drifting. The classical Runge-Kutta method: a curve that falls steadily from the initial value by a very small amount."
 #| fig-status: simulated
-fig, axes = plt.subplots(2, 2, figsize=(6.4, 5.6), sharex=True)
-for ax, integrator in zip(axes.flat, INTEGRATORS, strict=True):
-    trajectory = runs[integrator.name]
-    energies = mechanical_energy(trajectory, mass, potential)
-    ax.plot(trajectory.t / swing, energies / energies[0], color="#93003a", linewidth=0.8)
-    if integrator.name == "explicit Euler":
-        ax.set_yscale("log")
-    ax.set_title(integrator.name, fontsize=10)
-for ax in axes[1]:
-    ax.set_xlabel("time (swings)")
-for ax in axes[:, 0]:
-    ax.set_ylabel("energy / initial energy")
-fig.tight_layout()
-plt.show()
+result.show("fig-pendulum-energy")
 ```
 
 ```{python}
-euler_ratio = mechanical_energy(runs["explicit Euler"], mass, potential)
-euler_ratio = euler_ratio[-1] / euler_ratio[0]
+#| echo: false
+excerpt(experiment.run, region="euler-ratio")
 ```
 
 [The four behaviours are the ones the previous lesson derived on the
@@ -650,7 +580,7 @@ oscillator]{.claim type="numerically-verified" scope="pendulum at the
 amplitude and the step of the example"
 evidence="fig-pendulum-energy"}, on a force for which nothing can be
 derived in closed form: explicit Euler has multiplied the energy by
-`{python} f"{euler_ratio:.1f}"` in twenty swings, the two symplectic methods
+`{python} result["euler-ratio"]` in twenty swings, the two symplectic methods
 stay in bands that do not widen, and the classical Runge-Kutta method loses
 a little at every step. The oscillator result is therefore not a special
 property of the linear force. Now halve the step. The cell repeats the twenty
@@ -658,41 +588,29 @@ swings at [50, 100, 200, and 400 steps per small-angle period]{.given}, and the
 observed order is the logarithm to base two of the ratio of successive drifts.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="step-counts")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.drift_orders)
+```
+
+```{python}
 #| label: drift-orders
-step_counts = [50, 100, 200, 400]
-drifts = {
-    integrator.name: np.array(
-        [energy_drift(mechanical_energy(run(integrator, amplitude, n, 20), mass, potential)) for n in step_counts]
-    )
-    for integrator in INTEGRATORS
-}
-
-rows = []
-columns = [("steps per T0", "", "d")]
-for integrator in INTEGRATORS:
-    columns += [(f"{integrator.name}: drift", "", ".1e"), ("order", "", ".2f")]
-for i, n in enumerate(step_counts):
-    row = [n]
-    for integrator in INTEGRATORS:
-        drift = drifts[integrator.name]
-        row += [drift[i], np.log2(drift[i - 1] / drift[i]) if i else None]
-    rows.append(row)
-
-table(
-    rows,
-    columns=columns,
-    caption="Energy drift over twenty swings against the number of steps per small-angle period, with the observed order, to two significant digits.",
-)
+#| echo: false
+result.table("drift-orders")
 ```
 
 [The drift of the two first-order methods halves with the step, the drift
 of velocity Verlet falls by the factor of the second order, and the drift of
 the classical Runge-Kutta method falls by about
-`{python} f"{drifts['Runge-Kutta 4'][1] / drifts['Runge-Kutta 4'][2]:.0f}"`
+`{python} result["rk4-ratio"]`
 when the step halves]{.claim type="numerically-verified"
 scope="pendulum at the amplitude of the example, over the four steps of the table"
 evidence="drift-orders"}: the observed order of that method is
-about `{python} f"{np.log2(drifts['Runge-Kutta 4'][1] / drifts['Runge-Kutta 4'][2]):.1f}"`,
+about `{python} result["rk4-order"]`,
 more than its order. For the oscillator the previous lesson derived that one
 step multiplies the energy by a factor that differs from one by a power of
 the step one higher than the order of the method, and a number of steps
@@ -711,38 +629,22 @@ release, the state at the height of a right angle, and the bottom. It does so
 at the step of the runs, at half that step, and at a quarter of it.
 
 ```{python}
-#| label: step-energy-gain
-dt = t0 / 100
-total = mass * g * length * (1 - np.cos(np.radians(amplitude)))  # energy of the release, J
-rows = []
-for degrees in (amplitude, 60, 0):
-    theta = np.radians(degrees)
-    speed = np.sqrt(2 * (total - mass * g * length * (1 - np.cos(theta))) / mass)
-    state = State(t=0.0, x=[length * theta], v=[speed])
-    acceleration = -g * np.sin(theta)
-    curvature = mass * g / length * np.cos(theta)  # U'' in J/m^2
-    row = [degrees, speed]
-    for step in (dt, dt / 2, dt / 4):
-        gain = mechanical_energy(simulate(state, pendulum, step, 1, step=euler.step), mass, potential)
-        formula = 0.5 * step**2 * (mass * acceleration**2 + curvature * speed**2)
-        row += [gain[1] - gain[0], (gain[1] - gain[0]) / formula - 1]
-    rows.append(row)
+#| echo: false
+excerpt(experiment.step_energy_gain)
+```
 
-table(
-    rows,
-    columns=[("angle", "degrees", "d"), ("speed", "m/s", ".3f")]
-    + [(f"gain at {label}", "J", ".3e") if k == 0 else (f"difference at {label}", "", ".1e")
-       for label in ("the step", "half", "a quarter") for k in (0, 1)],
-    caption="Energy gained in one explicit Euler step, and its relative difference from the formula, at the step, half of it, and a quarter of it.",
-)
+```{python}
+#| label: step-energy-gain
+#| echo: false
+result.table("step-energy-gain")
 ```
 
 [The formula gives the energy gain of one step to the leading order]{.claim
 type="numerically-verified" scope="explicit Euler on the pendulum, three
 states of the motion of the examples" evidence="step-energy-gain"}: the relative
-difference is at most `{python} f"{max(abs(r[k]) for r in rows for k in (3, 5, 7)):.0e}"` over the table, and falls
-as the step falls, from `{python} f"{rows[1][3]:.1e}"` to
-`{python} f"{rows[1][7]:.1e}"` at the state of the right angle, as the
+difference is at most `{python} result["largest-difference"]` over the table, and falls
+as the step falls, from `{python} result["right-angle-difference"]` to
+`{python} result["right-angle-difference-quarter"]` at the state of the right angle, as the
 neglected term of the next order in $\Delta t$ requires. At the release, the
 state of rest, the gain is positive although the velocity is zero, because
 the first term does not need a velocity.
@@ -750,7 +652,7 @@ the first term does not need a velocity.
 ### What the energy does not see
 
 Velocity Verlet keeps the energy within a band of
-`{python} f"{drifts['velocity Verlet'][1]:.0e}"` over the twenty swings of
+`{python} result["verlet-drift"]` over the twenty swings of
 the run, and the band is no wider at the end than at the start. Is the
 simulated motion right to that accuracy? The cell measures, for the
 three stable methods at the step of the runs, the time of each forward
@@ -758,31 +660,19 @@ passage through the bottom, and reports how far behind or ahead of the
 exact period the passages fall as the swings go by.
 
 ```{python}
-#| label: period-lag
-rows = []
-for integrator in INTEGRATORS[1:]:
-    trajectory = runs[integrator.name]
-    crossings = forward_crossings(trajectory)
-    lag = crossings - (crossings[0] + np.arange(len(crossings)) * swing)
-    drift = energy_drift(mechanical_energy(trajectory, mass, potential))
-    rows.append((integrator.name, drift, 1e3 * lag[5], 1e3 * lag[10], 1e3 * lag[19]))
-
-table(
-    rows,
-    columns=[
-        ("method", "", ""),
-        ("energy drift", "", ".1e"),
-        ("lag after 5 swings", "ms", ".2f"),
-        ("lag after 10 swings", "ms", ".2f"),
-        ("lag after 19 swings", "ms", ".2f"),
-    ],
-    caption="Time by which the bob is behind (positive) or ahead of (negative) the exact period at its forward passages through the bottom, with the energy drift of the run.",
-)
+#| echo: false
+excerpt(experiment.period_lag)
 ```
 
 ```{python}
-lag_rows = rows
-bottom_speed = np.sqrt(2 * g * length * (1 - np.cos(np.radians(amplitude))))
+#| label: period-lag
+#| echo: false
+result.table("period-lag")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.run, region="bottom-speed")
 ```
 
 [The lag grows in proportion to the number of swings for every
@@ -790,12 +680,12 @@ method]{.claim type="numerically-verified" scope="the three stable methods,
 the amplitude and the step of the example" evidence="period-lag"}:
 the simulated period differs from the exact one by a fixed fraction, and
 the error accumulates. For velocity Verlet the energy band is
-`{python} f"{drifts['symplectic Euler'][1] / drifts['velocity Verlet'][1]:.0f}"`
+`{python} result["symplectic-over-verlet"]`
 times narrower than that of symplectic Euler, and the lag is about the same
 size with the opposite sign. After the last passage both bobs are off in time, by
-`{python} f"{lag_rows[0][4]:.1f}"` ms and `{python} f"{-lag_rows[1][4]:.1f}"` ms, which at the bottom, where the bob moves at
-`{python} f"{bottom_speed:.1f}"` m/s, is a position error of
-`{python} f"{100 * bottom_speed * abs(lag_rows[0][4]) * 1e-3:.1f}"` cm for
+`{python} result["symplectic-lag"]` ms and `{python} result["verlet-lead"]` ms, which at the bottom, where the bob moves at
+`{python} result["bottom-speed"]` m/s, is a position error of
+`{python} result["lag-distance-cm"]` cm for
 symplectic Euler, with the energy correct to the drift of the table. The energy band bounds the error in the
 energy and nothing else. Only a comparison in time, here against the exact
 period, can see a phase error.
@@ -803,77 +693,56 @@ period, can see a phase error.
 ### Over the top
 
 Released from rest at [170°]{.given}, the pendulum has
-`{python} f"{potential(released(170).x) / (2 * mass * g * length):.4f}"` of
+`{python} result["release-170"]` of
 the energy $2 m g L$ it would need to reach the top, so the true motion swings back and
 forth forever between $\pm 170°$. The cell runs three swings with explicit
 Euler and with velocity Verlet at [200 steps per small-angle period]{.given} and
 reports the largest energy and the largest angle each one reaches.
 
 ```{python}
-separatrix = 2 * mass * g * length  # the energy at the top, J
-near_the_top = {integrator.name: run(integrator, 170, 200, 3) for integrator in (euler, verlet)}
-
-rows = []
-for integrator in (euler, verlet):
-    trajectory = near_the_top[integrator.name]
-    energies = mechanical_energy(trajectory, mass, potential)
-    largest_angle = np.degrees(np.max(np.abs(trajectory.x[:, 0])) / length)
-    rows.append((integrator.name, energies[0] / separatrix, np.max(energies) / separatrix, largest_angle))
-
-table(
-    rows,
-    columns=[
-        ("method", "", ""),
-        ("initial energy / top", "", ".4f"),
-        ("largest energy / top", "", ".4f"),
-        ("largest angle", "degrees", ".0f"),
-    ],
-    caption="The energy, in units of the energy of the top, and the largest angle that each method reaches in three swings of the pendulum released near the top.",
-)
+#| echo: false
+excerpt(experiment.near_the_top)
 ```
 
 ```{python}
-top_rows = rows
-euler_energies = mechanical_energy(near_the_top["explicit Euler"], mass, potential)
-trajectory = near_the_top["explicit Euler"]
-crossed = trajectory.t[np.argmax(euler_energies > separatrix)]
-past_top = trajectory.t[np.argmax(np.abs(trajectory.x[:, 0]) / length > np.pi)]
-swing_170 = pendulum_period(length, np.radians(170))
+#| echo: false
+result.table("near-the-top")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.over_the_top)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.run, region="over-the-top")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_pendulum_over_the_top)
 ```
 
 ```{python}
 #| label: fig-pendulum-over-the-top
+#| echo: false
 #| fig-cap: "Explicit Euler does not turn back at the far end: it winds round and round, a motion that the pendulum with this energy cannot have, while velocity Verlet swings between the two release angles."
 #| fig-alt: "Line plot of the angle in degrees against time in seconds. The velocity Verlet curve oscillates between plus and minus the release angle, with long flat stretches near the extremes. The explicit Euler curve follows it down through the bottom, then fails to turn back on the far side, passes the dotted line below it, and decreases without limit, winding round and round, to a very large negative angle by the end."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for integrator, style in ((verlet, "-"), (euler, "--")):
-    trajectory = near_the_top[integrator.name]
-    ax.plot(
-        trajectory.t,
-        np.degrees(trajectory.x[:, 0] / length),
-        color="#00429d" if integrator is verlet else "#93003a",
-        linestyle=style,
-        label=integrator.name,
-    )
-ax.axhline(180, color="#555555", linewidth=0.8, linestyle=":")
-ax.axhline(-180, color="#555555", linewidth=0.8, linestyle=":")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("angle (degrees)")
-ax.legend(loc="upper left")
-plt.show()
+result.show("fig-pendulum-over-the-top")
 ```
 
 Explicit Euler adds energy at every step, by the amount the previous example
 checked, and at this step the energy of the top is reached after
-`{python} f"{crossed:.2f}"` s, which is
-`{python} f"{crossed / (swing_170 / 4):.2f}"` of the time the true bob needs
+`{python} result["crossed"]` s, which is
+`{python} result["crossed-in-quarters"]` of the time the true bob needs
 for the quarter swing down to the bottom. [From there the simulation
 describes a rotating pendulum, a different motion from the one that was
 asked for]{.claim type="numerically-verified" scope="explicit Euler, the step and the release
 of this example" evidence="fig-pendulum-over-the-top"}:
-the angle passes the top at `{python} f"{past_top:.2f}"` s, later than the
-energy, and ends at `{python} f"{top_rows[0][3]:.0f}"`°. The error is not a digit; it is the
+the angle passes the top at `{python} result["past-top"]` s, later than the
+energy, and ends at `{python} result["euler-largest-angle"]`°. The error is not a digit; it is the
 kind of motion. The energy crossed its line before the angle crossed the
 top, and it is the cheaper of the two to watch, because it needs no
 exact solution and no knowledge of where the top is.
@@ -897,8 +766,8 @@ freedom, and four fixed-step methods.
 - The energy of the explicit Euler step is a leading-order formula, checked
   at three states; it does not bound the drift of a run.
 - Round-off is not what limits the results: the smallest drift of the
-  tables, `{python} f"{drifts['Runge-Kutta 4'][-1]:.1e}"`, is
-  `{python} f"{drifts['Runge-Kutta 4'][-1] / np.finfo(float).eps:.0e}"` times the
+  tables, `{python} result["rk4-finest-drift"]`, is
+  `{python} result["rk4-finest-in-eps"]` times the
   spacing of double-precision numbers at one. A finer step or a longer run
   would reach the region where it matters.
 - The pendulum has one degree of freedom, and the exact period is the
@@ -920,7 +789,7 @@ swing it is at a given time. A method can leave the energy curve almost
 alone and still turn the state along it too fast or too slowly, so the
 simulated bob drifts away from the true one in time. The lag table shows it:
 velocity Verlet has an energy band
-`{python} f"{drifts['symplectic Euler'][1] / drifts['velocity Verlet'][1]:.0f}"`
+`{python} result["symplectic-over-verlet"]`
 times narrower than that of symplectic Euler, and a lag of about the same
 size. To tell the two runs apart, compare a quantity that depends on time,
 such as the times of the passages through the bottom against the exact
@@ -947,29 +816,19 @@ $\theta_0^4$ term to the series, as the explanation derived it, shows where
 the difference between the first two answers comes from.
 
 ```{python}
-from scipy.optimize import brentq
-
-from_series = np.degrees(np.sqrt(0.16))
-two_terms = np.degrees(brentq(lambda a: a**2 / 16 + 11 * a**4 / 3072 - 0.01, 0.01, 1.0))
-exact_amplitude = brentq(lambda angle: pendulum_period(length, angle) / t0 - 1.01, 0.01, 1.0)
-measured = np.mean(np.diff(forward_crossings(run(rk4, np.degrees(exact_amplitude), 200, 3))))
-
-table(
-    [
-        ("one-term series", from_series, None),
-        ("two-term series", two_terms, None),
-        ("exact period", np.degrees(exact_amplitude), None),
-        ("simulation at the exact amplitude", np.degrees(exact_amplitude), measured / t0),
-    ],
-    columns=[("source", "", ""), ("amplitude", "degrees", ".2f"), ("period / T0", "", ".4f")],
-    caption="Amplitude at which the period exceeds the small-angle period by one per cent, to two decimals, and the simulated period there.",
-)
+#| echo: false
+excerpt(experiment.one_per_cent_longer)
 ```
 
-About `{python} f"{np.degrees(exact_amplitude):.0f}"`°. The one-term series is
-`{python} f"{from_series - np.degrees(exact_amplitude):.3f}"`° above the
+```{python}
+#| echo: false
+result.table("one-per-cent-longer")
+```
+
+About `{python} result["exact-amplitude"]`°. The one-term series is
+`{python} result["one-term-excess"]`° above the
 exact amplitude, and the second term of the series reduces that to
-`{python} f"{two_terms - np.degrees(exact_amplitude):.3f}"`°, which is what the
+`{python} result["two-term-excess"]`°, which is what the
 first term leaves out. A pendulum clock keeps its amplitude small for this
 reason, and keeps it constant because even a small amplitude that varied would
 vary the period.
@@ -991,32 +850,13 @@ pendulum force. The work is the integral of the power $-b\,v^2$ over the
 run, by the trapezoidal rule on the simulated velocities.
 
 ```{python}
-from pbc.mechanics.drag import linear_drag
+#| echo: false
+excerpt(experiment.damped_budget)
+```
 
-b = 0.1  # kg/s
-damped = newton(mass, pendulum_force(mass, length), linear_drag(b))
-
-rows = []
-for n in step_counts[1:]:
-    trajectory = simulate(released(amplitude), damped, t0 / n, round(5 * swing / t0 * n), step=verlet.step)
-    energies = mechanical_energy(trajectory, mass, potential)
-    power = -b * np.sum(trajectory.v**2, axis=1)
-    work = np.trapezoid(power, trajectory.t)
-    rows.append(
-        (n, energies[0] - energies[-1], -work, energies[0] - energies[-1] + work, drifts["velocity Verlet"][step_counts.index(n)])
-    )
-
-table(
-    rows,
-    columns=[
-        ("steps per T0", "", "d"),
-        ("energy lost", "J", ".4f"),
-        ("work by drag", "J", ".4f"),
-        ("gap", "J", ".1e"),
-        ("undamped drift", "", ".1e"),
-    ],
-    caption="Energy lost, work done by the drag, and the gap between them over five swings, with the drift of the undamped run at the same step.",
-)
+```{python}
+#| echo: false
+result.table("damped-budget")
 ```
 
 The budget closes to the accuracy of the method: the gap quarters when the
@@ -1042,16 +882,13 @@ runs of this lesson, so the prediction is tested for fifty swings as for
 twenty.
 
 ```{python}
-target = 1e-5
-needed = int(np.ceil(100 * np.sqrt(drifts["velocity Verlet"][1] / target)))
-trajectory = run(verlet, amplitude, needed, 50)
-drift = energy_drift(mechanical_energy(trajectory, mass, potential))
+#| echo: false
+excerpt(experiment.steps_for_a_drift)
+```
 
-table(
-    [(needed, drift, len(trajectory.t) - 1)],
-    columns=[("steps per T0", "", "d"), ("drift over fifty swings", "", ".2e"), ("steps in the run", "", "d")],
-    caption="The predicted number of steps per small-angle period, and the drift of the run that uses it.",
-)
+```{python}
+#| echo: false
+result.table("steps-for-a-drift")
 ```
 
 The prediction lands on the target. The previous lesson's rule stands:
@@ -1060,7 +897,7 @@ and the order tells the cost of the accuracy.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -1071,6 +908,8 @@ reproduce_this(
         "src/pbc/mechanics/energy.py",
         "src/pbc/mechanics/pendulum.py",
         "src/pbc/mechanics/drag.py",
+        "src/pbc/mechanics/experiments/energy_conservation.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_dynamics.py",
@@ -1078,6 +917,7 @@ reproduce_this(
         "tests/unit/test_energy.py",
         "tests/unit/test_pendulum.py",
         "tests/unit/test_drag.py",
+        "tests/unit/test_energy_conservation_experiment.py",
     ],
 )
 ```

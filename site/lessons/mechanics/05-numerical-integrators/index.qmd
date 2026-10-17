@@ -20,6 +20,7 @@ lesson:
   related: [symplectic-euler-conserved-energy]
   format: 2
   preview: fig-integrators-phase-space
+  experiment: pbc.mechanics.experiments.numerical_integrators
   prerequisites:
     lessons: [harmonic-oscillator]
     outside:
@@ -30,8 +31,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import integrators
+from pbc.mechanics.experiments import numerical_integrators as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -60,11 +64,6 @@ stay within a band. What does a step cost, in evaluations of the force. The
 answers differ by method, and they are not a ranking: a method that is
 best for an accurate position after two periods is not the one to trust
 with the energy over a thousand. The lesson ends with the rule that follows.
-
-```{python}
-#| echo: false
-import numpy as np
-```
 
 ## Assumptions
 
@@ -189,39 +188,17 @@ The two Euler rules differ only in an ordering, and a picture of the data
 flow shows what the ordering changes:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_update_orderings)
+```
+
+```{python}
 #| label: fig-update-orderings
+#| echo: false
 #| fig-cap: "The same four quantities, wired in two orders. In explicit Euler the position is moved by the old velocity, so the two updates are independent of each other. In symplectic Euler the velocity is updated first and the position is moved by the new one, so the position update waits for the velocity update."
 #| fig-status: conceptual
 #| fig-alt: "Two diagrams side by side, each with the position and velocity at step n on the left and at step n plus one on the right. In both, each quantity has an arrow to its own successor, and a dashed arrow runs from the old position to the new velocity, for the force. In explicit Euler a solid arrow runs from the old velocity to the new position, crossing the dashed one. In symplectic Euler a solid arrow runs upward from the new velocity to the new position."
-import matplotlib.pyplot as plt
-
-from pbc.authoring import diagrams
-
-fig, axes = plt.subplots(1, 2, figsize=(6.4, 3.0))
-orderings = (
-    ("Explicit Euler", 0, False),
-    ("Symplectic Euler", 1, True),
-)
-for ax, (name, colour, velocity_first) in zip(axes, orderings, strict=True):
-    diagrams.frame(ax, (-0.2, 4.4), (-0.7, 3.2))
-    diagrams.text(ax, (2.1, 3.0), name, colour=colour)
-    left, right = 0.4, 3.8
-    diagrams.state_box(ax, (left, 2.0), "$x_n$", width=1.0, height=0.7, colour=colour)
-    diagrams.state_box(ax, (left, 0.4), "$v_n$", width=1.0, height=0.7, colour=colour)
-    diagrams.state_box(ax, (right, 2.0), "$x_{n+1}$", width=1.0, height=0.7, colour=colour)
-    diagrams.state_box(ax, (right, 0.4), "$v_{n+1}$", width=1.0, height=0.7, colour=colour)
-    diagrams.arrow(ax, (left + 0.5, 2.0), (right - 0.5, 2.0), colour=colour)
-    diagrams.arrow(ax, (left + 0.5, 0.4), (right - 0.5, 0.4), colour=colour)
-    diagrams.arrow(ax, (left + 0.45, 1.7), (right - 0.45, 0.7), colour=colour, linestyle="--")
-    if velocity_first:
-        diagrams.arrow(ax, (right, 0.75), (right, 1.65), colour=colour)
-        diagrams.text(ax, (right + 0.1, 1.2), "new\nvelocity", ha="left", colour=colour)
-    else:
-        diagrams.arrow(ax, (left + 0.45, 0.7), (right - 0.45, 1.7), colour=colour)
-        diagrams.text(ax, (right + 0.1, 1.2), "old\nvelocity", ha="left", colour=colour)
-    diagrams.text(ax, (2.1, -0.4), "dashed: the force, from $x_n$", colour="#57606a")
-fig.tight_layout()
-plt.show()
+result.show("fig-update-orderings")
 ```
 
 The diagram is drawn by hand, and nothing in it is computed. It answers the
@@ -281,7 +258,7 @@ The first is the factor of the previous lesson. The second is below one for
 $z < 2\sqrt 2$: Runge-Kutta *loses* energy, by a tiny fixed fraction per
 step, $z^6/72$ for small $z$. The loss is steady, so it accumulates over a
 long run just as explicit Euler's gain does, only far more slowly, and above
-$z = 2\sqrt 2$, fewer than about `{python} f"{2 * np.pi / (2 * np.sqrt(2)):.1f}"`
+$z = 2\sqrt 2$, fewer than about `{python} result["stability-steps"]`
 steps per period, the factor exceeds one and the method is unstable.
 
 Symplectic Euler and velocity Verlet treat $x$ and $v$ differently, so their
@@ -367,9 +344,6 @@ methods.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import integrators
-
 excerpt(
     integrators.symplectic_euler_step,
     notes={
@@ -434,22 +408,13 @@ excerpt(integrators.Integrator)
 ```
 
 ```{python}
-from pbc.authoring import table
-from pbc.mechanics.integrators import INTEGRATORS
+#| echo: false
+excerpt(experiment.methods)
+```
 
-table(
-    [
-        (i.name, i.step.__name__, i.order, i.evaluations)
-        for i in INTEGRATORS
-    ],
-    columns=[
-        ("method", "", ""),
-        ("stepper", "", ""),
-        ("order", "", "d"),
-        ("evaluations per step", "", "d"),
-    ],
-    caption="The four methods of the lesson, as the list INTEGRATORS gives them.",
-)
+```{python}
+#| echo: false
+result.table("methods")
 ```
 
 ## Worked examples
@@ -463,103 +428,59 @@ counting how often each calls the acceleration, and
 tabulates the last state, the energy relative to the start, and the count.
 
 ```{python}
-#| label: state-after-three-periods
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.oscillator import angular_frequency, energy, harmonic_motion, spring
-
-mass = 0.5  # kg
-k = 2.0  # spring constant, N/m
-omega = angular_frequency(mass, k)
-period = 2 * np.pi / omega
-released = State(t=0.0, x=1.0, v=0.0)
-oscillator = newton(mass, spring(k))
-
-
-def counted(acceleration):
-    """The acceleration function, and a list that grows by one per call."""
-    calls = []
-
-    def counting(t, x, v):
-        calls.append(1)
-        return acceleration(t, x, v)
-
-    return counting, calls
-
-
-def run(integrator, steps_per_period, n_periods, start=released, acceleration=oscillator):
-    """Simulate n_periods with the integrator; the trajectory and the number of calls."""
-    counting, calls = counted(acceleration)
-    trajectory = simulate(
-        start,
-        counting,
-        period / steps_per_period,
-        round(n_periods * steps_per_period),
-        step=integrator.step,
-    )
-    return trajectory, len(calls)
-
-
-coarse, coarse_periods = 50, 3
-final = {}
-rows = []
-for integrator in INTEGRATORS:
-    trajectory, calls = run(integrator, coarse, coarse_periods)
-    relative = energy(trajectory, mass, k)
-    final[integrator.name] = relative[-1] / relative[0]
-    rows.append(
-        (integrator.name, trajectory.x[-1, 0], trajectory.v[-1, 0], final[integrator.name], calls)
-    )
-exact_end = harmonic_motion(released, mass, k, coarse_periods * period)
-rows.append(("exact", exact_end.x[0, 0], exact_end.v[0, 0], 1.0, None))
-
-table(
-    rows,
-    columns=[
-        ("method", "", ""),
-        ("x", "m", ".3f"),
-        ("v", "m/s", ".3f"),
-        ("energy / initial", "", ".6f"),
-        ("calls", "", "d"),
-    ],
-    caption="State after three periods at fifty steps per period, to three decimals; energy to six decimals.",
-)
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-The angular frequency is $\omega$ = `{python} f"{omega:.0f}"` rad/s, and the period
-is `{python} f"{period:.3f}"` s. [Explicit Euler has multiplied the energy by `{python} f"{final['explicit Euler']:.1f}"`
+```{python}
+#| echo: false
+excerpt(experiment.counted)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.run_method)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment, region="coarse")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.after_three_periods)
+```
+
+```{python}
+#| label: state-after-three-periods
+#| echo: false
+result.table("state-after-three-periods")
+```
+
+The angular frequency is $\omega$ = `{python} result["omega"]` rad/s, and the period
+is `{python} result["period"]` s. [Explicit Euler has multiplied the energy by `{python} result["euler-final"]`
 in three periods.]{.claim type="numerically-verified" scope="the oscillator at
 this step" evidence="state-after-three-periods"} The other three end close to the exact
 state. Velocity Verlet has the energy back to
-`{python} f"{abs(final['velocity Verlet'] - 1):.1e}"` of the start although it did
+`{python} result["verlet-departure"]` of the start although it did
 not conserve it along the way, and Runge-Kutta is
-`{python} f"{1e6 * (1 - final['Runge-Kutta 4']):.1f}"` parts per million below
+`{python} result["rk4-loss-ppm"]` parts per million below
 the start, which is the drain the explanation derived. In phase space the
 difference is visible at a glance:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_integrators_phase_space)
+```
+
+```{python}
 #| label: fig-integrators-phase-space
+#| echo: false
 #| fig-cap: "Three periods in phase space for each method at the same coarse step, against the exact ellipse. Explicit Euler spirals outward and never returns; symplectic Euler stays on a closed curve that is tilted and wider than the ellipse; velocity Verlet and Runge-Kutta cannot be told from the ellipse at this scale."
 #| fig-status: simulated
 #| fig-alt: "Four panels of velocity against position, one per method, each with the exact orbit as a dotted ellipse. Explicit Euler spirals outward, far beyond the ellipse. Symplectic Euler traces a closed curve that is slightly tilted and slightly wider than the ellipse. Velocity Verlet and classical Runge-Kutta trace curves that lie on the ellipse to within the width of the line."
-import matplotlib.pyplot as plt
-
-exact_orbit = harmonic_motion(released, mass, k, np.linspace(0.0, period, 200))
-
-fig, axes = plt.subplots(2, 2, figsize=(6.4, 6.4), sharex=True, sharey=True)
-for ax, integrator in zip(axes.flat, INTEGRATORS, strict=True):
-    trajectory, _ = run(integrator, coarse, coarse_periods)
-    ax.plot(exact_orbit.x[:, 0], exact_orbit.v[:, 0], color="#00429d", linestyle=":", label="exact")
-    ax.plot(trajectory.x[:, 0], trajectory.v[:, 0], color="#93003a", linewidth=0.8)
-    ax.set_title(integrator.name, fontsize=10)
-    ax.set_xlim(-3.5, 3.5)
-    ax.set_ylim(-7.0, 7.0)
-    ax.set_aspect(1 / omega)
-for ax in axes[1]:
-    ax.set_xlabel("position (m)")
-for ax in axes[:, 0]:
-    ax.set_ylabel("velocity (m/s)")
-fig.tight_layout()
-plt.show()
+result.show("fig-integrators-phase-space")
 ```
 
 The data are the runs of the table above, drawn against the exact ellipse of
@@ -582,39 +503,24 @@ per period over two periods and tabulates the error and the observed order for
 each method.
 
 ```{python}
+#| echo: false
+excerpt(experiment.state_error)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment, region="step-counts")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.error_orders)
+```
+
+```{python}
 #| label: error-orders
-def state_error(trajectory):
-    """Largest distance from the exact state in the plane (x, v / omega), in m."""
-    exact = harmonic_motion(released, mass, k, trajectory.t)
-    dx = trajectory.x - exact.x
-    dv = (trajectory.v - exact.v) / omega
-    return np.max(np.sqrt(np.sum(dx**2 + dv**2, axis=1)))
-
-
-step_counts = [25 * 2**i for i in range(6)]
-errors = {
-    integrator.name: np.array(
-        [state_error(run(integrator, n, 2)[0]) for n in step_counts]
-    )
-    for integrator in INTEGRATORS
-}
-
-columns = [("steps per period", "", "d")]
-for integrator in INTEGRATORS:
-    columns += [(f"{integrator.name} error", "m", ".2e"), ("order", "", ".2f")]
-rows = []
-for i, n in enumerate(step_counts):
-    row = [n]
-    for integrator in INTEGRATORS:
-        error = errors[integrator.name]
-        row += [error[i], np.log2(error[i - 1] / error[i]) if i else None]
-    rows.append(row)
-
-table(
-    rows,
-    columns=columns,
-    caption="Largest error over two periods for each method, with the observed order from the previous row.",
-)
+#| echo: false
+result.table("error-orders")
 ```
 
 [The observed orders settle at the orders of the explanation: one, one, two,
@@ -624,50 +530,23 @@ The two first-order methods approach one from above, because at the coarser
 steps their errors contain the higher powers of $\omega\,\Delta t$ as well,
 and they do so from very different starting points: at the same step symplectic
 Euler is
-`{python} f"{errors['explicit Euler'][0] / errors['symplectic Euler'][0]:.0f}"`
+`{python} result["euler-over-symplectic"]`
 times as accurate as explicit Euler at the coarsest step, at the same cost per
 step. On logarithmic axes the four errors are straight lines whose slopes are
 the orders:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_integrators_convergence)
+```
+
+```{python}
 #| label: fig-integrators-convergence
+#| echo: false
 #| fig-cap: "Largest error over two periods against the time step, for the four methods, with reference lines for the slopes one, two, and four. Each method follows the reference line of its order, so a tenfold smaller step buys one digit from explicit and symplectic Euler, two from velocity Verlet, and four from Runge-Kutta."
 #| fig-status: simulated
 #| fig-alt: "Log-log plot of the error in metres against the time step in seconds. Four sets of points lie on straight lines: explicit Euler highest with slope one, symplectic Euler below it with slope one, velocity Verlet steeper with slope two, and classical Runge-Kutta steepest with slope four, reaching far below a millimetre at the finest step. Dotted reference lines show the three slopes."
-steps = period / np.array(step_counts)
-styles = {
-    "explicit Euler": ("o", "-"),
-    "symplectic Euler": ("s", "--"),
-    "velocity Verlet": ("^", "-."),
-    "Runge-Kutta 4": ("D", ":"),
-}
-
-fig, ax = plt.subplots(figsize=(6.4, 4.2))
-for integrator in INTEGRATORS:
-    marker, linestyle = styles[integrator.name]
-    ax.loglog(
-        steps,
-        errors[integrator.name],
-        color="#93003a",
-        marker=marker,
-        linestyle=linestyle,
-        markersize=4,
-        label=integrator.name,
-    )
-for slope, anchor in ((1, 1.5), (2, 0.15), (4, 1.5e-3)):
-    ax.loglog(
-        steps,
-        anchor * (steps / steps[0]) ** slope,
-        color="#555555",
-        linestyle=":",
-        linewidth=0.8,
-    )
-    ax.annotate(f"slope {slope}", (steps[-1], anchor * (steps[-1] / steps[0]) ** slope),
-                textcoords="offset points", xytext=(4, -8), fontsize=8, color="#555555")
-ax.set_xlabel("time step (s)")
-ax.set_ylabel("largest error over two periods (m)")
-ax.legend(loc="lower right")
-plt.show()
+result.show("fig-integrators-convergence")
 ```
 
 The errors come from the table above and the exact solution; the reference
@@ -677,31 +556,28 @@ coarser, where the stability limits of the explanation do.
 
 ### Energy over a long run
 
-Twenty periods at twenty steps per period, $\omega\,\Delta t$ = `{python} f"{2 * np.pi / 20:.3f}"`,
+Twenty periods at twenty steps per period, $\omega\,\Delta t$ = `{python} result["omega-dt-20"]`,
 with the energy of every state relative to the initial energy. Each panel
 has its own vertical scale, because the four behaviours differ by many
 orders of magnitude.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="twenty-periods")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_integrators_energy)
+```
+
+```{python}
 #| label: fig-integrators-energy
+#| echo: false
 #| fig-cap: "Energy relative to the initial energy over twenty periods at twenty steps per period; each panel has its own vertical scale. Explicit Euler gains energy at a constant rate, which is a straight line on the logarithmic axis. The two symplectic methods oscillate in a band that does not widen, narrower for velocity Verlet. Runge-Kutta loses energy slowly and steadily."
 #| fig-status: simulated
 #| fig-alt: "Four panels of relative energy against time in periods. Explicit Euler: a straight line on a logarithmic axis, rising enormously. Symplectic Euler: an oscillation above and below the starting value that repeats every period without drifting. Velocity Verlet: a narrower oscillation that repeats without drifting. classical Runge-Kutta: a straight line falling very slowly."
-n_periods, n = 20, 20
-fig, axes = plt.subplots(2, 2, figsize=(6.4, 5.6), sharex=True)
-for ax, integrator in zip(axes.flat, INTEGRATORS, strict=True):
-    trajectory, _ = run(integrator, n, n_periods)
-    relative = energy(trajectory, mass, k)
-    ax.plot(trajectory.t / period, relative / relative[0], color="#93003a", linewidth=0.8)
-    if integrator.name == "explicit Euler":
-        ax.set_yscale("log")
-    ax.set_title(integrator.name, fontsize=10)
-for ax in axes[1]:
-    ax.set_xlabel("time (periods)")
-for ax in axes[:, 0]:
-    ax.set_ylabel("energy / initial energy")
-fig.tight_layout()
-plt.show()
+result.show("fig-integrators-energy")
 ```
 
 The next cell checks the four behaviours against the formulas of the
@@ -709,103 +585,59 @@ explanation, on the same runs: the per-step factors for explicit Euler and
 Runge-Kutta, and the modified energies for the two symplectic methods.
 
 ```{python}
-z = omega * period / n
-results = {integrator.name: run(integrator, n, n_periods)[0] for integrator in INTEGRATORS}
+#| echo: false
+excerpt(experiment.relative_energy)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.ratios)
+```
 
-def relative_energy(trajectory):
-    e = energy(trajectory, mass, k)
-    return e / e[0]
+```{python}
+#| echo: false
+excerpt(experiment.spread)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.energy_formulas)
+```
 
-def ratios(trajectory):
-    e = energy(trajectory, mass, k)
-    return e[1:] / e[:-1]
-
-
-def spread(values):
-    """Largest relative deviation from the first value."""
-    return np.max(np.abs(values / values[0] - 1))
-
-
-euler, symplectic, verlet, rk4 = (results[i.name] for i in INTEGRATORS)
-dt = period / n
-modified_se = 0.5 * mass * (
-    symplectic.v[:, 0] ** 2 + omega**2 * symplectic.x[:, 0] ** 2
-    - omega**2 * dt * symplectic.x[:, 0] * symplectic.v[:, 0]
-)
-modified_vv = 0.5 * mass * (
-    verlet.v[:, 0] ** 2 + omega**2 * (1 - omega**2 * dt**2 / 4) * verlet.x[:, 0] ** 2
-)
-rk4_factor = 1 - z**6 / 72 + z**8 / 576
-long_n, long_periods = 32, 1000
-
-table(
-    [
-        ("explicit Euler", "ratio per step", ratios(euler)[0], 1 + z**2,
-         np.max(np.abs(ratios(euler) - (1 + z**2)))),
-        ("Runge-Kutta 4", "ratio per step", ratios(rk4)[0], rk4_factor,
-         np.max(np.abs(ratios(rk4) - rk4_factor))),
-        ("symplectic Euler", "modified energy", None, None, spread(modified_se)),
-        ("velocity Verlet", "modified energy", None, None, spread(modified_vv)),
-    ],
-    columns=[
-        ("method", "", ""),
-        ("quantity", "", ""),
-        ("computed", "", ".8f"),
-        ("derived", "", ".8f"),
-        ("largest deviation", "", ".1e"),
-    ],
-    caption="The energy formulas of the explanation against the runs of the figure: the per-step energy ratio, and how far the modified energy strays from constant.",
-)
+```{python}
+#| echo: false
+result.table("energy-formulas")
 ```
 
 Every formula holds to round-off. The two symplectic methods conserve their
-modified energies to about `{python} f"{max(spread(modified_se), spread(modified_vv)):.0e}"`,
+modified energies to about `{python} result["modified-spread"]`,
 which is why the true energy oscillates within a fixed band in the figure and
 never leaves it. The true energy of symplectic Euler stays between
-`{python} f"{np.min(relative_energy(symplectic)):.4f}"` and
-`{python} f"{np.max(relative_energy(symplectic)):.4f}"` times the start, a band
-as wide as $\omega\,\Delta t$ = `{python} f"{z:.2f}"`; velocity Verlet stays
-between `{python} f"{np.min(relative_energy(verlet)):.4f}"` and
-`{python} f"{np.max(relative_energy(verlet)):.4f}"`, a band of about
-$\omega^2 \Delta t^2 / 4$ = `{python} f"{z**2 / 4:.3f}"`. Runge-Kutta loses
-`{python} f"{1e6 * (1 - rk4_factor):.1f}"` parts per million per step, a steady
+`{python} result["symplectic-lowest"]` and
+`{python} result["symplectic-highest"]` times the start, a band
+as wide as $\omega\,\Delta t$ = `{python} result["z"]`; velocity Verlet stays
+between `{python} result["verlet-lowest"]` and
+`{python} result["verlet-highest"]`, a band of about
+$\omega^2 \Delta t^2 / 4$ = `{python} result["verlet-band"]`. Runge-Kutta loses
+`{python} result["rk4-loss-per-step-ppm"]` parts per million per step, a steady
 drain that no refinement of the digits of the step changes in sign. Over a
 thousand periods the difference between bounded and steady shows plainly.
 The cell runs the three methods that can be run that far at
-`{python} long_n` steps per period and tabulates the energy and, for the
+`{python} result["long-n"]` steps per period and tabulates the energy and, for the
 reader who would trust the position as well, the largest state error; explicit
 Euler would multiply the energy by ten to the power
-`{python} f"{int(1000 * 32 * np.log10(1 + (2 * np.pi / 32) ** 2))}"`
+`{python} result["euler-digits"]`
 and is left out.
 
 ```{python}
-#| label: long-run-energy-bands
-long_runs, long_lowest = {}, {}
-rows = []
-for integrator in INTEGRATORS[1:]:
-    trajectory, calls = run(integrator, long_n, long_periods)
-    relative = relative_energy(trajectory)
-    long_runs[integrator.name] = state_error(trajectory)
-    long_lowest[integrator.name] = np.min(relative)
-    rows.append(
-        (integrator.name, np.min(relative), np.max(relative), relative[-1],
-         long_runs[integrator.name], calls)
-    )
+#| echo: false
+excerpt(experiment.long_run_energy_bands)
+```
 
-table(
-    rows,
-    columns=[
-        ("method", "", ""),
-        ("lowest energy / initial", "", ".5f"),
-        ("highest energy / initial", "", ".5f"),
-        ("energy / initial at the end", "", ".5f"),
-        ("largest state error", "m", ".3f"),
-        ("calls", "", "d"),
-    ],
-    caption="A thousand periods at thirty-two steps per period: the range of the energy, and the largest distance from the exact state.",
-)
+```{python}
+#| label: long-run-energy-bands
+#| echo: false
+result.table("long-run-energy-bands")
 ```
 
 [The symplectic methods are still within their bands, which are no wider after
@@ -831,36 +663,22 @@ The cell predicts the steps per period that way, runs each method at that
 step, and counts the calls.
 
 ```{python}
+#| echo: false
+excerpt(experiment.calls_for_one_millimetre)
+```
+
+```{python}
 #| label: calls-for-one-millimetre
-tolerance = 1e-3  # m
-
-cost = {}
-rows = []
-for integrator in INTEGRATORS:
-    finest_error = errors[integrator.name][-1]
-    needed = int(np.ceil(step_counts[-1] * (finest_error / tolerance) ** (1 / integrator.order)))
-    trajectory, calls = run(integrator, needed, 2)
-    cost[integrator.name] = calls
-    rows.append((integrator.name, needed, state_error(trajectory), calls))
-
-table(
-    rows,
-    columns=[
-        ("method", "", ""),
-        ("steps per period", "", "d"),
-        ("error", "m", ".1e"),
-        ("calls over two periods", "", "d"),
-    ],
-    caption="Steps predicted from the order for an error of one millimetre over two periods, with the error reached and the calls it took.",
-)
+#| echo: false
+result.table("calls-for-one-millimetre")
 ```
 
 Every prediction lands just inside the tolerance, which is the order doing
 what it says. [For one millimetre over two periods, Runge-Kutta needs
-`{python} cost['Runge-Kutta 4']` calls, velocity Verlet
-`{python} cost['velocity Verlet']`, symplectic Euler
-`{python} cost['symplectic Euler']`, and explicit Euler
-`{python} cost['explicit Euler']`.]{.claim type="numerically-verified"
+`{python} result["cost-rk4"]` calls, velocity Verlet
+`{python} result["cost-verlet"]`, symplectic Euler
+`{python} result["cost-symplectic"]`, and explicit Euler
+`{python} result["cost-euler"]`.]{.claim type="numerically-verified"
 scope="the oscillator, tolerance of one millimetre" evidence="calls-for-one-millimetre"}
 The ratios only grow for a tighter tolerance: for one more digit explicit Euler
 needs ten times the calls and Runge-Kutta fewer than twice.
@@ -881,7 +699,7 @@ the exact motion for comparison. With scripts enabled, choose the
 integrator to emphasise and to read out, and change the number of steps per
 period to see every curve respond. The interesting settings are the coarse
 ones: at four steps per period $\omega\,\Delta t$ is about
-`{python} f"{2 * np.pi / 4:.1f}"`, and the stability limits of the explanation
+`{python} result["omega-dt-4"]`, and the stability limits of the explanation
 decide which curves survive.
 
 The runs behind the figure come from the cell below, which calls the tested
@@ -890,10 +708,8 @@ is built. The script of the figure draws these results and computes no
 physics of its own.
 
 ```{python}
-from pbc.mechanics.explorer import STEPS_PER_PERIOD, explorer_data
-
-explorer = explorer_data(mass=mass, k=k)
-runs = {run["name"]: run["series"] for run in explorer["integrators"]}
+#| echo: false
+excerpt(experiment.run, region="explorer")
 ```
 
 ::: {#integrator-explorer data-widget="integrator-explorer" data-enhancement=""}
@@ -903,42 +719,13 @@ runs = {run["name"]: run["series"] for run in explorer["integrators"]}
 #| fig-cap: "Position and energy over five periods at a moderate step, for the four methods. The energy shows explicit Euler climbing while the others stay near the start. With scripts, the figure responds to the controls below it."
 #| fig-status: simulated
 #| fig-alt: "Two panels against time in periods. Top: position in metres, with the exact motion as a thin cosine curve and the four methods drawn over it. Bottom: energy relative to the initial energy on a logarithmic axis. Explicit Euler rises steadily and ends far above the start. Symplectic Euler and velocity Verlet oscillate in narrow bands around the start. classical Runge-Kutta stays close to the start."
-import matplotlib.pyplot as plt
-
-LINE_STYLES = [
-    ("#b34700", "-"),
-    ("#005a9c", (0, (7, 4))),
-    ("#00734f", (0, (2, 4))),
-    ("#6a3d9a", (0, (9, 4, 2, 4))),
-]
-default = STEPS_PER_PERIOD.index(16)
-fig, (top, bottom) = plt.subplots(2, 1, figsize=(6.4, 5.2), sharex=True)
-top.plot(
-    np.array(explorer["exact"]["t"]) / period,
-    explorer["exact"]["x"],
-    color="#444444",
-    linewidth=1.0,
-    label="exact",
-)
-for (color, style), integrator in zip(LINE_STYLES, INTEGRATORS, strict=True):
-    series = runs[integrator.name][default]
-    t = np.arange(len(series["x"])) / series["steps_per_period"]
-    top.plot(t, series["x"], color=color, linestyle=style, linewidth=1.4, label=integrator.name)
-    bottom.plot(t, series["e"], color=color, linestyle=style, linewidth=1.4)
-top.set_ylim(-1.5, 1.5)
-top.set_ylabel("position (m)")
-top.legend(loc="upper right", fontsize=7, ncol=3)
-bottom.set_yscale("log")
-bottom.set_ylabel("energy / initial energy")
-bottom.set_xlabel("time (periods)")
-fig.tight_layout()
-plt.show()
+result.show("fig-integrator-explorer")
 ```
 
 ::: {.widget-controls}
 With JavaScript, this figure gets controls for the integrator and the
 number of steps per period. Without it, the figure above and the tables
-below show the results at the default step count (`{python} STEPS_PER_PERIOD[default]` steps per period)
+below show the results at the default step count (`{python} result["default-steps"]` steps per period)
 and at every other step count.
 :::
 :::
@@ -949,31 +736,19 @@ position error over the run, and the number of evaluations of the
 acceleration, for each method.
 
 ```{python}
+#| echo: false
 from IPython.display import display
 
-for title, key, spec, unit in [
-    ("Energy after five periods relative to the initial energy", "final_energy", ".4g", ""),
-    ("Largest position error over five periods", "max_error", ".2e", "m"),
-    ("Evaluations of the acceleration over five periods", "calls", "d", ""),
-]:
-    display(
-        table(
-            [
-                (n, *(series[j][key] for series in runs.values()))
-                for j, n in enumerate(STEPS_PER_PERIOD)
-            ],
-            columns=[("steps per period", "", "d")]
-            + [(name, unit, spec) for name in runs],
-            caption=f"{title}, for each step count of the figure.",
-        )
-    )
+display(result.table("explorer-final-energy"))
+display(result.table("explorer-max-error"))
+display(result.table("explorer-calls"))
 ```
 
 ```{python}
 #| echo: false
 from pbc.authoring import widget_data, widget_module
 
-widget_data("integrator-explorer", explorer)
+widget_data("integrator-explorer", result.widget("integrator-explorer"))
 ```
 
 ```{python}
@@ -1025,10 +800,10 @@ true one; it says nothing about where on the curve the state is. The method
 turns the state by an angle per step that is slightly wrong, so the phase error
 grows with time while the energy stays bounded. The long-run table shows it:
 the largest state error of velocity Verlet over the thousand periods is
-`{python} f"{long_runs['velocity Verlet']:.2f}"` m, the whole width of the orbit
+`{python} result["verlet-long-error"]` m, the whole width of the orbit
 of amplitude one metre, so at some time the state was on the far side of the
 orbit from the exact one, although its energy is within
-`{python} f"{100 * (1 - long_lowest['velocity Verlet']):.1f}"` per cent of the start. The first assumption
+`{python} result["verlet-lowest-per-cent"]` per cent of the start. The first assumption
 that fails is the one about what "accurate" means: bounded energy error and
 small position error are different properties, and the first does not imply
 the second.
@@ -1061,20 +836,13 @@ two and blows up at the third. Explicit Euler grows at all three, by the
 factor $1 + \omega^2 \Delta t^2$ per step.
 
 ```{python}
-rows = []
-for steps_per_period in (3.5, 3.0, 2.2):
-    row = [steps_per_period, 2 * np.pi / steps_per_period]
-    for integrator in INTEGRATORS:
-        trajectory = simulate(released, oscillator, period / steps_per_period, 100, step=integrator.step)
-        row.append(relative_energy(trajectory)[-1])
-    rows.append(row)
+#| echo: false
+excerpt(experiment.stability_limits)
+```
 
-table(
-    rows,
-    columns=[("steps per period", "", ".1f"), ("omega dt", "", ".3f")]
-    + [(f"{i.name}, energy / initial", "", ".2e") for i in INTEGRATORS],
-    caption="Energy relative to the start after one hundred steps, at three steps near the stability limits.",
-)
+```{python}
+#| echo: false
+result.table("stability-limits")
 ```
 
 At the first step size the two symplectic methods are stable and their
@@ -1110,39 +878,13 @@ error is the distance between the simulated and the exact position after
 two seconds.
 
 ```{python}
-from scipy.constants import g
+#| echo: false
+excerpt(experiment.throw_with_drag)
+```
 
-from pbc.mechanics.drag import fall_with_linear_drag, linear_drag
-from pbc.mechanics.dynamics import weight
-
-drag_mass, b = 0.5, 0.25  # kg, kg/s: time constant 2 s
-thrown = State(t=0.0, x=[0.0, 0.0], v=[12.0, 15.0])
-with_drag = newton(drag_mass, weight(drag_mass, [0.0, -g]), linear_drag(b))
-duration = 2.0  # s
-exact_throw = fall_with_linear_drag(thrown, drag_mass, b, [0.0, -g], duration)
-
-previous = {}
-rows = []
-for n_steps in (20, 40, 80, 160, 320):
-    row = [n_steps]
-    for integrator in INTEGRATORS[2:]:
-        trajectory = simulate(thrown, with_drag, duration / n_steps, n_steps, step=integrator.step)
-        error = np.linalg.norm(trajectory.x[-1] - exact_throw.x[0])
-        order = np.log2(previous[integrator.name] / error) if integrator.name in previous else None
-        previous[integrator.name] = error
-        row += [error, order]
-    rows.append(row)
-
-table(
-    rows,
-    columns=[("steps", "", "d")]
-    + [
-        column
-        for integrator in INTEGRATORS[2:]
-        for column in ((f"{integrator.name} error", "m", ".2e"), ("order", "", ".2f"))
-    ],
-    caption="Position error after two seconds of a throw with linear drag, with the observed order.",
-)
+```{python}
+#| echo: false
+result.table("throw-with-drag")
 ```
 
 Both keep their orders. For velocity Verlet that is what the predicted
@@ -1171,40 +913,28 @@ period of each method, then compare the largest errors.
 
 ::: {.solution}
 ```{python}
-budget = 200  # calls per period
-equal_cost = {}
-rows = []
-for integrator in INTEGRATORS:
-    steps_per_period = budget // integrator.evaluations
-    trajectory, calls = run(integrator, steps_per_period, 2)
-    equal_cost[integrator.name] = state_error(trajectory)
-    rows.append((integrator.name, steps_per_period, calls, equal_cost[integrator.name]))
+#| echo: false
+excerpt(experiment.equal_cost)
+```
 
-table(
-    rows,
-    columns=[
-        ("method", "", ""),
-        ("steps per period", "", "d"),
-        ("calls", "", "d"),
-        ("largest error", "m", ".1e"),
-    ],
-    caption="Largest error over two periods when every method has the same number of calls per period.",
-)
+```{python}
+#| echo: false
+result.table("equal-cost")
 ```
 
 At equal cost the ranking is the ranking by order, and the gaps are large:
 velocity Verlet is
-`{python} f"{equal_cost['symplectic Euler'] / equal_cost['velocity Verlet']:.0f}"`
+`{python} result["symplectic-over-verlet"]`
 times as accurate as symplectic Euler although it takes half the steps, and
 Runge-Kutta is
-`{python} f"{equal_cost['velocity Verlet'] / equal_cost['Runge-Kutta 4']:.0f}"`
+`{python} result["verlet-over-rk4"]`
 times as accurate as velocity Verlet with half of those. The one case in
 which a lower order wins at equal cost is a run long enough for
 Runge-Kutta's energy drain to matter, which is the long-run example.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -1215,6 +945,8 @@ reproduce_this(
         "src/pbc/mechanics/oscillator.py",
         "src/pbc/mechanics/drag.py",
         "src/pbc/mechanics/explorer.py",
+        "src/pbc/mechanics/experiments/numerical_integrators.py",
+        "src/pbc/experiment.py",
         "src/pbc/authoring/widgets.py",
         "site/widgets/integrator-explorer.js",
     ],
@@ -1225,6 +957,7 @@ reproduce_this(
         "tests/unit/test_drag.py",
         "tests/unit/test_explorer.py",
         "tests/unit/test_widgets.py",
+        "tests/unit/test_numerical_integrators_experiment.py",
     ],
 )
 ```

@@ -21,6 +21,7 @@ lesson:
   related: [lagrangian-mechanics]
   format: 2
   preview: fig-separation
+  experiment: pbc.mechanics.experiments.double_pendulum_chaos
   prerequisites:
     lessons: [energy-conservation, numerical-integrators]
     outside:
@@ -32,8 +33,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import chaos
+from pbc.mechanics.experiments import double_pendulum_chaos as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -204,9 +208,6 @@ earlier lessons applies to it unchanged.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import chaos
-
 excerpt(
     chaos.double_pendulum,
     notes={
@@ -264,54 +265,34 @@ zero, interpolated within the step. The second runs the pendulum from a
 regular and from a chaotic start and reports the drift of the energy.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.released)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.run_for)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.periods)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.modes_and_energy)
+```
+
+```{python}
 #| label: modes-and-energy
-import numpy as np
-from scipy.constants import g
-
-from pbc.authoring import table
-from pbc.mechanics.chaos import (
-    double_pendulum,
-    double_pendulum_energy,
-    lyapunov_exponent,
-)
-from pbc.mechanics.dynamics import State, simulate
-from pbc.mechanics.integrators import rk4_step
-
-mass, length = 1.0, 1.0  # kg, m
-pendulum = double_pendulum(mass, mass, length, length)
-dt = 0.01  # s
-
-
-def released(first, second):
-    """At rest, with the two rods at the given angles (rad)."""
-    return State(t=0.0, x=[first, second], v=[0.0, 0.0])
-
-
-def run(start, duration):
-    return simulate(start, pendulum, dt, round(duration / dt), step=rk4_step)
-
-
-def periods(trajectory):
-    """The times between the passages of the first angle through zero in the
-    same direction, interpolated within the step (s)."""
-    s, t = trajectory.x[:, 0], trajectory.t
-    before = np.where((s[:-1] > 0) & (s[1:] <= 0))[0]
-    crossings = t[before] + s[before] / (s[before] - s[before + 1]) * (t[before + 1] - t[before])
-    return np.diff(crossings)
-
-
-rows = []
-for label, ratio, factor in (("slow mode", np.sqrt(2.0), 2.0 - np.sqrt(2.0)), ("fast mode", -np.sqrt(2.0), 2.0 + np.sqrt(2.0))):
-    small = 1e-3  # rad
-    trajectory = run(released(small, small * ratio), 12.0)
-    analytic = 2.0 * np.pi / np.sqrt(g / length * factor)
-    rows.append((label, analytic, np.mean(periods(trajectory))))
-
-table(
-    rows,
-    columns=[("mode", "", ""), ("period from the equations", "s", ".4f"), ("simulated period", "s", ".4f")],
-    caption="Period of the two normal modes of the small oscillations: the closed form and the simulation, to four decimals.",
-)
+#| echo: false
+result.table("modes-and-energy")
 ```
 
 [The simulated periods of both modes agree with the closed form to the four
@@ -324,29 +305,30 @@ chaos, are not tested by a linear check. The energy is the second check, and
 it sees them:
 
 ```{python}
+#| echo: false
+excerpt(experiment.drift)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment, region="starts")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.energy_drift)
+```
+
+```{python}
 #| label: energy-drift
-def drift(trajectory):
-    energy = double_pendulum_energy(trajectory.x, trajectory.v, mass, mass, length, length)
-    return np.max(np.abs(energy - energy[0])) / abs(energy[0])
-
-
-regular_start, chaotic_start = released(0.2, 0.2), released(2.0, 2.0)
-regular_run, chaotic_run = run(regular_start, 50.0), run(chaotic_start, 50.0)
-
-table(
-    [
-        ("regular", 0.2, drift(regular_run)),
-        ("chaotic", 2.0, drift(chaotic_run)),
-    ],
-    columns=[("start", "", ""), ("both angles", "rad", ".1f"), ("energy drift over 50 s", "", ".1e")],
-    caption="Relative energy drift of the double pendulum released at rest with both rods at the same angle, over fifty seconds, classical Runge-Kutta method.",
-)
+#| echo: false
+result.table("energy-drift")
 ```
 
 [The energy stays within a small fraction of its start in both regimes]{.claim
 type="numerically-verified" scope="the two starts of the table, fifty seconds,
 classical Runge-Kutta method with the stated step" evidence="energy-drift"}, but
-the drift is `{python} f"{drift(chaotic_run) / drift(regular_run):.0e}"` times
+the drift is `{python} result["drift-ratio"]` times
 larger in the chaotic run. The energy drift of the method grows where the
 motion is violent, and this is the first sign that the program is not as exact
 in the chaotic regime as in the regular one.
@@ -362,50 +344,49 @@ scale would change the distances and the tolerances quoted below, not the
 exponent.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="offset")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.separation)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.shifted)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.separations)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.run, region="rate")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_separation)
+```
+
+```{python}
 #| label: fig-separation
+#| echo: false
 #| fig-cap: "The distance between two nearly identical starts, on a logarithmic axis. In the regular motion it grows slowly and stays far below the size of the motion; in the chaotic motion it grows along a straight line, an exponential, until it reaches the size of the motion and cannot grow any more. The dashed line has the slope of the Lyapunov exponent estimated below."
 #| fig-alt: "Line plot of the distance between two starts against time, with a logarithmic vertical axis. The curve of the regular start rises slowly and stays low with small wiggles. The curve of the chaotic start rises steeply along a straight line for about ten seconds, then levels off at a high value and fluctuates. A dashed straight line with a slope that matches the steep part is drawn through the start of the chaotic curve."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-from pbc.authoring import FIGURE_COLOURS
-
-offset = 1e-8  # rad
-
-
-def separation(first, second):
-    return np.linalg.norm(np.hstack([first.x - second.x, first.v - second.v]), axis=1)
-
-
-def shifted(start):
-    return State(t=0.0, x=start.x + np.array([offset, 0.0]), v=start.v)
-
-
-regular_gap = separation(regular_run, run(shifted(regular_start), 50.0))
-chaotic_gap = separation(chaotic_run, run(shifted(chaotic_start), 50.0))
-
-estimates = {
-    name: lyapunov_exponent(start, pendulum, dt, round(100.0 / dt))
-    for name, start in (("regular", regular_start), ("chaotic", chaotic_start))
-}
-rate = estimates["chaotic"].exponent
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.semilogy(regular_run.t, regular_gap, color=FIGURE_COLOURS[0], linestyle="-", label="regular start")
-ax.semilogy(chaotic_run.t, chaotic_gap, color=FIGURE_COLOURS[1], linestyle="--", label="chaotic start")
-t_line = np.linspace(0.0, 14.0, 50)
-ax.semilogy(t_line, offset * np.exp(rate * t_line), color="#57606a", linestyle=":", label="slope of the exponent")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("distance between the two starts")
-ax.legend(loc="lower right")
-plt.show()
+result.show("fig-separation")
 ```
 
 The figure is the simulation of the two starts, with the line drawn from the
 exponent that the next example estimates. The regular separation reaches
-`{python} f"{regular_gap.max():.0e}"` at the end and the chaotic separation
-`{python} f"{chaotic_gap.max():.1f}"`, which is the size of the motion itself:
-the starts began `{python} f"{offset:.0e}"` apart. The chaotic curve is straight on the
+`{python} result["regular-gap"]` at the end and the chaotic separation
+`{python} result["chaotic-gap"]`, which is the size of the motion itself:
+the starts began `{python} result["offset"]` apart. The chaotic curve is straight on the
 logarithmic axis for the first stretch, which is what an exponential looks
 like, and then the separation can grow no more because the two pendulums are
 anywhere in the same region and the distance between two places in it is
@@ -414,19 +395,14 @@ bounded.
 ### The estimate in both regimes
 
 ```{python}
-#| label: lyapunov-table
-rows = []
-for name, estimate in estimates.items():
-    row = [name]
-    for horizon in (25.0, 50.0, 100.0):
-        row.append(estimate.running[np.searchsorted(estimate.t, horizon) - 1])
-    rows.append(row)
+#| echo: false
+excerpt(experiment.lyapunov_table)
+```
 
-table(
-    rows,
-    columns=[("start", "", ""), ("after 25 s", "1/s", ".3f"), ("after 50 s", "1/s", ".3f"), ("after 100 s", "1/s", ".3f")],
-    caption="The estimate of the largest Lyapunov exponent of the two starts of the figure, after three lengths of the run, to three decimals.",
-)
+```{python}
+#| label: lyapunov-table
+#| echo: false
+result.table("lyapunov-table")
 ```
 
 [The estimate for the regular start falls with the length of the run and ends
@@ -434,31 +410,25 @@ near zero, and the estimate for the chaotic start is positive and
 steady]{.claim type="numerically-verified" scope="the two starts, one hundred
 seconds, classical Runge-Kutta method, separation one hundred-millionth"
 evidence="lyapunov-table"}: the regular estimate went from
-`{python} f"{rows[0][1]:.3f}"` to `{python} f"{rows[0][3]:.3f}"` per second, the
-chaotic one from `{python} f"{rows[1][1]:.2f}"` to
-`{python} f"{rows[1][3]:.2f}"`. So a lone number is not the evidence, the
+`{python} result["regular-25"]` to `{python} result["regular-100"]` per second, the
+chaotic one from `{python} result["chaotic-25"]` to
+`{python} result["chaotic-100"]`. So a lone number is not the evidence, the
 behaviour with the length of the run is. The chaotic value corresponds to a
-factor of $e$ in the separation every `{python} f"{1.0 / rate:.2f}"` s.
+factor of $e$ in the separation every `{python} result["e-folding"]` s.
 
 The estimator itself has to be checked on a case where the answer is known. A
 particle at a hyperbolic point, with $\ddot x = \lambda^2 x$, has the exponent
 $\lambda$ exactly, and the same code estimates it:
 
 ```{python}
+#| echo: false
+excerpt(experiment.known_exponent)
+```
+
+```{python}
 #| label: known-exponent
-known = 1.3  # 1/s
-check = lyapunov_exponent(
-    State(t=0.0, x=[0.0], v=[0.0]),
-    lambda t, x, v: known**2 * x,
-    dt=0.01,
-    n_steps=3000,
-    separation=1e-6,
-)
-table(
-    [(known, check.exponent, abs(check.exponent / known - 1.0))],
-    columns=[("exponent", "1/s", ".3f"), ("estimate", "1/s", ".4f"), ("relative difference", "", ".1e")],
-    caption="The estimator on the hyperbolic point, whose exponent is known, to the precision shown.",
-)
+#| echo: false
+result.table("known-exponent")
 ```
 
 [The estimator recovers the known exponent to a fraction of a per cent]{.claim
@@ -473,30 +443,20 @@ step is a different trajectory after a while. The cell compares the two
 trajectories of the chaotic start and the estimates of the exponent from them.
 
 ```{python}
-#| label: step-halved
-fine = 0.005  # s
-coarse_run = chaotic_run
-fine_run = simulate(chaotic_start, pendulum, fine, round(50.0 / fine), step=rk4_step)
-gap = np.linalg.norm(
-    np.hstack([coarse_run.x - fine_run.x[::2], coarse_run.v - fine_run.v[::2]]), axis=1
-)
-diverged = coarse_run.t[np.argmax(gap > 1e-3)]
-fine_estimate = lyapunov_exponent(chaotic_start, pendulum, fine, round(100.0 / fine), rescale_every=20)
-
-table(
-    [
-        ("step of the first run", dt, estimates["chaotic"].exponent),
-        ("half the step", fine, fine_estimate.exponent),
-    ],
-    columns=[("run", "", ""), ("step", "s", ".3f"), ("estimate after 100 s", "1/s", ".3f")],
-    caption="The estimate of the exponent of the chaotic start at two steps, to three decimals.",
-)
+#| echo: false
+excerpt(experiment.step_halved)
 ```
 
-The trajectories agree until `{python} f"{diverged:.0f}"` s and then differ by more
+```{python}
+#| label: step-halved
+#| echo: false
+result.table("step-halved")
+```
+
+The trajectories agree until `{python} result["diverged"]` s and then differ by more
 than a thousandth: after that time the position of the pendulum depends on
 the step, and no change of method restores it. The exponent is the same to
-within `{python} f"{abs(fine_estimate.exponent / estimates['chaotic'].exponent - 1.0):.0%}"`, because it is a property of the motion
+within `{python} result["fine-agreement"]`, because it is a property of the motion
 as a whole that the step does not change. This is what a chaotic simulation can
 claim: the first seconds as a trajectory, and the exponent as a statistic.
 
@@ -564,23 +524,19 @@ tolerance, and expect it to be of the order of the formula, not equal to it.
 
 ::: {.solution}
 ```{python}
-d0, tolerance = 1e-6, 1e-2
-horizon = np.log(tolerance / d0) / rate
-other = run(State(0.0, chaotic_start.x + np.array([d0, 0.0]), chaotic_start.v), 50.0)
-gap_curve = separation(chaotic_run, other)
-measured = chaotic_run.t[np.argmax(gap_curve > tolerance)]
+#| echo: false
+excerpt(experiment.prediction_horizon)
+```
 
-table(
-    [(horizon, measured)],
-    columns=[("from the exponent", "s", ".1f"), ("measured", "s", ".1f")],
-    caption="The time to lose a phase-space distance of a hundredth from a start known to a millionth of a radian, to one decimal.",
-)
+```{python}
+#| echo: false
+result.table("prediction-horizon")
 ```
 
 The two agree to the factor that the fluctuation of the growth rate along the
-path allows, `{python} f"{measured / horizon:.2f}"`. A hundred times better
+path allows, `{python} result["measured-over-horizon"]`. A hundred times better
 knowledge of the start, an error of $d_0/100$, adds
-`{python} f"{np.log(100.0) / rate:.1f}"` s: the logarithm that the formula
+`{python} result["hundred-times"]` s: the logarithm that the formula
 promises.
 :::
 :::
@@ -598,25 +554,21 @@ an estimate that falls; a chaotic one holds.
 
 ::: {.solution}
 ```{python}
-rows = []
-for angle in (0.5, 1.0, 1.5, 2.0, 2.5):
-    estimate = lyapunov_exponent(released(angle, angle), pendulum, dt, round(50.0 / dt))
-    middle = estimate.running[np.searchsorted(estimate.t, 25.0) - 1]
-    rows.append((angle, middle, estimate.exponent))
+#| echo: false
+excerpt(experiment.energy_scan)
+```
 
-table(
-    rows,
-    columns=[("both angles", "rad", ".1f"), ("estimate after 25 s", "1/s", ".3f"), ("estimate after 50 s", "1/s", ".3f")],
-    caption="The estimate of the exponent for five starts of increasing energy, to three decimals.",
-)
+```{python}
+#| echo: false
+result.table("energy-scan")
 ```
 
 The estimate falls between twenty-five and fifty seconds by
-`{python} f"{1.0 - rows[0][2] / rows[0][1]:.0%}"` and
-`{python} f"{1.0 - rows[1][2] / rows[1][1]:.0%}"` at the two smallest angles, and
-is a factor of `{python} f"{rows[2][1] / rows[1][1]:.0f}"` larger, and nearly steady
-(`{python} f"{abs(1.0 - rows[2][2] / rows[2][1]):.0%}"` change), at
-`{python} f"{rows[2][0]:.1f}"` rad. Within these five starts the change from
+`{python} result["settling-0"]` and
+`{python} result["settling-1"]` at the two smallest angles, and
+is a factor of `{python} result["jump"]` larger, and nearly steady
+(`{python} result["steady"]` change), at
+`{python} result["steady-angle"]` rad. Within these five starts the change from
 regular to chaotic is between the second and the third. The line is not sharp:
 the double pendulum has regular and chaotic starts at the same energy near the
 transition, a single estimate of fifty seconds can mistake a long regular
@@ -624,7 +576,7 @@ episode for chaos, and a single pair of angles does not draw the boundary.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -633,11 +585,14 @@ reproduce_this(
         "src/pbc/mechanics/dynamics.py",
         "src/pbc/mechanics/integrators.py",
         "src/pbc/mechanics/chaos.py",
+        "src/pbc/mechanics/experiments/double_pendulum_chaos.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_dynamics.py",
         "tests/unit/test_integrators.py",
         "tests/unit/test_chaos.py",
+        "tests/unit/test_double_pendulum_chaos_experiment.py",
     ],
 )
 ```

@@ -279,6 +279,7 @@ _FRONT_MATTER_FIELDS = {
     "lessons",
     "outside",
     "preview",
+    "experiment",
 }
 
 
@@ -1252,7 +1253,7 @@ class PathOverview:
             )
         reproduce = self._reproduce(lesson)
         if reproduce:
-            rows.append(("Reproduce", reproduce))
+            rows.append(("On your machine", reproduce))
         facts = "".join(f"<dt>{term}</dt><dd>{value}</dd>" for term, value in rows)
         return (
             '<details class="lesson-details"><summary>Details'
@@ -1261,14 +1262,18 @@ class PathOverview:
         )
 
     def _reproduce(self, lesson: Lesson) -> str:
-        """The link to the section of the lesson that says how to reproduce
-        it, when the lesson has the section."""
+        """The link to the section of the lesson that says how to run its
+        experiment on your own machine, named by its heading, when the lesson
+        has the section."""
         if self.site is None:
             return ""
         text = (self.site / lesson.page).read_text(encoding="utf-8")
-        if not re.search(r"^## Reproduce this\b", text, re.MULTILINE):
+        found = re.search(
+            rf"^## (.+?) \{{#{REPRODUCE_ANCHOR}\}}\s*$", text, re.MULTILINE
+        )
+        if found is None:
             return ""
-        return self._link(lesson.page, "Reproduce this lesson", REPRODUCE_ANCHOR)
+        return self._link(lesson.page, escape(found.group(1)), REPRODUCE_ANCHOR)
 
     # --- Courses ------------------------------------------------------------
 

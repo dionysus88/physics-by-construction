@@ -9,14 +9,18 @@ import os
 import shutil
 import subprocess
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Browser, Page
 from support import lesson_checks, site_checks
+from support.experiments import compare_with_page, split_footer_commands
 from support.paths import REPO_ROOT, SITE_SOURCE
 from support.site_checks import DESKTOP, PHONE, describe
 from support.site_server import SiteServer, configured_repository_url
+
+from pbc.authoring.reproduce import HEADINGS, LEAN_EXPERIMENT, kind_of
 
 # A lesson page may take this long to execute and render (architecture, "CI
 # pipeline and time budget").
@@ -359,18 +363,40 @@ def _reproduce_commands(page: Page, server: SiteServer, lesson: str) -> list[str
     return listing.text_content().strip().splitlines()
 
 
+def _declared(lesson: str) -> dict:
+    """The front matter of the lesson whose built page is ``lesson``."""
+    source = SITE_SOURCE / Path(lesson).with_suffix(".qmd")
+    return lesson_checks.read_lesson(source).front_matter["lesson"]
+
+
 @pytest.mark.parametrize("lesson", LESSONS)
-def test_reproduce_section_names_the_built_commit(
+def test_the_last_section_names_the_activity_and_the_built_commit(
     page: Page, server: SiteServer, lesson: str
 ):
     commands = _reproduce_commands(page, server, lesson)
+    declared = _declared(lesson)
+    heading = page.locator("#reproduce-this h2").inner_text().strip()
 
+    # The section keeps its identifier and is headed by the activity.
+    assert heading == HEADINGS[kind_of(declared["methods"])]
     # The repository is the one the site links to, at the commit that was built.
     repository = configured_repository_url(SITE_SOURCE)
     assert commands[0] == f"git clone {repository}.git"
     assert f"git checkout {_head_commit()}" in commands
-    source = Path(lesson).with_suffix(".qmd").as_posix()
-    assert commands[-1] == f"uv run --locked quarto render site/{source}"
+    # The commands end in the experiment, and none renders or previews the site.
+    if declared["experiment"] == LEAN_EXPERIMENT:
+        # A proof-only lesson computes nothing: its footer checks proofs.
+        assert "uv sync --locked --no-dev" not in commands
+        assert "lake build" in " ".join(commands)
+    else:
+        assert "uv sync --locked --no-dev" in commands
+        assert (
+            f"uv run --locked --no-dev python -m {declared['experiment']} results"
+            in commands
+        )
+    for command in commands:
+        assert "quarto" not in command and "build-site" not in command
+        assert "verify.sh" not in command
 
 
 def _clone_of_the_working_tree(target: Path) -> Path:
@@ -382,42 +408,49 @@ def _clone_of_the_working_tree(target: Path) -> Path:
     return target
 
 
+def _share_the_lean_packages(clone: Path) -> None:
+    """A reader's first Lean run fetches the Mathlib build cache. The checks
+    share the packages of this checkout, as test_lean_check.py does, so they
+    neither download Mathlib again nor build it."""
+    (clone / "lean" / ".lake").mkdir()
+    (clone / "lean" / ".lake" / "packages").symlink_to(
+        REPO_ROOT / "lean" / ".lake" / "packages", target_is_directory=True
+    )
+
+
+def _run(command: str, cwd: Path, env: dict[str, str]) -> float:
+    """Run ``command`` as a reader's shell would; the seconds it took."""
+    started = time.monotonic()
+    result = subprocess.run(
+        ["bash", "-eo", "pipefail", "-c", command],
+        cwd=cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, f"{command}\n{result.stdout}{result.stderr}"
+    return time.monotonic() - started
+
+
 # Compares bytes with the built site, and numerical output can differ in the
 # last digit between processors: it runs on the machine that built the site
-# (ADR 012).
+# (ADR 012). This is the internal reproduction of the page, which a reader is
+# never asked to run (ADR 016): the render of the page in a clone, with the
+# Lean build first for a page that shows Lean.
 @pytest.mark.same_machine
 @pytest.mark.parametrize("lesson", LESSONS)
 def test_reproduce_commands_regenerate_the_page_within_the_time_budget(
-    page: Page, server: SiteServer, site_dir: Path, tmp_path: Path, lesson: str
+    site_dir: Path, tmp_path: Path, lesson: str
 ):
-    commands = _reproduce_commands(page, server, lesson)
-    setup = commands.index("uv sync --locked")
-    assert commands[0].startswith("git clone ") and commands[1].startswith("cd ")
     clone = _clone_of_the_working_tree(tmp_path / "clone")
-    if any(command.endswith("check-lean.sh") for command in commands):
-        # A learner's first run fetches the Mathlib build cache. The test
-        # shares the packages of this checkout, as test_lean_check.py does, so
-        # it neither downloads Mathlib again nor builds it.
-        (clone / "lean" / ".lake").mkdir()
-        (clone / "lean" / ".lake" / "packages").symlink_to(
-            REPO_ROOT / "lean" / ".lake" / "packages", target_is_directory=True
-        )
-
-    # The commands after the setup, exactly as the page shows them. They use
-    # the environment of this checkout instead of a second 'uv sync'.
-    seconds = {}
-    for command in commands[setup + 1 :]:
-        started = time.monotonic()
-        result = subprocess.run(
-            ["bash", "-eo", "pipefail", "-c", command],
-            cwd=clone,
-            env={**os.environ, "UV_PROJECT": str(REPO_ROOT)},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        seconds[command] = time.monotonic() - started
-        assert result.returncode == 0, f"{command}\n{result.stdout}{result.stderr}"
+    # The environment of this checkout instead of a second 'uv sync'.
+    env = {**os.environ, "UV_PROJECT": str(REPO_ROOT)}
+    if _declared(lesson).get("lean-modules"):
+        _share_the_lean_packages(clone)
+        _run("./scripts/check-lean.sh", clone, env)
+    source = Path(lesson).with_suffix(".qmd").as_posix()
+    seconds = _run(f"uv run --locked quarto render site/{source}", clone, env)
 
     # Every number and figure of the page: the regenerated page and its
     # figure files are the published ones, byte for byte.
@@ -433,7 +466,69 @@ def test_reproduce_commands_regenerate_the_page_within_the_time_budget(
         regenerated = clone / "site" / "_site" / figure
         assert regenerated.read_bytes() == (site_dir / figure).read_bytes(), figure
 
-    assert seconds[commands[-1]] < LESSON_BUDGET_SECONDS
+    assert seconds < LESSON_BUDGET_SECONDS
+
+
+@dataclass(frozen=True)
+class Learner:
+    """One clone of the working tree with one learner environment in it."""
+
+    clone: Path
+    env: dict[str, str]
+
+
+# The variables that would point uv at the environment of this checkout.
+_CHECKOUT_ENVIRONMENT = ("UV_PROJECT", "UV_PROJECT_ENVIRONMENT", "VIRTUAL_ENV")
+
+
+@pytest.fixture(scope="session")
+def learner(tmp_path_factory: pytest.TempPathFactory) -> Learner:
+    """The reader's environment of the experiment check: one per run, made
+    with the reader's setup command in a clone, outside the budget of a
+    lesson, and never the environment of this checkout, which the setup
+    command would strip of the checks in progress (ADR 016 decision 4)."""
+    clone = _clone_of_the_working_tree(tmp_path_factory.mktemp("learner") / "clone")
+    _share_the_lean_packages(clone)
+    env = {k: v for k, v in os.environ.items() if k not in _CHECKOUT_ENVIRONMENT}
+    _run("uv sync --locked --no-dev", clone, env)
+    # Every experiment runs against that environment without a further sync.
+    return Learner(clone, {**env, "UV_NO_SYNC": "1"})
+
+
+@pytest.mark.same_machine
+@pytest.mark.parametrize("lesson", LESSONS)
+def test_the_experiment_regenerates_the_figures_and_numbers_of_the_page(
+    page: Page,
+    server: SiteServer,
+    site_dir: Path,
+    tmp_path: Path,
+    learner: Learner,
+    lesson: str,
+):
+    commands = _reproduce_commands(page, server, lesson)
+    experiment, lean = split_footer_commands(commands)
+
+    if experiment is not None:
+        assert experiment.startswith("uv run --locked --no-dev python -m ")
+        assert experiment.endswith(" results")
+        # The experiment, exactly as the page shows it, within the budget.
+        shutil.rmtree(learner.clone / "results", ignore_errors=True)
+        seconds = _run(experiment, learner.clone, learner.env)
+        results = tmp_path / "results"
+        shutil.move(learner.clone / "results", results)
+        assert seconds < LESSON_BUDGET_SECONDS
+    # The proofs the page shows, with the reader's Lean commands; the cache
+    # of Mathlib is shared, so 'lake exe cache get' has nothing to fetch.
+    for command in lean:
+        if command != "lake exe cache get":
+            _run(command, learner.clone / "lean", learner.env)
+    if experiment is None:
+        return  # nothing was computed, so there is no figure to compare
+
+    # Its figure files are the page's, byte for byte, and its numbers are
+    # the page's at the precision the page shows them.
+    problems = compare_with_page(results, site_dir / lesson)
+    assert not problems, "\n".join(problems)
 
 
 def test_format_2_lessons_print_no_block_of_numbers(site_dir: Path):

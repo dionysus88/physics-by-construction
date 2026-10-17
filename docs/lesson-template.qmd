@@ -15,6 +15,10 @@ lesson:
     - "Replace: a second outcome; a lesson states two to five"
   related: []
   format: 2
+  # The experiment of the lesson: copy src/pbc/mechanics/experiments/
+  # lesson_template.py to pbc.<course>.experiments.<id with underscores>,
+  # name that module here, and replace the example.
+  experiment: pbc.mechanics.experiments.lesson_template
   prerequisites:
     lessons: []
     outside:
@@ -23,8 +27,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import kinematics
+from pbc.mechanics.experiments import lesson_template as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -79,9 +86,6 @@ listing is read from the file when the site is built.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import kinematics
-
 excerpt(kinematics.euler_step)
 ```
 
@@ -89,29 +93,27 @@ excerpt(kinematics.euler_step)
 
 ### Name of the first example
 
-A code cell is executed by the build. Its code and its output appear on the
-page.
+Everything the page computes is in the lesson's experiment, which the
+header cell runs once as `result`. A cell shows the experiment's code by
+reference and its result: a listing, then what it printed or a table.
 
 ```{python}
-import numpy as np
-
-from pbc.mechanics.kinematics import State, constant_acceleration, simulate
-
-start = State(t=0.0, x=0.0, v=2.0)
-dt = 0.25  # time step, s
-
-
-def braking(t):
-    return -1.0
-
-
-computed = simulate(start, braking, dt, n_steps=8)
-exact = constant_acceleration(start, -1.0, computed.t)
-print(f"position after {computed.t[-1]:.1f} s: {computed.x[-1]:.3f} m")
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-Put computed numbers into a sentence with an inline expression: the exact
-position is `{python} f"{exact.x[-1]:.3f}"` m. Never type a result by hand;
+```{python}
+#| echo: false
+excerpt(experiment.braking_cart)
+```
+
+```{python}
+#| echo: false
+print(result.output("braking-cart"), end="")
+```
+
+Put computed numbers into a sentence with an inline expression that reads
+the experiment: the exact position is `{python} result["exact-position"]` m. Never type a result by hand;
 the check reports a number in the prose that no expression produced. A value
 you give, not compute, is marked: the start speed is [2 m/s]{.given}. A table
 of results is built with `table()`, not printed; see the guide.
@@ -122,26 +124,17 @@ and a status: `measured`, `calibrated`, `processed`, `simulated`, or
 `conceptual`.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_replace_with_a_name)
+```
+
+```{python}
 #| label: fig-replace-with-a-name
+#| echo: false
 #| fig-cap: "Caption shown under the figure."
 #| fig-alt: "What a reader who cannot see the figure needs to know: the kind of plot, the axes, and what the curves do."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(computed.t, exact.x, color="#00429d", label="exact")
-ax.plot(
-    computed.t,
-    computed.x,
-    color="#93003a",
-    linestyle="--",
-    marker="o",
-    label="computed",
-)
-ax.set_xlabel("time (s)")
-ax.set_ylabel("position (m)")
-ax.legend()
-plt.show()
+result.show("fig-replace-with-a-name")
 ```
 
 After each figure or table, say what it means: what the reader sees, where
@@ -179,20 +172,33 @@ The answer, in a few sentences.
 State the exercise. Given values may be typed here.
 
 ::: {.solution}
-Explain the solution. Its numbers come from an executed cell.
+Explain the solution. Its numbers come from the experiment.
 
 ```{python}
-print(f"largest error: {np.max(np.abs(computed.x - exact.x)):.3f} m")
+#| echo: false
+excerpt(experiment.largest_error)
+```
+
+```{python}
+#| echo: false
+print(result.output("largest-error"), end="")
 ```
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/mechanics/kinematics.py"],
-    tests=["tests/unit/test_kinematics.py"],
+    code=[
+        "src/pbc/mechanics/kinematics.py",
+        "src/pbc/mechanics/experiments/lesson_template.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_kinematics.py",
+        "tests/unit/test_lesson_template_experiment.py",
+    ],
 )
 ```

@@ -60,16 +60,17 @@ voice guide, `docs/editorial-voice.md`. It changes none of the rules below.
 6. Check it:
 
    ```bash
-   uv run --locked pytest tests/unit                                       # the code
-   uv run --locked pytest tests/lessons                                    # the lesson source checks
-   uv run --locked quarto render site/lessons/<course>/<lesson>/index.qmd  # the page alone, to read it under site/_site/
-   ./scripts/verify.sh --targeted                                          # before a pull request: the targeted run
+   uv run --locked pytest tests/unit                                                # the code and the experiment
+   uv run --locked pytest tests/lessons                                             # the lesson source checks
+   uv run --locked python -m pbc.<course>.experiments.<lesson> results              # the experiment of the lesson
+   ./scripts/verify.sh --targeted                                                   # before a pull request: the targeted run
    ```
 
-   `docs/development.md` has the one-time setup these commands need, and
-   under "Verification" the three tiers. The targeted run computes what CI
-   will execute, runs the checks that need no site build, and renders the
-   changed lessons alone; it builds no site. A new lesson, or a change to the
+   The experiment writes the figures and numbers of the page into `results/`
+   ("The experiment of a lesson"). `docs/development.md` has the one-time
+   setup these commands need, and under "Verification" the three tiers. The
+   targeted run computes what CI will execute, runs the checks that need no
+   site build, and checks the changed lessons alone; it builds no site. A new lesson, or a change to the
    front-matter fields that form the learning path and the headers of its
    neighbours, needs `./scripts/verify.sh --base`; when a change needs the
    full `./scripts/verify.sh`, the targeted run says so.
@@ -117,6 +118,7 @@ lesson:
 | `lesson.prerequisites.outside` | yes | List of texts `Term: what exactly`: what a reader must know that no lesson on the site teaches. The text before the first colon must be the `term` of an entry of `site/glossary.yaml` (see "Glossary"). May be empty. |
 | `lesson.lean-modules` | no | List of the Lean modules the lesson displays, such as `PhysicsByConstruction.Mechanics.Kinematics`. A lesson that shows Lean lists exactly the modules it names: each must exist in `lean/`, and the page names no other. |
 | `lesson.format` | no | `1` (the default: the MVP template) or `2` (the progressive-depth template, see "Lesson format 2"). The checks of format 2 apply to the lessons that declare it. |
+| `lesson.experiment` | yes | The lesson's experiment, see "The experiment of a lesson": the module `pbc.<course>.experiments.<name>`, where `<name>` is the `id` with hyphens as underscores; or `./scripts/check-lean.sh` for a lesson whose methods are `[lean]` only and that computes nothing it shows. |
 
 No other key is allowed, neither at the top level nor under `lesson`. Options
 that apply to every page belong in `site/_quarto.yml`. An option that changes
@@ -212,9 +214,9 @@ level-2 sections. These are required, and none may be empty:
 | Code | `code` | The reusable code of the lesson, shown by reference from `src/pbc`. |
 | Worked examples | `worked-examples` | Executed examples that compare the result with something known. |
 | Exercises | `exercises` | At least one exercise; every exercise has its solution on the page. A lesson with an interactive visualization may have the section `interactive-visualization` instead or as well (see "Widgets"). |
-| Reproduce this | `reproduce-this` | The output of `reproduce_this()`, see below. Keep it last. |
+| Run this experiment, Replay this experiment, or Check this proof | `reproduce-this` | The output of `reproduce_this()`, see "The last section" below. Keep it last. |
 
-The header (`lesson_header()`), the "Reproduce this" section, and every code or
+The header (`lesson_header()`), the last section, and every code or
 Lean excerpt (`excerpt`, `lean_excerpt`, `lean_evidence`) name things outside
 the lesson: the other lessons and the commit of the build. You write the cells
 as shown here; what they leave in the page while it renders is a marker, and the
@@ -322,7 +324,7 @@ page.
 
 A lesson in the `lean` strand states and proves a result of the models of
 another course. It follows the same format as every other lesson (sections,
-header, exercises, "Reproduce this"); this section covers what is different.
+header, exercises, the last section); this section covers what is different.
 
 ### Write the proof
 
@@ -475,6 +477,10 @@ of every format 2 lesson.
 A figure is drawn by an executed cell. Image files are never part of a
 lesson.
 
+A lesson with an experiment draws the figure in a `draw_` function of its
+experiment and the cell shows it with `result.show(label)` (see "The
+experiment of a lesson"); the options of the cell below are the same.
+
 ````markdown
 ```{python}
 #| label: fig-ball-thrown-up
@@ -499,6 +505,108 @@ plt.show()
   the page, so the page does not shift when the image loads.
 - Label the axes with units. Do not tell curves apart by colour alone: vary
   the line style or the marker as well.
+
+## The experiment of a lesson
+
+Every number, table, and figure of a lesson comes from its experiment: one
+module under `src/pbc/<course>/experiments/`, named after the lesson's `id`
+(`kinematics` for `id: kinematics`, `particles_in_a_box` for
+`id: particles-in-a-box`), declared in the front matter as
+`lesson.experiment`. The page's cells call it, and a reader runs it without
+the website (ADR 016):
+
+```bash
+uv sync --locked --no-dev
+uv run --locked --no-dev python -m pbc.mechanics.experiments.kinematics results
+```
+
+writes every figure of the page as `results/<label>.png` and every number
+and table cell, as the page shows it, into `results/results.json`. The
+experiment needs the project's dependencies only, never the `dev` group.
+These are a reader's commands, in a clone of their own. In the checkout you
+develop in, leave out `--no-dev`: `uv run --locked python -m
+pbc.mechanics.experiments.kinematics results`, because `--no-dev` would
+remove the development tools from the environment it runs in.
+`pbc.mechanics.experiments.kinematics` is the model to copy; the template
+starts from `pbc.mechanics.experiments.lesson_template`.
+
+The module
+
+- imports the lesson's code from `src/pbc` and holds the experiment: the
+  values the examples start from, the functions that compute the examples
+  and the exercise solutions, and one function per figure that draws it and
+  returns the Matplotlib figure (`draw_<what>`);
+- defines `run()`, which computes everything and records it in a
+  `pbc.experiment.Experiment` by name: `number(name, value, format)` for a
+  number in the text, `table(name, rows, columns, caption)` for a result
+  table (the columns of `table()`, see "Result tables"), and
+  `figure(label, draw)` for a figure, under the `fig-` label of its cell;
+- ends with `if __name__ == "__main__": main(run)`.
+
+Three more records cover the other things a page shows:
+`with experiment.capture(name):` records what a block prints, which the page
+prints with `print(result.output(name), end="")`; `widget(name, data)`
+records the JSON data of an interactive figure, which the page passes to
+`widget_data` or `widget_asset` as `result.widget(name)` and the program
+writes as `<name>.json`; `display(name, shown)` records the Markdown of a
+display object, such as the replayed run of an agent lesson, which the page
+shows as `result.display(name)`. The experiment of an agent lesson replays
+its recording and names its live run as `LIVE`, the module the last section
+gives for the run with a model. A figure drawn from a dataset is found by
+what its experiment records it with: the lesson checks follow the names in
+`experiment.figure(label, ...)` through the module, as they follow the
+cells, and ask for `fig-dataset` when they reach a dataset reader.
+
+The page runs it once, in the header cell, and shows what it recorded:
+
+````markdown
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics.experiments import kinematics as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.thrown_ball)
+```
+
+```{python}
+#| echo: false
+result.table("thrown-ball")
+```
+
+After `{python} result["end-time"]` s the ball is ...
+
+```{python}
+#| label: fig-ball-thrown-up
+#| echo: false
+#| fig-cap: "..."
+#| fig-alt: "..."
+result.show("fig-ball-thrown-up")
+```
+````
+
+Code the reader should read is shown with `excerpt` of the experiment's
+function, not typed into a cell, so no computation exists twice. The values
+an example starts from are top-level names of the module between
+`# region: <name>` and `# endregion: <name>`, shown with
+`excerpt(experiment, region="<name>")`. A figure is
+encoded once by `pbc.experiment.encode`, with fixed Matplotlib settings
+(the defaults, with the figure size and resolution of the page) and no
+metadata: the figure file of the built page and the reader's file are the
+same bytes. Do not call `plt.show()`, and do not set Matplotlib settings in
+the page; set them on the figure in its `draw_` function.
+
+The experiment has a unit test, `tests/unit/test_<name>_experiment.py`: it
+runs the command into a temporary directory (`support.experiments`), checks
+that it writes every figure the page labels and every name the page reads,
+and asserts the lesson's science on the result. The lesson source checks
+report a declared experiment that is not at its place, not imported by the
+page, or without its test.
 
 ## Visual design
 
@@ -1092,31 +1200,48 @@ the way the explorer's are written: displayed values against a fresh run of
 `src/pbc` with a stated tolerance, the keyboard path through every control,
 and the fallback with scripts off.
 
-## Reproduce this
+## The last section
 
-The last section is one cell:
+The last section names what a reader does with the lesson on their own
+machine, and keeps the identifier `reproduce-this`, which every link to it
+uses. Its heading depends on the methods of the lesson (ADR 016 decision 3):
+"Run this experiment" for a simulation or a lesson of measured data,
+"Replay this experiment" for an agent lesson, and "Check this proof" for a
+lesson whose methods are `[lean]` only. The section is one cell:
 
 ````markdown
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
-from pbc.authoring import reproduce_this
-
 reproduce_this(
-    code=["src/pbc/mechanics/kinematics.py"],
-    tests=["tests/unit/test_kinematics.py"],
+    code=[
+        "src/pbc/mechanics/kinematics.py",
+        "src/pbc/mechanics/experiments/kinematics.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_kinematics.py",
+        "tests/unit/test_kinematics_experiment.py",
+    ],
 )
 ```
 ````
 
 `code` names the modules the page imports and `tests` the tests of those
 modules, relative to the repository root. The cell writes the commit the page
-was built from, links to the files at that commit, and the commands that
-check out the commit, run the tests, and render the page again. A build from
-a checkout with uncommitted changes says so on the page. A check runs the
-commands of every lesson and compares the regenerated page and figures with
-the published ones, byte for byte.
+was built from, links to the files at that commit, and the commands from a
+clone to the experiment: check out the commit, install the project's
+packages (`uv sync --locked --no-dev`), and run the experiment the front
+matter declares. A Lean lesson adds `lake build` of the modules it shows; an
+agent lesson adds the live run as a separate block marked "not verified",
+which names its key and the optional dependency `openai`, and its experiment
+module names that run as `LIVE`. No command of the section renders or
+previews the website. A build from a checkout with uncommitted changes says
+so on the page. The lesson source checks require the heading of the kind of
+the lesson, and a check of the built site runs the experiment of every lesson
+with these commands and compares its figure files, byte for byte, and its
+numbers, at the precision the page shows them, with the published page.
 
 ## Equations
 
@@ -1528,9 +1653,9 @@ check. It lives outside `site/` and `src/`.
 
 | Check | Reports |
 |---|---|
-| `lesson-checks` (`tests/lessons`) | Front matter outside the schema; a Lean module that the page shows and `lean-modules` does not list, or that it lists without showing or without a file; a missing or empty required section; a lesson without the `lesson_header()` cell before its first heading; an exercise without a solution; a "Reproduce this" section without `reproduce_this()`; an outside prerequisite that names no glossary entry, an entry that no lesson assumes or whose definition is not one to three sentences, a missing or unknown course, a lesson without a method, a number of outcomes outside two to five, a related lesson that does not exist or is a prerequisite, a duplicate id, a gap or duplicate in the orders of a strand, a slot that does not exist, is claimed twice, or is homed in another course, a prerequisite that does not exist, comes later in its own strand, or forms a cycle, a curriculum file outside its schema; code that is neither an executed `{python}` cell nor marked "not verified"; a figure cell without `fig-alt`; an image file in a page; for a format 2 lesson, a missing or empty `limits` section, a number of self-checks other than one (or one without a solution), choices that break the rules of "Self-checks and progress", a claim of an unknown type, a claim without `evidence` or whose evidence names no executed cell, register or card key, Lean theorem, or recorded run, a figure without a valid `fig-status`, a `go-deeper` key that the register lacks, a URL typed in the source, and a hand-typed number in prose or alt text; a register entry with a missing or malformed field, a duplicate key, or no lesson using it that is not reserved; a generated artifact or a stray file under `site/` or `src/`. |
+| `lesson-checks` (`tests/lessons`) | Front matter outside the schema; a Lean module that the page shows and `lean-modules` does not list, or that it lists without showing or without a file; a missing or empty required section; a lesson without the `lesson_header()` cell before its first heading; an exercise without a solution; a last section without `reproduce_this()` or with another heading than the one of the kind of the lesson; a lesson without `lesson.experiment`, or with an experiment that is not at its place, not imported by the page, or without its unit test; an outside prerequisite that names no glossary entry, an entry that no lesson assumes or whose definition is not one to three sentences, a missing or unknown course, a lesson without a method, a number of outcomes outside two to five, a related lesson that does not exist or is a prerequisite, a duplicate id, a gap or duplicate in the orders of a strand, a slot that does not exist, is claimed twice, or is homed in another course, a prerequisite that does not exist, comes later in its own strand, or forms a cycle, a curriculum file outside its schema; code that is neither an executed `{python}` cell nor marked "not verified"; a figure cell without `fig-alt`; an image file in a page; for a format 2 lesson, a missing or empty `limits` section, a number of self-checks other than one (or one without a solution), choices that break the rules of "Self-checks and progress", a claim of an unknown type, a claim without `evidence` or whose evidence names no executed cell, register or card key, Lean theorem, or recorded run, a figure without a valid `fig-status`, a `go-deeper` key that the register lacks, a URL typed in the source, and a hand-typed number in prose or alt text; a register entry with a missing or malformed field, a duplicate key, or no lesson using it that is not reserved; a generated artifact or a stray file under `site/` or `src/`. |
 | `site-build` | A cell that raises, including the header cell of a lesson whose path is inconsistent; an equation that cannot become MathML. |
-| `site-checks` (`tests/e2e`) | A learner-state script with a request, another origin, or storage other than local storage; a request, cookie, or write that carries or keeps learner state outside local storage; a self-check that is not usable with scripts disabled; stored data of another version that is not discarded; progress controls without keyboard operation or that fail the accessibility scan (`tests/e2e/test_learner_state.py`); A lesson without a built page or a required section; a lesson the home page does not lead to without JavaScript; a format 2 page whose cell printed a block of numbers; a header whose course, methods, outcomes, prerequisites, "Before you begin" list, related lessons, or previous and next links differ from the front matter; a glossary page that lacks an entry or does not link the lessons that assume it; an evidence map that lacks a claim, lists it more than once, or links an element the lesson page does not have once; a path page that does not list every lesson under its course and each of its methods; a lesson address that existed before the courses and no longer resolves; an excerpt that differs from its source, a Python object or a region of a Lean file; a cell or inline expression that was not executed; "not verified" material without a visible label; "Reproduce this" commands that fail, take longer than 30 seconds, or do not regenerate the published page; a widget script that makes a request, names another origin, or uses browser storage, or a widget that writes to cookies or storage when operated; a widget that does not respond to its controls, cannot be operated by keyboard, shows values that differ from `pbc`, or moves the page when it loads; and the checks every page gets (images, links, JavaScript, widths, accessibility). |
+| `site-checks` (`tests/e2e`) | A learner-state script with a request, another origin, or storage other than local storage; a request, cookie, or write that carries or keeps learner state outside local storage; a self-check that is not usable with scripts disabled; stored data of another version that is not discarded; progress controls without keyboard operation or that fail the accessibility scan (`tests/e2e/test_learner_state.py`); A lesson without a built page or a required section; a lesson the home page does not lead to without JavaScript; a format 2 page whose cell printed a block of numbers; a header whose course, methods, outcomes, prerequisites, "Before you begin" list, related lessons, or previous and next links differ from the front matter; a glossary page that lacks an entry or does not link the lessons that assume it; an evidence map that lacks a claim, lists it more than once, or links an element the lesson page does not have once; a path page that does not list every lesson under its course and each of its methods; a lesson address that existed before the courses and no longer resolves; an excerpt that differs from its source, a Python object or a region of a Lean file; a cell or inline expression that was not executed; "not verified" material without a visible label; a last section whose heading or commands are not those of the kind of the lesson, or that names a render; an experiment that fails, takes longer than 30 seconds, or writes a figure file or a number that is not the published page's; the internal render of a page in a clone that does not regenerate the published page; a widget script that makes a request, names another origin, or uses browser storage, or a widget that writes to cookies or storage when operated; a widget that does not respond to its controls, cannot be operated by keyboard, shows values that differ from `pbc`, or moves the page when it loads; and the checks every page gets (images, links, JavaScript, widths, accessibility). |
 | `determinism` | A page that differs between two builds. |
 
 Fix the lesson when a check fails. Do not weaken a check to make a lesson

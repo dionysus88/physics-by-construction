@@ -10,6 +10,7 @@ headings, code blocks, and divs are found where Pandoc finds them and not by
 a second Markdown parser.
 """
 
+import ast
 import datetime
 import functools
 import itertools
@@ -27,6 +28,7 @@ import yaml
 
 from pbc.authoring import evidence, glossary, is_numeric_console_block, previews
 from pbc.authoring import path as learning_path
+from pbc.authoring.reproduce import HEADINGS, kind_of
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
 from pbc.data.status import allowed_statuses, artifact_types, needs_artifact
@@ -79,7 +81,7 @@ _LESSON_KEYS = {
     "outcomes",
     "related",
 }
-_OPTIONAL_LESSON_KEYS = {"lean-modules", "format", "slot", "preview"}
+_OPTIONAL_LESSON_KEYS = {"lean-modules", "format", "slot", "preview", "experiment"}
 # The lesson formats; a lesson without a declaration is in format 1.
 FORMATS = (1, 2)
 _PREREQUISITE_KEYS = {"lessons", "outside"}
@@ -385,6 +387,8 @@ def _metadata_problems(front_matter: Any, strand: str, directory: str) -> list[s
         problems.append(
             f"'lesson.format' must be one of {', '.join(map(str, FORMATS))}"
         )
+    if "experiment" in lesson and not _is_text(lesson["experiment"]):
+        problems.append("'lesson.experiment' is not a text")
     if "lean-modules" in lesson and not (
         _text_list(lesson["lean-modules"])
         and all(_LEAN_MODULE.fullmatch(module) for module in lesson["lean-modules"])
@@ -527,7 +531,7 @@ def _choices_problems(lesson: Lesson) -> Iterator[str]:
 def check_sections(repository: Path) -> list[Violation]:
     """Every lesson has the required sections with content, exercises come
     with solutions (hints, if any, before them), and the header and
-    "Reproduce this" are produced by their helpers."""
+    last section are produced by their helpers."""
     violations = []
     for page in lesson_pages(repository):
         lesson = read_lesson(page)
@@ -800,6 +804,138 @@ def check_lean_modules(repository: Path) -> list[Violation]:
                     " not show",
                 )
             )
+    return violations
+
+
+# --- Experiments --------------------------------------------------------------
+
+# The entry point of a lesson whose methods are Lean only, when the lesson
+# computes nothing it shows: the proof check (ADR 016 decision 2).
+LEAN_EXPERIMENT = "./scripts/check-lean.sh"
+
+
+def experiment_module(course: str, lesson_id: str) -> str:
+    """The module of the experiment of the lesson ``lesson_id`` of ``course``
+    (``docs/authoring.md``, "The experiment of a lesson")."""
+    return f"pbc.{course}.experiments.{lesson_id.replace('-', '_')}"
+
+
+def experiment_test(module: str) -> str:
+    """The unit test of the experiment ``module``, relative to the repository."""
+    return f"tests/unit/test_{module.rsplit('.', 1)[-1]}_experiment.py"
+
+
+def _imported_modules(code: str) -> set[str]:
+    """The modules a cell imports, with ``from a import b`` as ``a.b`` too."""
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return set()
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            found.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            found.add(node.module)
+            found.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return found
+
+
+def _inline_text(inlines: list[Node]) -> str:
+    """The plain text of Pandoc inlines."""
+    parts = []
+    for node in inlines:
+        if node["t"] == "Str":
+            parts.append(node["c"])
+        elif node["t"] in ("Space", "SoftBreak", "LineBreak"):
+            parts.append(" ")
+        elif node["t"] in ("Emph", "Strong", "Underline", "SmallCaps"):
+            parts.append(_inline_text(node["c"]))
+        elif node["t"] in ("Span", "Link", "Quoted"):
+            parts.append(_inline_text(node["c"][1]))
+        elif node["t"] == "Code":
+            parts.append(node["c"][1])
+    return "".join(parts)
+
+
+def _heading_problems(lesson: Lesson, methods: Any) -> Iterator[str]:
+    """The last section is headed by the activity of the lesson and keeps the
+    identifier 'reproduce-this' (ADR 016 decision 3)."""
+    expected = HEADINGS[kind_of(methods if isinstance(methods, list) else [])]
+    for block in lesson.blocks:
+        if block["t"] == "Header" and _attributes(block)[0] == "reproduce-this":
+            shown = _inline_text(block["c"][2])
+            if shown != expected:
+                yield (
+                    f"the section 'reproduce-this' is headed {shown!r}; a lesson"
+                    f" of this kind is headed {expected!r}"
+                )
+
+
+def _experiment_problems(repository: Path, lesson: Lesson) -> Iterator[str]:
+    meta = lesson.front_matter["lesson"]
+    declared = meta.get("experiment")
+    methods = meta.get("methods")
+    yield from _heading_problems(lesson, methods)
+    if declared == LEAN_EXPERIMENT:
+        if methods != ["lean"]:
+            yield (
+                f"'lesson.experiment' is {LEAN_EXPERIMENT}, which only a lesson"
+                " whose methods are [lean] may declare"
+            )
+        elif any(True for _ in _figure_cells(lesson)):
+            yield (
+                "the lesson draws a figure, so it declares its experiment module;"
+                " its proof check comes from 'lesson.lean-modules'"
+            )
+        return
+    expected = experiment_module(str(meta.get("course")), str(meta.get("id")))
+    if declared != expected:
+        yield f"'lesson.experiment' is {declared!r}; this lesson's module is {expected}"
+        return
+    file = repository / "src" / f"{expected.replace('.', '/')}.py"
+    if not file.is_file():
+        yield f"the experiment {expected} has no file {file.relative_to(repository)}"
+    test = experiment_test(expected)
+    if not (repository / test).is_file():
+        yield f"the experiment {expected} has no unit test {test}"
+    imported = set()
+    for path in _walk(lesson.blocks):
+        cell = lesson.cell(path[-1])
+        if cell is not None and cell.executed:
+            imported |= _imported_modules(cell.code)
+    if expected not in imported:
+        yield f"no executed cell of the page imports its experiment {expected}"
+
+
+def check_experiments(repository: Path, *, required: bool = False) -> list[Violation]:
+    """A lesson declares its experiment (ADR 016 decision 2): the module
+    ``pbc.<course>.experiments.<id>`` that its cells import and that has its
+    unit test, or, for a lesson whose methods are Lean only and that computes
+    nothing, the proof check. ``required`` reports a lesson without a
+    declaration too."""
+    violations = []
+    for page in lesson_pages(repository):
+        name = _name(repository, page)
+        lesson = read_lesson(page)
+        front_matter = lesson.front_matter
+        if not (
+            isinstance(front_matter, dict)
+            and isinstance(front_matter.get("lesson"), dict)
+        ):
+            continue
+        if "experiment" not in front_matter["lesson"]:
+            if required:
+                violations.append(
+                    Violation(
+                        "experiment", name, "the lesson declares no 'lesson.experiment'"
+                    )
+                )
+            continue
+        violations += [
+            Violation("experiment", name, problem)
+            for problem in _experiment_problems(repository, lesson)
+        ]
     return violations
 
 
@@ -1076,6 +1212,81 @@ def _data_use(lesson: Lesson) -> DataUse:
     return DataUse(cell.code for cell in cells if cell is not None and cell.executed)
 
 
+# A figure cell of a lesson with an experiment: it shows the figure that the
+# experiment recorded under the cell's label (docs/authoring.md, "The
+# experiment of a lesson").
+_SHOWN = re.compile(r"""result\.show\(\s*["'](fig-[a-z0-9-]+)["']\s*\)""")
+
+
+def _records(tree: ast.AST) -> set[str]:
+    """The names that hold the record of an experiment: bound to
+    ``Experiment()`` or annotated ``Experiment``."""
+    names = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Assign)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "Experiment"
+        ):
+            names |= {t.id for t in node.targets if isinstance(t, ast.Name)}
+        elif (
+            isinstance(node, ast.arg)
+            and isinstance(node.annotation, ast.Name)
+            and node.annotation.id == "Experiment"
+        ):
+            names.add(node.arg)
+    return names
+
+
+class ExperimentFigures:
+    """Which figures of a lesson's experiment module are made from a dataset.
+
+    The page's cell only shows the figure, so whether it is made from data is
+    decided where the module records it, ``<experiment>.figure(label, draw)``:
+    by the names that ``draw`` uses, followed through the whole module as
+    ``DataUse`` follows them through the cells of a page.
+    """
+
+    def __init__(self, source: str):
+        self._tree = ast.parse(source)
+        self._use = DataUse([source], inert=_records(self._tree))
+
+    def uses(self, label: str) -> bool | None:
+        """Whether the figure ``label`` is made from data; None when the
+        module records no such figure."""
+        for node in ast.walk(self._tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "figure"
+                and len(node.args) == 2
+                and isinstance(node.args[0], ast.Constant)
+                and node.args[0].value == label
+            ):
+                return self._use.uses(ast.unparse(node.args[1]))
+        return None
+
+
+def _experiment_figures(repository: Path, lesson: Lesson) -> ExperimentFigures | None:
+    """The figures of the lesson's declared experiment module, if it has one."""
+    meta = (
+        lesson.front_matter.get("lesson")
+        if isinstance(lesson.front_matter, dict)
+        else None
+    )
+    module = meta.get("experiment") if isinstance(meta, dict) else None
+    if not isinstance(module, str) or not module.startswith("pbc."):
+        return None
+    file = repository / "src" / f"{module.replace('.', '/')}.py"
+    if not file.is_file():
+        return None
+    try:
+        return ExperimentFigures(file.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return None
+
+
 def _artifact_problems(
     card: dict, dataset: str, options: dict[str, Any]
 ) -> Iterator[tuple[str, str]]:
@@ -1149,7 +1360,7 @@ def _hand_typed_numbers(lesson: Lesson) -> Iterator[str]:
 
 
 def _format_2_problems(
-    lesson: Lesson, register: set[str], text: str
+    lesson: Lesson, register: set[str], text: str, repository: Path
 ) -> Iterator[tuple[str, str]]:
     sections = _sections(lesson)
     # The self-check may follow the limits; it is not what the lesson does
@@ -1185,6 +1396,7 @@ def _format_2_problems(
             )
 
     data_use = _data_use(lesson)
+    experiment = _experiment_figures(repository, lesson)
     for cell, options in _figure_cells(lesson):
         if options.get("fig-status") not in FIGURE_STATUSES:
             yield (
@@ -1195,7 +1407,18 @@ def _format_2_problems(
         name = options.get("label") or _first_line(cell.code)
         dataset = options.get("fig-dataset")
         model_of = options.get("fig-model-of")
-        if dataset is None and model_of is None and data_use.uses(cell.code):
+        shown = _SHOWN.search(cell.code)
+        if experiment is not None and shown is not None:
+            made_from_data = experiment.uses(shown.group(1))
+            if made_from_data is None:
+                yield (
+                    "figure-dataset",
+                    f"figure cell '{name}' shows {shown.group(1)!r}, which its"
+                    " experiment does not record",
+                )
+        else:
+            made_from_data = data_use.uses(cell.code)
+        if dataset is None and model_of is None and made_from_data:
             yield (
                 "figure-dataset",
                 f"figure cell '{name}' is made from a dataset (it uses a data"
@@ -1286,7 +1509,10 @@ def check_format_2(repository: Path) -> list[Violation]:
         violations += [
             Violation(rule, _name(repository, page), problem)
             for rule, problem in _format_2_problems(
-                read_lesson(page), keys, text[match.end() :] if match else text
+                read_lesson(page),
+                keys,
+                text[match.end() :] if match else text,
+                repository,
             )
         ]
     return violations

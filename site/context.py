@@ -1,6 +1,6 @@
 """Regenerate the context of every built page (ADR 014 decision 9).
 
-The header of a lesson and the commit that "Reproduce this" and the code and
+The header of a lesson and the commit that the last section and the code and
 Lean excerpts name are not part of what a lesson's cells compute: the cells
 leave markers (``pbc.authoring.context``), and this script, which runs after
 the site is rendered (``post-render`` in ``_quarto.yml``), replaces each marker

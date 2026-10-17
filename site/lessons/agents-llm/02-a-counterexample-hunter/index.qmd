@@ -13,6 +13,7 @@ lesson:
   course: mechanics
   slot: AI3
   preview: fig-hunt
+  experiment: pbc.mechanics.experiments.counterexample_hunter
   methods: [simulation, llm-agents]
   outcomes:
     - State a falsifiable claim with a predicate and a budget of experiments
@@ -28,8 +29,10 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics.experiments import counterexample_hunter as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -112,26 +115,14 @@ its initial value over a run.
 
 ```{python}
 #| echo: false
-from pbc.agents.display import AllowlistDisplay
-from pbc.agents.hunter_lab import (
-    BUDGET,
-    FALSE_CLAIM,
-    MAX_STEPS,
-    OPEN_CLAIM,
-    TOLERANCE,
-    TOOL,
-    replay_hunt,
-    tools,
-)
-
-AllowlistDisplay(tools())
+result.display("allowlist")
 ```
 
-1. `{python} FALSE_CLAIM.statement`.
-2. `{python} OPEN_CLAIM.statement`.
+1. `{python} result["false-claim"]`.
+2. `{python} result["open-claim"]`.
 
-The agent **may** call `{python} TOOL` with the arguments above, run at most
-`{python} BUDGET` experiments, make at most `{python} MAX_STEPS` model
+The agent **may** call `{python} result["tool"]` with the arguments above, run at most
+`{python} result["budget"]` experiments, make at most `{python} result["max-steps"]` model
 messages, and write text. It **may not** do anything the harness of the
 previous lesson did not already forbid, and the new argument adds nothing to
 that: the `method` is one of four names in a list, and any other value is
@@ -146,7 +137,6 @@ the predicate.
 #| echo: false
 from pbc.agents.hunter import FalsifiableClaim, judge
 from pbc.agents.tools import Allowlist, Choice
-from pbc.authoring import excerpt, reproduce_this
 
 excerpt(FalsifiableClaim)
 ```
@@ -182,34 +172,31 @@ These are the calls a misbehaving model might send to the new tool. Only the
 first one runs.
 
 ```{python}
-from pbc.agents import ToolCall
+#| echo: false
+excerpt(experiment, region="good")
+```
 
-allowlist = tools()
-good = {"method": "velocity Verlet", "steps_per_period": 32, "periods": 5}
-attempts = [
-    ("a valid experiment", good),
-    ("a method that is not in the list", {**good, "method": "os.system"}),
-    ("a method that is not even text", {**good, "method": ["velocity Verlet"]}),
-    ("zero steps per period", {**good, "steps_per_period": 0}),
-    ("a million periods", {**good, "periods": 1_000_000}),
-    ("a fractional number of steps", {**good, "steps_per_period": 32.5}),
-    ("an extra argument", {**good, "code": "1+1"}),
-]
-for label, arguments in attempts:
-    result = allowlist.dispatch(ToolCall("x", TOOL, arguments))
-    outcome = f"{result.content['max_energy_drift']:.4f}" if result.ok else result.content["error"]
-    print(f"{label}: {outcome}")
+```{python}
+#| echo: false
+excerpt(experiment.bounds)
+```
+
+```{python}
+#| echo: false
+print(result.output("bounds"), end="")
 ```
 
 A rejected call does not use the budget. The budget is used only by calls that
 reach the simulation, and when it is spent the next call is refused:
 
 ```{python}
-allowlist = tools()
-for number in range(1, BUDGET + 2):
-    result = allowlist.dispatch(ToolCall(str(number), TOOL, good))
-    if not result.ok:
-        print(f"experiment {number}: {result.content['error']}")
+#| echo: false
+excerpt(experiment.budget)
+```
+
+```{python}
+#| echo: false
+print(result.output("budget"), end="")
 ```
 
 ### A claim with a counterexample
@@ -220,10 +207,13 @@ Claude Code session, after reading the tool results. Every result is computed
 by this build now.
 
 ```{python}
-from pbc.agents.display import RunDisplay, VerdictDisplay
+#| echo: false
+excerpt(experiment.run, region="replay")
+```
 
-recording, transcript, verdict = replay_hunt("false")
-RunDisplay(recording, transcript, authored=True)
+```{python}
+#| echo: false
+result.display("false-run")
 ```
 
 The verdict does not come from the last message. The judge ran the
@@ -231,7 +221,8 @@ experiments of the domain again and found the first one that breaks the
 predicate:
 
 ```{python}
-VerdictDisplay(verdict)
+#| echo: false
+result.display("false-verdict")
 ```
 
 The statement above is labelled with its type, `numerically-verified`, and its
@@ -247,12 +238,13 @@ whose size grows with the square of the step. The second example is another
 run with the same system prompt, and ends when the budget is spent.
 
 ```{python}
-open_recording, open_transcript, open_verdict = replay_hunt("open")
-RunDisplay(open_recording, open_transcript, authored=True)
+#| echo: false
+result.display("open-run")
 ```
 
 ```{python}
-VerdictDisplay(open_verdict)
+#| echo: false
+result.display("open-verdict")
 ```
 
 The hunt found nothing, and the page says that the outcome is inconclusive. The
@@ -266,41 +258,31 @@ the successful hunt is removed and the one of the failed hunt is replaced with
 a confident counterexample that no experiment supports:
 
 ```{python}
-from dataclasses import replace
+#| echo: false
+excerpt(experiment.with_last_text)
+```
 
-from pbc.agents import ModelMessage, Step
+```{python}
+#| echo: false
+excerpt(experiment.what_the_agent_says)
+```
 
-def with_last_text(run, text):
-    *earlier, last = run.steps
-    message = ModelMessage(text, last.message.tool_calls)
-    return replace(run, steps=(*earlier, Step(message, last.results)))
-
-silent = with_last_text(transcript, "")
-boasting = with_last_text(
-    open_transcript, "Counterexample found: Verlet at 16 steps per period drifts by 90 per cent."
-)
-print("silent agent, real counterexample:", judge(FALSE_CLAIM, silent, tools()).outcome)
-print("boasting agent, no counterexample:", judge(OPEN_CLAIM, boasting, tools()).outcome)
+```{python}
+#| echo: false
+print(result.output("what-the-agent-says"), end="")
 ```
 
 Second, the results stored in a transcript are overwritten with a drift of 90
 per cent in every experiment. The judge does not read them:
 
 ```{python}
-forged = replace(
-    open_transcript,
-    steps=tuple(
-        Step(
-            step.message,
-            tuple(
-                replace(r, content={"max_energy_drift": 0.9}) if r.ok else r
-                for r in step.results
-            ),
-        )
-        for step in open_transcript.steps
-    ),
-)
-print("forged results:", judge(OPEN_CLAIM, forged, tools()).outcome)
+#| echo: false
+excerpt(experiment.forged_results)
+```
+
+```{python}
+#| echo: false
+print(result.output("forged-results"), end="")
 ```
 
 ### What the agent saw, and what it did not
@@ -309,37 +291,17 @@ The figure is a fresh scan of the same tool at 50 periods, with the two limits.
 The points are the experiments of the two worked hunts at 50 periods.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_hunt)
+```
+
+```{python}
 #| label: fig-hunt
+#| echo: false
 #| fig-status: simulated
 #| fig-cap: "Largest energy drift of the oscillator against steps per period, for symplectic Euler and velocity Verlet over 50 periods. Dashed lines are the limits of the two claims; the dots are experiments of the worked hunts."
 #| fig-alt: "A log-log chart of energy drift against steps per period from 16 to 200. Both curves fall as the step shrinks. The symplectic Euler curve, falling slowly, crosses its dashed line at 5 per cent between 64 and 100 steps per period. The velocity Verlet curve, falling faster, stays below its dashed line at 4 per cent for every step from 16 on, and comes close to it at the coarsest step."
-import matplotlib.pyplot as plt
-import numpy as np
-
-function = tools().tool(TOOL).function
-steps = np.array([16, 20, 24, 32, 48, 64, 100, 150, 200])
-fig, ax = plt.subplots(figsize=(6.4, 3.8))
-for method, claim, colour in (
-    ("symplectic Euler", FALSE_CLAIM, "#93003a"),
-    ("velocity Verlet", OPEN_CLAIM, "#00429d"),
-):
-    drift = [function(method, int(n), 50)["max_energy_drift"] for n in steps]
-    ax.loglog(steps, drift, color=colour, label=method)
-    ax.axhline(claim.limit, color=colour, linestyle="--", linewidth=1)
-for run in (transcript, open_transcript):
-    for step in run.steps:
-        for call, result in zip(step.message.tool_calls, step.results, strict=True):
-            if result.ok and call.arguments["periods"] == 50:
-                ax.plot(
-                    call.arguments["steps_per_period"],
-                    result.content["max_energy_drift"],
-                    "ko",
-                    markersize=4,
-                )
-ax.set_xlabel("steps per period")
-ax.set_ylabel("largest energy drift")
-ax.legend()
-plt.show()
+result.show("fig-hunt")
 ```
 
 Verlet's curve stays under its limit on this scan, so on these steps the claim
@@ -399,14 +361,13 @@ wraps, not the allowlist, so that no budget is used.
 
 ::: {.solution}
 ```{python}
-function = tools().tool(TOOL).function
-smallest = next(
-    n
-    for n in range(16, 201)
-    if FALSE_CLAIM.holds_on(function("symplectic Euler", n, 20)["max_energy_drift"])
-)
-print(smallest, f"{function('symplectic Euler', smallest, 20)['max_energy_drift']:.4f}")
-print(smallest - 1, f"{function('symplectic Euler', smallest - 1, 20)['max_energy_drift']:.4f}")
+#| echo: false
+excerpt(experiment.smallest_counterexample)
+```
+
+```{python}
+#| echo: false
+print(result.output("smallest-counterexample"), end="")
 ```
 
 Below this step the claim has counterexamples, and from here up to 200 it has
@@ -422,10 +383,13 @@ counterexample? Does the answer say anything about the original claim?
 
 ::: {.solution}
 ```{python}
-stricter = replace(OPEN_CLAIM, limit=0.035)
-new_verdict = judge(stricter, open_transcript, tools())
-print(new_verdict.outcome, new_verdict.witness)
-print("original claim:", judge(OPEN_CLAIM, open_transcript, tools()).outcome)
+#| echo: false
+excerpt(experiment.stricter_claim)
+```
+
+```{python}
+#| echo: false
+print(result.output("stricter-claim"), end="")
 ```
 
 The experiment at 16 steps per period drifts by about 3.86 per cent, above
@@ -435,7 +399,7 @@ number, and its verdict is still inconclusive.
 :::
 :::
 
-## Reproduce this
+## Replay this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -444,10 +408,13 @@ reproduce_this(
         "src/pbc/agents/hunter.py",
         "src/pbc/agents/hunter_lab.py",
         "src/pbc/agents/tools.py",
+        "src/pbc/mechanics/experiments/counterexample_hunter.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_agents_hunter.py",
         "tests/unit/test_agents_tools.py",
+        "tests/unit/test_counterexample_hunter_experiment.py",
     ],
 )
 ```

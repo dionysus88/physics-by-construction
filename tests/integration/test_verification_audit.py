@@ -83,11 +83,12 @@ def test_the_audit_names_every_check_of_the_group_build_and_the_e2e_groups():
             assert f"`{name}`" in graph, f"the call graph does not name {name}"
 
 
-def test_a_lesson_executes_three_times_in_a_full_run():
-    # build 1 is site-build, build 2 is determinism, and the third execution
-    # is the reproduction of the lesson. The third build of the preview test
-    # (four executions, as the audit recorded) is consolidated into the
-    # determinism check (F119, ADR 017 decision 8).
+def test_a_lesson_executes_four_times_in_a_full_run():
+    # build 1 is site-build, build 2 is determinism, the third execution is
+    # the reproduction of the page, and the fourth the experiment of the
+    # lesson, without a render (F117, ADR 016 decision 4). The third build of
+    # the preview test (four executions before F119, as the audit recorded)
+    # is consolidated into the determinism check (F119, ADR 017 decision 8).
     commands = verify_conf.checks()
     assert commands["site-build"] == "./scripts/build-site.sh"
     assert commands["determinism"] == "./scripts/check-determinism.sh"
@@ -116,11 +117,13 @@ def test_a_lesson_executes_three_times_in_a_full_run():
     assert result.returncode == 0, result.stdout + result.stderr
     collected = [line for line in result.stdout.splitlines() if "::" in line]
     reproductions = [line for line in collected if "reproduce_commands" in line]
+    experiments = [line for line in collected if "the_experiment_regenerates" in line]
     assert [line for line in collected if PREVIEW_TEST in line] == []
-    # One reproduction per lesson, and nothing else compares bytes on the
-    # machine of the build.
-    assert reproductions == collected
+    # One reproduction and one experiment per lesson, and nothing else
+    # compares bytes on the machine of the build.
+    assert sorted(reproductions + experiments) == sorted(collected)
     assert len(reproductions) == len(lesson_checks.lesson_pages(REPO_ROOT))
+    assert len(experiments) == len(lesson_checks.lesson_pages(REPO_ROOT))
 
     # The reproduction renders in a clone, which holds no store and no
     # selection, so it executes the lesson itself.

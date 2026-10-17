@@ -55,11 +55,13 @@ no system packages.
    can be merged while its checks fail, because no ruleset requires the
    `verify` status check; see `docs/deployment.md`.
 
-For learners, `site/reproduce.qmd` (published as the "Set up" page) is the
-single guide: the required setup, reproduce and extend commands per lesson
-type, the optional workflows, and troubleshooting. A test
-(`tests/integration/test_setup_page.py`) keeps its required commands equal to
-those of `ci.yml`. The external links of the reference register are checked on
+This setup is the maintainers' and agents' contract, not a reader's. For
+readers, `site/reproduce.qmd` (published as the "Set up" page) is the single
+guide, organised by what they do: run an experiment with Git and uv, replay
+an agent lesson or run it live with their own key, and check a proof with
+elan (ADR 016). A test (`tests/integration/test_setup_page.py`) performs its
+Python-only commands in a fresh clone, requires that they install nothing of
+the `dev` group, and runs an experiment of each kind in that environment. The external links of the reference register are checked on
 demand with `./scripts/check-links.sh`; see "Link maintenance" in
 `docs/authoring.md`.
 
@@ -140,24 +142,26 @@ in `scripts/verify-workflow.conf`. They run in this order:
 | `lean-build` | `scripts/check-lean.sh`: takes Mathlib from its build cache and never compiles it from source, builds every module under `lean/PhysicsByConstruction/`, then audits every declaration. A declared `axiom`, a `sorry`, or any axiom besides Lean's three standard ones fails the check. A passed check writes `lean/.lake/pbc-build-record.json` (the versions and a checksum of every module), which the pages of the `lean` strand read; a failed check removes it. |
 | `check-tests-quarto`, `check-tests-browser`, `check-tests-other` | Three checks that together are pytest on `tests/integration`: every check fails on an input that violates it, a lesson made from the template passes, and the CI workflow keeps its permission boundaries. The first names the files that build fixture sites with Quarto, the second the files that need the browser, and the third runs every other file, so a new file runs without a change; CI runs them in three jobs that prepare only what each part needs (`docs/verification-audit.md`, "Division into independent parts"). `tests/integration/test_site_check_division.py` proves by collection that every test runs exactly once. |
 | `lesson-checks` | pytest on `tests/lessons`: the lesson sources follow the format of `docs/authoring.md`. Front matter follows the schema, the required sections and the generated header are present, the lessons form one learning path (unique ids, orders without gaps or duplicates, prerequisites that exist, come earlier, and form no cycle), displayed code is an executed cell or marked "not verified", figure cells have alternative text, and no generated artifact is committed under `site/` or `src/`. |
-| `lesson-pages` | `scripts/check-lesson-pages.sh`: in the targeted run, the single-page render of each selected lesson in a clone of the working tree with its own locked environment (so the page reads the clone's files, as the page's "Reproduce this" commands do), within the 30-second budget of a lesson page, after the Lean build in the clone when a selected lesson displays Lean modules, and after the Lean build of the checkout when a file under `lean/` changed. In a run that builds the site it has nothing to do and says so: the build, the determinism check, and the reproduction cover every lesson. |
+| `lesson-pages` | `scripts/check-lesson-pages.sh`: in the targeted run, the single-page render of each selected lesson in a clone of the working tree with its own locked environment (so the page reads the clone's files, as a reader's clone would), within the 30-second budget of a lesson page, after the Lean build in the clone when a selected lesson displays Lean modules, and after the Lean build of the checkout when a file under `lean/` changed; then the experiment of each selected lesson with a reader's commands, in one learner environment of the clone (`uv sync --locked --no-dev`), within the budget, compared with the page it rendered (figure files byte for byte, numbers at their displayed precision). In a run that builds the site it has nothing to do and says so: the build, the determinism check, and the reproduction cover every lesson. |
 | `site-build` | `scripts/build-site.sh`: Quarto executes every page in the locked environment and renders `site/_site/`. A failing cell or an equation that cannot become MathML fails the build. |
-| `site-checks-*` | Four checks that together are pytest on `tests/e2e` ("The checks of the built site" below), on the built site served under its sub-path: nothing is loaded from another origin, no cookie is set, images have alt text and dimensions, internal links resolve, pages are readable without JavaScript and a script adds no content to them (except inside an element with `data-enhancement`, an `id`, and static content of its own), do not scroll sideways at phone, tablet, or desktop width and keep every image on the screen, and the axe-core scan finds no WCAG 2.1 A or AA violation. For lessons: every lesson has a built page with the required sections, the home page leads to every lesson without JavaScript, the learning path page and every lesson header show what the front matter says (order, difficulty, prerequisites, previous and next), excerpts are identical to their source in `src/pbc` or in `lean/` (for a Lean excerpt, the region between its anchors), the formal proofs lesson states the commit, Lean, and Mathlib versions and links to the proofs at the built commit, "not verified" material shows its label, and the commands of each "Reproduce this" section regenerate the published page and its figures within 30 seconds. |
+| `site-checks-*` | Four checks that together are pytest on `tests/e2e` ("The checks of the built site" below), on the built site served under its sub-path: nothing is loaded from another origin, no cookie is set, images have alt text and dimensions, internal links resolve, pages are readable without JavaScript and a script adds no content to them (except inside an element with `data-enhancement`, an `id`, and static content of its own), do not scroll sideways at phone, tablet, or desktop width and keep every image on the screen, and the axe-core scan finds no WCAG 2.1 A or AA violation. For lessons: every lesson has a built page with the required sections, the home page leads to every lesson without JavaScript, the learning path page and every lesson header show what the front matter says (order, difficulty, prerequisites, previous and next), excerpts are identical to their source in `src/pbc` or in `lean/` (for a Lean excerpt, the region between its anchors), the formal proofs lesson states the commit, Lean, and Mathlib versions and links to the proofs at the built commit, "not verified" material shows its label, the last section of each lesson is headed by its activity and lists the commands from a clone to its experiment and no render, the experiment of each lesson, run with those commands in one learner environment per run (`uv sync --locked --no-dev` in a fresh clone), writes the published figure files byte for byte and the published numbers at their displayed precision within 30 seconds, and the internal render of each page in a fresh clone regenerates the published page. |
 | `determinism` | `scripts/check-determinism.sh`: builds a fresh copy of the site sources a second time and requires byte-identical output. |
 | Workflow self-tests | The shell tests of the agentic development workflow in `tests/*-test.sh`. Run in CI always, and locally only when a workflow file changed; see "Workflow self-tests" below. |
 
 Run one check on its own with the command from `scripts/verify.conf`, for
 example `uv run --locked pytest tests/unit`. The `site-checks-*` checks and
-`determinism` need the output of `site-build`. To read a lesson page you
-are changing, render that page alone, which is what the targeted run does in
-a clone:
+`determinism` need the output of `site-build`. To see what a lesson you are
+changing computes, run its experiment, which writes the figures and numbers
+of its page into a directory:
 
 ```bash
-uv run --locked quarto render site/lessons/<course>/<lesson>/index.qmd
+uv run --locked python -m pbc.<course>.experiments.<lesson> results
 ```
 
-It writes the page under `site/_site/`, which Git ignores. Nobody builds the
-site to read or check a lesson (ADR 016).
+In this checkout the command keeps the development tools; a reader's
+`--no-dev` would remove them from the environment. Then run the targeted
+tier, which checks the page of the lesson in a clone (ADR 016, ADR 017
+decision 7).
 
 How to write a lesson is described in `docs/authoring.md`; the template is
 `docs/lesson-template.qmd`.
@@ -323,7 +327,7 @@ What the selection controls (ADR 014 decision 3):
   again from the same restored state, so the lessons that were executed
   execute twice and the comparison still covers every byte of the site.
 - **The context of a page** is never taken from the store. The header
-  (`lesson_header`), "Reproduce this" (`reproduce_this`), and the code and
+  (`lesson_header`), the last section (`reproduce_this`), and the code and
   Lean excerpts (`excerpt`, `lean_excerpt`, `lean_evidence`) leave a marker
   in the result of their cell: the kind of region and what it is built from,
   with no commit and no other lesson. The post-render script `site/context.py`
@@ -331,7 +335,7 @@ What the selection controls (ADR 014 decision 3):
   the front matter of every lesson as it is now and the commit of the run, so
   a page restored from the store shows the navigation and the commit of this
   run. It fails the build for a marker that is not valid, for a lesson page
-  without a header or a "Reproduce this" section, and for a marker that stays.
+  without a header or a last section, and for a marker that stays.
   A lesson author writes the same cells as before.
 - **The checks of one page** (reading without JavaScript, widths,
   accessibility, payload) run for the pages whose normalised bytes differ from

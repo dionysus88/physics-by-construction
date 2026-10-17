@@ -45,6 +45,13 @@ def test_lean_modules_of_a_lesson_are_the_ones_it_shows(repository: Path):
     assert not violations, describe(violations)
 
 
+def test_every_lesson_declares_an_experiment_that_follows_the_contract(
+    repository: Path,
+):
+    violations = lesson_checks.check_experiments(repository, required=True)
+    assert not violations, describe(violations)
+
+
 def test_figures_are_drawn_by_cells_and_have_alt_text(repository: Path):
     violations = lesson_checks.check_figures(repository)
     assert not violations, describe(violations)

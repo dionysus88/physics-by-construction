@@ -1366,7 +1366,8 @@ def _source_of(
     None when there is no such thing. With ``region`` or ``lines``, only that
     part of a Python object, or None when it does not exist.
 
-    A module of ``pbc`` names a top-level function or class of ``src/``; a
+    A module of ``pbc`` names a top-level function or class of ``src/``, or
+    nothing after the colon for a region or lines of the module itself; a
     module of ``PhysicsByConstruction`` or an exercise stub (``Exercises``)
     names a region of a Lean file in ``lean/``.
     """
@@ -1377,6 +1378,9 @@ def _source_of(
     if module.split(".")[0] != "pbc" or not file.is_file():
         return None
     text = file.read_text(encoding="utf-8")
+    if not target:
+        # A part of the module itself, never the whole of it.
+        return _shown_part(text, region, lines) if region or lines else None
     for node in ast.parse(text).body:
         if (
             isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)

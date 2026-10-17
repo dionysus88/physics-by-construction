@@ -7,10 +7,14 @@ Corrections, suggestions, and lesson ideas are welcome.
 1. Open a GitHub Issue that describes the problem or the proposal. All
    non-trivial changes start from an Issue.
 2. Work on a branch, never on `main`. Changes land through pull requests.
-3. Run `./scripts/verify.sh` before opening the pull request. The setup it
-   needs is in [docs/development.md](docs/development.md#one-time-setup). CI
-   runs the same command, and a pull request with a failing check cannot be
-   merged.
+3. Before opening the pull request, run the experiment of the lesson you
+   changed, its unit tests, and the lesson checks, and then the verification
+   tier the change needs: for an ordinary change
+   `./scripts/verify.sh --targeted`, which builds no site. The setup it needs
+   and the other tiers are in
+   [docs/development.md](docs/development.md#one-time-setup). CI builds and
+   validates the site on every pull request, and a pull request with a
+   failing check cannot be merged.
 4. Keep the pull request focused on its Issue and include the verification
    evidence.
 
