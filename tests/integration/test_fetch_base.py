@@ -20,6 +20,9 @@ from support.paths import SCRIPTS
 REPO = "owner/repo"
 RUN = 1000
 ARTIFACT = 77
+MAIN = "a" * 40  # the commit refs/heads/main points to
+COMMIT = "b" * 40  # the commit of a run, an ancestor of MAIN
+ELSEWHERE = "c" * 40  # a commit that never reached main
 
 FAKE_GH = """#!/usr/bin/env bash
 # api [-H header] <path>: answers from $FAKE_API, one file per path (the query
@@ -65,6 +68,14 @@ class Api:
         gh.chmod(gh.stat().st_mode | stat.S_IXUSR)
         self.target = tmp / "work" / "base"
         self.github_output = tmp / "github-output"
+        self.put(
+            f"repos/{REPO}/git/ref/heads/main",
+            {"ref": "refs/heads/main", "object": {"type": "commit", "sha": MAIN}},
+        )
+        self.put(f"repos/{REPO}/git/matching-refs/tags/main", [])
+        self.add_commit(COMMIT, "behind")
+        self.add_commit(MAIN, "identical")
+        self.add_commit(ELSEWHERE, "ahead", merge_base=MAIN)
         self.add_run(RUN)
 
     def put(self, path: str, data: object) -> None:
@@ -73,6 +84,13 @@ class Api:
     def put_bytes(self, path: str, data: bytes) -> None:
         (self.api / key(path)).write_bytes(data)
 
+    def add_commit(self, sha: str, status: str, merge_base: str | None = None):
+        """How the compare API relates ``sha`` to the head of main."""
+        self.put(
+            f"repos/{REPO}/compare/{MAIN}...{sha}",
+            {"status": status, "merge_base_commit": {"sha": merge_base or sha}},
+        )
+
     def add_run(
         self, run: int, *, listed: bool = True, verify: str = "success", **record
     ) -> None:
@@ -80,6 +98,7 @@ class Api:
             "id": run,
             "event": "push",
             "head_branch": "main",
+            "head_sha": COMMIT,
             "status": "completed",
             "conclusion": "success",
             "path": ".github/workflows/ci.yml",
@@ -103,6 +122,10 @@ class Api:
             self.put(path, listing)
         self.add_artifact(run, ARTIFACT + run)
 
+    def change_run(self, run: int, **record) -> None:
+        path = f"repos/{REPO}/actions/runs/{run}"
+        self.put(path, self.read(path) | record)
+
     def read(self, path: str):
         file = self.api / key(path)
         return json.loads(file.read_text()) if file.exists() else None
@@ -115,7 +138,8 @@ class Api:
         **record,
     ) -> None:
         archive = self.tmp / f"base-{artifact}.zip"
-        files = entries if entries is not None else good_entries()
+        sha = (self.read(f"repos/{REPO}/actions/runs/{run}") or {}).get("head_sha")
+        files = entries if entries is not None else good_entries(run, sha or COMMIT)
         with zipfile.ZipFile(archive, "w") as zipped:
             for name, content in files.items():
                 zipped.writestr(name, content if content is not None else b"")
@@ -164,8 +188,14 @@ class Api:
         return dict(line.split("=", 1) for line in lines)
 
 
-def good_entries() -> dict[str, bytes | None]:
+def provenance(run: int = RUN, sha: str = COMMIT, ref: str = "refs/heads/main"):
+    """What collect-base.sh records of the run that collected a base."""
+    return json.dumps({"ref": ref, "sha": sha, "run_id": run}).encode()
+
+
+def good_entries(run: int = RUN, sha: str = COMMIT) -> dict[str, bytes | None]:
     return {
+        "provenance.json": provenance(run, sha),
         "digests.json": json.dumps({"format": 1, "lessons": {}}).encode(),
         "pages.json": json.dumps({"format": 1, "files": {}}).encode(),
         "freeze/lessons/a/index/execute-results/html.json": b"{}",
@@ -270,6 +300,142 @@ def test_a_run_that_is_not_a_verified_push_run_on_main_is_rejected(
     )
     run = api.read(f"repos/{REPO}/actions/runs/{RUN + 1}") | record | {"id": RUN}
     api.put(f"repos/{REPO}/actions/runs/{RUN}", run)
+    assert_no_base(api, api.fetch(), why)
+
+
+# A tag push records the tag's name as head_branch, so a tag named main reads
+# like the branch: the repository decides (ADR 014 decision 2, Issue #211).
+
+
+def test_a_tag_push_of_a_tag_named_main_is_rejected(api: Api):
+    # The record of the push of a tag main on a commit that never reached the
+    # branch: the same as a branch push but for the commit it checked out.
+    api.change_run(RUN, head_sha=ELSEWHERE)
+    assert_no_base(api, api.fetch(), "not on the history of refs/heads/main")
+    api.github_output.unlink()
+    assert_no_base(
+        api, api.fetch("--run", str(RUN)), "not on the history of refs/heads/main"
+    )
+
+
+def test_while_a_tag_named_main_exists_there_is_no_base(api: Api):
+    # Even for a run whose commit is on main: the tag could have pointed there.
+    api.put(
+        f"repos/{REPO}/git/matching-refs/tags/main",
+        [
+            {"ref": "refs/tags/main-v1", "object": {"type": "commit", "sha": MAIN}},
+            {"ref": "refs/tags/main", "object": {"type": "commit", "sha": COMMIT}},
+        ],
+    )
+    assert_no_base(api, api.fetch(), "a tag named main exists")
+
+
+def test_a_tag_whose_name_only_begins_with_main_does_not_matter(api: Api):
+    api.put(
+        f"repos/{REPO}/git/matching-refs/tags/main",
+        [{"ref": "refs/tags/main-v1", "object": {"type": "commit", "sha": MAIN}}],
+    )
+    result = api.fetch()
+    assert result.returncode == 0, output(result)
+    assert api.outputs() == {"accepted": "true", "run-id": str(RUN)}
+
+
+def test_a_tag_push_of_a_commit_on_main_whose_tag_is_gone_is_rejected(api: Api):
+    # Review 01, M1: a tag main pushed on a commit already on main, and
+    # deleted before the fetch. The run record, the ancestry and the tags
+    # are those of a branch push; only the run's own ref tells them apart.
+    only_artifact(
+        api, good_entries() | {"provenance.json": provenance(ref="refs/tags/main")}
+    )
+    why = "does not name refs/heads/main"
+    assert_no_base(api, api.fetch(), why)
+    api.github_output.unlink()
+    assert_no_base(api, api.fetch("--run", str(RUN)), why)
+
+
+@pytest.mark.parametrize(
+    ("record", "why"),
+    [
+        (None, "holds no provenance.json"),
+        (b"not json", "does not name refs/heads/main"),
+        (b'["refs/heads/main"]', "does not name refs/heads/main"),
+        (provenance(ref="main"), "does not name refs/heads/main"),
+        (provenance(ref="refs/heads/main-copy"), "does not name refs/heads/main"),
+        (provenance(sha=MAIN), "does not name refs/heads/main"),
+        (provenance(run=RUN + 1), "does not name refs/heads/main"),
+    ],
+    ids=["missing", "not-json", "not-object", "short", "other-branch", "sha", "run"],
+)
+def test_a_base_whose_run_did_not_record_the_branch_main_is_rejected(
+    api: Api, record: bytes | None, why: str
+):
+    # Fail closed: a base that does not establish the full ref of its run,
+    # for this run and its commit, gives a full run.
+    entries = {k: v for k, v in good_entries().items() if k != "provenance.json"}
+    if record is not None:
+        entries["provenance.json"] = record
+    only_artifact(api, entries)
+    assert_no_base(api, api.fetch(), why)
+
+
+@pytest.mark.parametrize(
+    ("compare", "head_sha"),
+    [
+        ({"status": "ahead"}, COMMIT),
+        ({"status": "diverged", "merge_base_commit": {"sha": MAIN}}, COMMIT),
+        ({"status": "behind", "merge_base_commit": {"sha": MAIN}}, COMMIT),
+        (None, COMMIT),
+        ({"status": "behind"}, None),
+        ({"status": "behind"}, "main"),
+    ],
+    ids=["ahead", "diverged", "other-merge-base", "no-compare", "no-sha", "not-sha"],
+)
+def test_a_run_whose_commit_is_not_on_main_is_rejected(
+    api: Api, compare: dict | None, head_sha: str | None
+):
+    path = f"repos/{REPO}/compare/{MAIN}...{COMMIT}"
+    if compare is None:
+        api.api.joinpath(key(path)).unlink()
+    else:
+        api.put(path, {"merge_base_commit": {"sha": COMMIT}} | compare)
+    api.change_run(RUN, head_sha=head_sha)
+    assert_no_base(api, api.fetch(), "not on the history of refs/heads/main")
+
+
+def test_the_head_of_main_itself_is_on_main(api: Api):
+    api.change_run(RUN, head_sha=MAIN)
+    only_artifact(api, good_entries(RUN, MAIN))
+    result = api.fetch()
+    assert result.returncode == 0, output(result)
+    assert api.outputs() == {"accepted": "true", "run-id": str(RUN)}
+
+
+@pytest.mark.parametrize(
+    ("path", "data", "why"),
+    [
+        ("git/ref/heads/main", None, "the branch main cannot be read"),
+        (
+            "git/ref/heads/main",
+            {"ref": "refs/tags/main", "object": {"type": "commit", "sha": MAIN}},
+            "is not a commit",
+        ),
+        (
+            "git/ref/heads/main",
+            {"ref": "refs/heads/main", "object": {"type": "tag", "sha": MAIN}},
+            "is not a commit",
+        ),
+        ("git/matching-refs/tags/main", None, "cannot be listed"),
+        ("git/matching-refs/tags/main", {"ref": "x"}, "cannot be listed"),
+    ],
+    ids=["no-branch", "tag-ref", "not-commit", "no-tags", "tags-not-list"],
+)
+def test_when_the_ref_of_main_cannot_be_established_there_is_no_base(
+    api: Api, path: str, data: object, why: str
+):
+    if data is None:
+        api.api.joinpath(key(f"repos/{REPO}/{path}")).unlink()
+    else:
+        api.put(f"repos/{REPO}/{path}", data)
     assert_no_base(api, api.fetch(), why)
 
 
@@ -470,7 +636,13 @@ def test_collect_base_gathers_what_a_build_left(tmp_path: Path):
     (site / "_digests.json").write_text("{}")
     (site / "_pages.json").write_text("{}")
     out = tmp_path / "out"
-    env = {**os.environ, "PBC_SOURCE_DIR": str(site)}
+    env = {
+        **os.environ,
+        "PBC_SOURCE_DIR": str(site),
+        "GITHUB_REF": "refs/heads/main",
+        "GITHUB_SHA": COMMIT,
+        "GITHUB_RUN_ID": str(RUN),
+    }
     run = subprocess.run(
         [SCRIPTS / "collect-base.sh", out],
         env=env,
@@ -485,7 +657,24 @@ def test_collect_base_gathers_what_a_build_left(tmp_path: Path):
         "digests.json",
         "freeze/lessons/a/result.json",
         "pages.json",
+        "provenance.json",
     ]
+    assert json.loads((out / "provenance.json").read_text()) == {
+        "ref": "refs/heads/main",
+        "sha": COMMIT,
+        "run_id": RUN,
+    }
+    # Only a workflow run, which knows its ref, collects a base.
+    for name in ("GITHUB_REF", "GITHUB_SHA", "GITHUB_RUN_ID"):
+        run = subprocess.run(
+            [SCRIPTS / "collect-base.sh", out],
+            env={k: v for k, v in env.items() if k != name},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert run.returncode == 1, name
+        assert f"{name} is not set" in run.stderr
     (site / "_pages.json").unlink()
     run = subprocess.run(
         [SCRIPTS / "collect-base.sh", out],

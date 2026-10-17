@@ -16,6 +16,20 @@ set -euo pipefail
 # nothing: a pull request run, a fork, or a failed main run is never
 # accepted, whatever it uploaded.
 #
+# The record names the branch only by its short name, and a tag push records
+# the tag's name there: a tag named main reads like the branch. The full ref
+# is therefore established from the repository and from the run itself. The
+# commit the run checked out must be on the history of refs/heads/main (the
+# compare API), so a commit that never reached main, with whatever ci.yml it
+# carries, is never a base; no tag refs/tags/main may exist; and the base
+# must hold provenance.json, which collect-base.sh writes from the run's own
+# GITHUB_REF, naming refs/heads/main, the commit and the run the runs API
+# checked. That record is trusted only because the commit is on main: its
+# ci.yml is the reviewed one, which writes the true ref. A tag push of a
+# commit on main, even one whose tag was deleted since, names refs/tags/main
+# there and is rejected; a base without the record is rejected too. The
+# record can only reject a base, never make one acceptable.
+#
 # --run <id> names the producing run; the same checks apply to it. The jobs
 # that check a built site use it to take the very base the build job took.
 #
@@ -115,6 +129,18 @@ acceptable_run() {
   [[ -z "$why" ]]
 }
 
+# Whether the commit of the run, in $scratch/run.json, is on the history of
+# main: the merge base of the two is that commit itself.
+on_main() {
+  local sha
+  sha="$(jq -r '.head_sha // ""' "$scratch/run.json" 2>/dev/null)" || return 1
+  [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || return 1
+  api "repos/$repo/compare/$main_sha...$sha?per_page=1" >"$scratch/compare.json" 2>/dev/null || return 1
+  jq -e --arg sha "$sha" '(.status == "identical" or .status == "behind")
+                          and .merge_base_commit.sha == $sha' \
+    "$scratch/compare.json" >/dev/null 2>&1
+}
+
 # Whether the aggregate job of run $1 concluded with success.
 verify_succeeded() {
   api "repos/$repo/actions/runs/$1/jobs?filter=latest&per_page=100" >"$scratch/jobs.json" 2>/dev/null || return 1
@@ -151,7 +177,23 @@ else
 fi
 [[ ${#candidates[@]} -gt 0 ]] || without_base "no earlier push to main has a successful run"
 
+# The commit of refs/heads/main, read by its full ref. A tag of that name makes
+# the short name of a run record ambiguous, so there is no base while one
+# exists.
+api "repos/$repo/git/ref/heads/main" >"$scratch/main.json" 2>/dev/null ||
+  without_base "the branch main cannot be read"
+main_sha="$(jq -r 'if .ref == "refs/heads/main" and .object.type == "commit"
+                   then .object.sha else "" end' "$scratch/main.json" 2>/dev/null || true)"
+[[ "$main_sha" =~ ^[0-9a-f]{40}$ ]] || without_base "the ref refs/heads/main is not a commit"
+api "repos/$repo/git/matching-refs/tags/main" >"$scratch/tags.json" 2>/dev/null ||
+  without_base "the tags named main cannot be listed"
+jq -e 'type == "array"' "$scratch/tags.json" >/dev/null 2>&1 ||
+  without_base "the tags named main cannot be listed"
+jq -e 'all(.[]; .ref != "refs/tags/main")' "$scratch/tags.json" >/dev/null 2>&1 ||
+  without_base "a tag named main exists, so a run record cannot tell it from the branch"
+
 chosen=""
+chosen_sha=""
 reasons=()
 for id in "${candidates[@]}"; do
   api "repos/$repo/actions/runs/$id" >"$scratch/run.json" 2>/dev/null || {
@@ -160,6 +202,10 @@ for id in "${candidates[@]}"; do
   }
   if ! acceptable_run "$scratch/run.json"; then
     reasons+=("run $id: $why")
+    continue
+  fi
+  if ! on_main; then
+    reasons+=("run $id: its commit is not on the history of refs/heads/main")
     continue
   fi
   if ! verify_succeeded "$id"; then
@@ -171,6 +217,7 @@ for id in "${candidates[@]}"; do
     continue
   fi
   chosen="$id"
+  chosen_sha="$(jq -r '.head_sha' "$scratch/run.json")"
   break
 done
 if [[ ${#reasons[@]} -gt 0 ]]; then
@@ -224,6 +271,14 @@ for record in digests.json pages.json; do
   jq -e 'type == "object"' "$stage/$record" >/dev/null 2>&1 ||
     without_base "$record is not a JSON object"
 done
+
+# The full ref of the run that collected the base, as that run recorded it.
+[[ -f "$stage/provenance.json" ]] ||
+  without_base "the base holds no provenance.json, so the ref of its run is not established"
+jq -e --arg sha "$chosen_sha" --argjson run "$chosen" '
+  type == "object" and .ref == "refs/heads/main" and .sha == $sha and .run_id == $run' \
+  "$stage/provenance.json" >/dev/null 2>&1 ||
+  without_base "provenance.json of run $chosen does not name refs/heads/main, its commit, and the run"
 
 rm -rf "$target"
 mkdir -p "$(dirname "$target")"
