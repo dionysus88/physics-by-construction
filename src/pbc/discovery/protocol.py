@@ -19,7 +19,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from pbc.agents.loop import Transcript
+from pbc.agents.loop import MAX_CALLS_PER_MESSAGE, Transcript
 from pbc.agents.replay import Recording, load_recording, save_recording
 from pbc.discovery.baselines import BaselineResult
 from pbc.discovery.environment import ENVIRONMENTS, Environment
@@ -93,8 +93,9 @@ class CostRecord:
 
     model_calls: int
     tool_calls: int
-    input_tokens: int
-    output_tokens: int
+    # None when the run reported no count, as a Claude Code session does not.
+    input_tokens: int | None
+    output_tokens: int | None
     cost_usd: float | None  # None when the provider gave none
 
 
@@ -165,7 +166,11 @@ def score_transcript(protocol: Protocol, transcript: Transcript, seed: int) -> S
     probes = refused = 0
     claim: dict[str, float] | None = None
     for step in transcript.steps:
-        for call in step.message.tool_calls:
+        for number, call in enumerate(step.message.tool_calls):
+            # The loop refuses the calls of a message beyond its limit unrun.
+            if number >= MAX_CALLS_PER_MESSAGE:
+                refused += 1
+                continue
             result = allowlist.dispatch(call)
             if not result.ok:
                 refused += 1

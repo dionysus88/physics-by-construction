@@ -1,0 +1,455 @@
+---
+title: "Discovering a force law with controlled probes"
+description: >-
+  A language model probes a black box that pulls a test body toward a centre,
+  one control at a time, and submits a force law; the build scores the claim
+  on distances it could not probe and sets it beside three baselines that use
+  no model.
+lesson:
+  id: black-box-force-law
+  strand: agents-llm
+  order: 5
+  difficulty: 2
+  course: mechanics
+  slot: D1
+  experiment: pbc.mechanics.experiments.black_box_force_law
+  methods: [simulation, llm-agents]
+  outcomes:
+    - Design controlled probes that separate the effect of each control on a force
+    - Read an exponent from the ratio of two forces at two distances, and say how the noise limits it
+    - Score a claimed law on settings outside the probed range, and compare it with baselines that use no model
+    - Say what a good score of a recorded run does and does not show about the agent
+  related: []
+  format: 2
+  preview: fig-force-probes
+  prerequisites:
+    lessons: [agent-experiment, inverse-physics]
+    outside:
+      - "Logarithms: the logarithm of a product and of a power"
+      - "Large language models: a program that continues a text"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import lesson_header
+from pbc.mechanics.experiments import black_box_force_law as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+How did anyone find out that gravity falls with the square of the distance?
+Not by guessing a formula and admiring it. A law of force is found by changing
+one thing at a time: keep the body, move it away, and see how much weaker the
+pull becomes; keep the distance, double the body, and see whether the pull
+doubles. Each such **controlled probe** isolates the effect of one control.
+A few of them, chosen well, say more than many chosen at random.
+
+This lesson gives that job to a language model. Behind the tools is a
+simulated **black box**: a fixed centre that pulls a test body with a force
+that depends on the distance and on the mass of the body. The law, its
+coefficients, and the settings on which the claim will be judged are hidden
+from the model, and from this page. The model may set the two controls, read
+a noisy force, and finally submit two numbers, a strength and an exponent.
+
+The build then does what the model cannot influence. It replays the recorded
+run and recomputes every reading. It scores the submitted law on distances
+beyond any the model could reach, where a wrong exponent shows. And it runs
+three methods without a model on the same box with the same budget, so that the
+agent's result has something to be compared with.
+
+## Assumptions
+
+1. **The black box is a simulation with a known family of laws.** The force is
+   $F = k\,m\,r^{-p}$, strength $k$ times mass $m$ times distance $r$ to the power $-p$, for some hidden strength and
+   exponent: the central force of the Discovery evaluation protocol
+   (`CentralForceEnvironment` of `pbc.discovery`). A claim is made in that family.
+   If the true law were outside it, no claim could be right, and the
+   least-squares baseline would say so through its chi-square.
+2. **Each reading has Gaussian noise of known size.** The noise is a function
+   of the seed and the controls, so the same probe gives the same reading and
+   the replay is exact. A new probe gives an independent reading only when a
+   control differs.
+3. **The rules come first.** The budget, the step limit, the tolerance on the
+   held-out error that counts as recovering the law, and the hidden world were
+   fixed in `pbc.discovery.force_lab` before the run was recorded. Nothing is
+   widened afterwards.
+4. **The agent is untrusted.** It reaches the box only through an allowlist of
+   two tools with bounded arguments, and its words are data. The score is a
+   function of its tool calls alone.
+5. **The prior knowledge is "partial".** The model is told the controls, the
+   observation, and the names of the two parameters to report, not the form of
+   the law. The tool that takes the claim describes its parameters, so the
+   names hint at a power of the distance; that is part of the condition.
+
+## Controlled probes and a held-out test {#explanation}
+
+Write the force as
+
+$$
+F(r, m) = k\, m\, r^{-p},
+$$
+
+with $r$ the distance, $m$ the mass, $k$ the strength, and $p$ the exponent.
+Two kinds of probe separate the controls.
+
+- **Hold the distance, change the mass.** If $F$ doubles when $m$ doubles,
+  the force is proportional to the mass, and $F/m$ depends on the distance
+  alone.
+- **Hold the mass, change the distance.** Take the logarithm:
+  $\ln F = \ln(k m) - p \ln r$. Between two distances $r_1 < r_2$ the exponent
+  is the slope
+  $$
+  p = \frac{\ln F(r_1) - \ln F(r_2)}{\ln r_2 - \ln r_1}.
+  $$
+
+Without noise two readings would fix $p$ exactly. With noise of standard
+deviation $\sigma$ on each force, the error of each logarithm is about
+$\sigma / F$, so the error of the slope is about
+
+$$
+\delta p \approx \frac{\sigma\sqrt{1/F_1^{2} + 1/F_2^{2}}}{\ln(r_2/r_1)}.
+$$
+
+That formula is the design, and it holds a trade-off. A wide ratio of
+distances makes the denominator large. But the force falls as $r^{-p}$, so the
+far reading is the weak one, its relative noise $\sigma/F_2$ grows as
+$r_2^{\,p}$, and it dominates the error. Moving the far probe out helps only
+while the logarithm in the denominator grows faster than the noise in the
+numerator. A heavy body makes every force larger and every relative noise
+smaller, at no cost. A probe at a middle distance also tests whether the
+logarithm is a straight line at all, which is a check of the family, not only
+a sharper estimate.
+
+**Why the claim is scored where nobody probed.** The controls are bounded. A
+claim that fits the readings inside the bounds can still be wrong outside
+them, and the further outside, the more a small error in $p$ grows: the
+relative error of a prediction at distance $r$ is about
+$\delta p \ln(r/r_0)$ for a law matched near $r_0$. The protocol therefore
+scores the claim on **held-out settings** beyond the largest distance the
+tools accept. The **held-out error** is the root-mean-square difference
+between the claim's prediction and the noise-free law there, relative to the
+size of the force. The law counts as **recovered** when that error is at most
+the tolerance of the protocol, `{python} result["tolerance"]`, and the run ended
+on its own.
+
+### What the agent may and may not do
+
+```{python}
+#| echo: false
+result.display("allowlist")
+```
+
+The agent **may** call `measure` at most `{python} result["budget"]` times, call
+`submit` to state its claim, send at most `{python} result["max-steps"]` messages with at
+most `{python} result["max-calls"]` tool calls each, and write text. It
+**may not** run code, read a file, reach the network, or call the judge. The
+law, its parameters, and the held-out settings are in no tool, no prompt, and
+no tool description; a test of `pbc.discovery` checks that for every
+environment.
+
+## Code
+
+The score is recomputed from the calls of the transcript alone. A fresh box
+of the same seed receives the same calls, the last accepted claim is scored,
+and nothing the agent wrote is read.
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, reproduce_this
+from pbc.discovery import score_transcript
+from pbc.discovery.baselines import least_squares, run_baselines
+
+excerpt(score_transcript)
+```
+
+The baselines spend the same budget without a model: on a regular grid, at
+random, and on the grid again with sparse identification, which looks for the
+force as a short sum of the terms $m\,r^{-n}$ for whole numbers
+`n`. Each reports success only when its fit is consistent with the noise.
+
+```{python}
+#| echo: false
+excerpt(run_baselines)
+```
+
+```{python}
+#| echo: false
+excerpt(least_squares)
+```
+
+## Worked examples
+
+### The recorded run
+
+```{python}
+#| echo: false
+excerpt(experiment.run, region="replay")
+```
+
+```{python}
+#| echo: false
+result.display("run")
+```
+
+The model was a Claude model working in a Claude Code session, recorded on
+`{python} result["recorded"]`: a fresh sub-agent that was given the system
+prompt, the task, and the tool descriptions above, and nothing else. It chose
+every call after reading the readings the harness computed; the session
+relayed them. It was not called through the provider API, and the session
+reported no token count or price.
+
+### The score, recomputed
+
+```{python}
+#| echo: false
+excerpt(experiment.score_table)
+```
+
+```{python}
+#| label: d1-score
+#| echo: false
+result.table("d1-score")
+```
+
+[The law the agent submitted predicts the force at the held-out distances
+within the tolerance of the protocol: the outcome is
+`{python} result["outcome"]`.]{.claim type="numerically-verified"
+scope="the simulated central force of this protocol, one recorded run, one
+seed" evidence="d1-score replay"} The model used
+`{python} result["probes"]` of its `{python} result["budget"]` probes: three distances at
+one mass and one mass at a second distance, the two kinds of controlled probe
+above, spanning the whole range of distances at a light body.
+
+### What the probes themselves support
+
+The agent submitted round numbers. Were they what its four readings show, or
+what it expected? Fit the family to exactly the readings it saw, with the
+standard errors that the noise gives:
+
+```{python}
+#| echo: false
+excerpt(experiment.probe_fit)
+```
+
+```{python}
+#| label: d1-probe-fit
+#| echo: false
+result.table("d1-probe-fit")
+```
+
+[A least-squares fit to the agent's own readings also recovers the law, with
+standard errors of the size the noise allows.]{.claim
+type="numerically-verified" scope="the four readings of the recorded run"
+evidence="d1-probe-fit"} The fit does not land exactly on the round numbers.
+The agent's claim scored better than its data alone could guarantee, because
+its rounding happened to agree with the world. A claim that matches by
+rounding and a claim that matches by measurement look the same in one score;
+the lesson on a modified law asks what happens when the familiar round number
+is wrong.
+
+### Beside the baselines
+
+```{python}
+#| echo: false
+excerpt(experiment.beside_the_baselines)
+```
+
+```{python}
+#| label: d1-baselines
+#| echo: false
+result.table("d1-baselines")
+```
+
+The baselines spent the whole budget and the agent a fraction of it. Least
+squares on the grid and on random settings both recover the law; sparse
+identification does as well here, since the law is one of its library's
+terms. The comparison is not a ranking of methods: it is one box, one seed,
+and one recorded run.
+
+### The probes on a logarithmic scale
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_force_probes)
+```
+
+```{python}
+#| label: fig-force-probes
+#| echo: false
+#| fig-status: simulated
+#| fig-cap: "Force per unit mass against distance on logarithmic axes: the agent's four readings lie on the straight line of the law fitted to them, and the grid baseline's readings lie on the same line; its slope is the exponent."
+#| fig-alt: "A log-log chart of force per unit mass against distance from one to four metres. Grey dots of the grid baseline and four larger dots of the agent fall on one straight descending line. The line is drawn from the fit to the agent's readings and extended past four metres as a dashed line toward the region that is scored."
+result.show("fig-force-probes")
+```
+
+The figure shows simulated readings, recomputed by this build. On logarithmic
+axes the law is a straight line, and the controlled probes of the agent cover
+its whole width. The dotted line is the largest distance the tools accept.
+Everything to its right is the extrapolation the held-out score tests, and no
+reading exists there.
+
+### Run the agent yourself
+
+This needs your own key and costs a few cents. The build does not run it, so
+the commands are marked.
+
+::: {.not-verified}
+```bash
+uv sync --locked --no-dev --extra openai
+export OPENAI_API_KEY="..."
+cd site/lessons/agents-llm/05-discovering-a-force-law
+uv run --locked --no-dev --extra openai python -m pbc.discovery.force_lab black-box
+```
+:::
+
+The program prints each message and reading and the held-out error it
+computed. With `--record` it writes `replay.json` in the current directory;
+the record of the run in `pbc.discovery.force_lab` then needs the new model,
+date, and cost, which the program prints.
+
+## Limits {#limits}
+
+- **One run of one model.** The page shows what one model once did with this
+  box. It does not say how often a model finds the law, and a live run will
+  probe elsewhere.
+- **A score is about the simulated box.** It says how well a claim predicts
+  this simulation beyond the probed range. Nothing here is a measurement of a
+  real force, and nothing says the law is true of nature.
+- **The family is given by the claim's parameters.** A claim can only be a
+  strength and an exponent. A law of another form, such as a force that
+  changes sign, cannot be stated, and the agent is not tested on finding the
+  form.
+- **A perfect score can come from rounding.** The agent's round numbers
+  matched the world exactly, which its four readings alone could not
+  guarantee. The score cannot tell good judgement from a lucky prior.
+- **The recording is not an API run.** The messages are those of a Claude
+  model in a Claude Code session, which was told by the session to answer in
+  the harness's format and to use no tool of its own; it was asked once, before
+  its first message, to send its reply again in that format. A run through the
+  provider API may differ.
+- **Sparse identification is fragile on a collinear library.** Its threshold is
+  relative to the largest coefficient. When the terms are nearly proportional
+  over the probed range it can drop the right term; the first exercise shows
+  it.
+
+::: {.exercise .self-check}
+The agent's claim scored a held-out error that rounds to zero. Does that show
+that its four readings determined the strength and the exponent to that
+precision?
+
+::: {.choices}
+::: {.choice}
+Yes: the held-out error measures how precisely the readings determine the
+parameters.
+
+::: {.feedback}
+The held-out error compares the claim with the law; it knows nothing of how
+the claim was reached. A guess that happens to be right scores as well as a
+measurement.
+:::
+:::
+
+::: {.choice correct="true"}
+No: the fit to the same readings has standard errors well above zero, so the
+exact match came from the agent's rounding, not from the precision of its
+data.
+
+::: {.feedback}
+Right. The readings support the law within their standard errors, and the
+claim fell inside them on a round number. The score is the same either way.
+:::
+:::
+:::
+
+::: {.solution}
+No. The score compares the claim with the hidden law on the held-out settings
+and says nothing about how the claim was reached. The least-squares fit to
+the agent's four readings gives values close to the claim but not equal to it,
+with standard errors set by the noise. The claim's exact match is the
+agreement of a round number with the world. That is why a protocol reports the
+score together with the evidence the claim rests on, and why the modified-law
+lesson puts a world where the round number is wrong.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+Make a box of your own with strength 9 and exponent 2, spend a budget of 20
+on the grid, and run sparse identification and least squares on it. One
+succeeds and one fails. Which, and why?
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.sparse_on_a_collinear_library)
+```
+
+```{python}
+#| echo: false
+result.table("own-box")
+```
+
+
+Least squares fits the two parameters of the family and succeeds. Sparse
+identification fails, although the law is exactly one of its terms. Over
+distances from one to four metres the terms of the library are nearly
+proportional to each other, so the first unconstrained fit spreads the force
+over several of them with large coefficients of opposite sign. The threshold
+is relative to the largest coefficient, and the right term falls under it and
+is removed. The baseline then reports that no sparse sum fits, which is a
+statement about its procedure, not about the law. A baseline is a method with
+failure modes of its own; that is why its failures are shown.
+:::
+:::
+
+::: {.exercise}
+Use the error formula of the explanation. The noise is `{python} result["sigma"]` N on
+each reading. For a body of 5 kg, estimate the error of the exponent from two
+readings at 1 m and 4 m, given a force of about 100 N at 1 m and 6 N at 4 m.
+Then do the same at 1 m and 2 m, given 100 N and 25 N. Which pair is better,
+and by how much?
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.slope_errors)
+```
+
+```{python}
+#| echo: false
+result.table("slope-errors")
+```
+
+
+The narrower pair is better, by the ratio in the table. Going from two
+metres to four doubles the logarithm in the denominator, but it makes the far
+force four times weaker and its relative noise four times larger, and the far
+reading dominates. When it does, the error behaves as $r_2^{\,p}/\ln(r_2/r_1)$,
+which is smallest at $r_2/r_1 = e^{1/p}$, well inside the bounds here. The
+widest span is still useful for another reason: it tests the straight line
+over the whole range, and the held-out settings lie beyond it.
+:::
+:::
+
+## Replay this experiment {#reproduce-this}
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/discovery/force_lab.py",
+        "src/pbc/discovery/environment.py",
+        "src/pbc/discovery/protocol.py",
+        "src/pbc/discovery/baselines.py",
+        "src/pbc/mechanics/experiments/black_box_force_law.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_force_lab.py",
+        "tests/unit/test_discovery.py",
+        "tests/unit/test_black_box_force_law_experiment.py",
+    ],
+)
+```

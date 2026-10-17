@@ -1,0 +1,450 @@
+---
+title: "Unlearning a familiar law: a modified force"
+description: >-
+  A language model probes a central force whose law is not the inverse square
+  it knows; the build shows that the familiar law fails the readings, that a
+  baseline without a model identifies the modified one, and reports the agent's
+  claim exactly as it scored.
+lesson:
+  id: modified-force-law
+  strand: agents-llm
+  order: 7
+  difficulty: 3
+  course: mechanics
+  slot: D3
+  experiment: pbc.mechanics.experiments.modified_force_law
+  methods: [simulation, llm-agents]
+  outcomes:
+    - Test a familiar law against readings and reject it with a stated criterion
+    - Identify a modified exponent with a baseline that uses no model, and score it beyond the probed range
+    - Tell a fit that is consistent where it was probed from one that is right where it was not
+    - Report an agent's result as it scored, whether or not the baseline did better
+  related: []
+  format: 2
+  preview: fig-unlearning
+  prerequisites:
+    lessons: [black-box-force-law, kepler-orbit]
+    outside:
+      - "Statistics: least squares and the chi-square of residuals"
+      - "Logarithms: the logarithm of a product and of a power"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics.experiments import modified_force_law as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+A body is pulled toward a centre, and the pull weakens with distance. Anyone
+who has learned mechanics knows what comes next: the inverse square, the law of
+gravity and of the electric force between charges. It is so familiar that it is
+easy to read into measurements that do not quite say it. But the inverse square
+is a result about our world, not a necessity: in a world with another number of
+dimensions, or around a source of another shape, the exponent differs. A
+discovery method that only ever finds the inverse square has not discovered it.
+
+This lesson puts a language model in front of a central force whose law is
+**deliberately modified**: it still falls as a power of the distance, but not
+the second power. The box, the tools, the budget, and the scoring are those of
+the force-law lesson; only the hidden world differs. The model is not warned.
+
+The lesson has a rule, set by the owner of the project before any run: the
+point is not to make the agent find the modified law at any cost. The build
+first shows that the familiar law fails the readings and that a method without
+a model identifies the modified one. Then it reports what the agent claimed and
+how that claim scored, as it is. Had the agent fallen back on the inverse
+square, the page would report a failure, not explain it away.
+
+## Assumptions
+
+1. **The world is simulated, and its law is in the family.** The force is
+   $F = k\,m\,r^{-p}$, strength $k$ times mass $m$ times distance $r$ to the power $-p$, with a hidden strength and a hidden
+   exponent that is not two (`CentralForceEnvironment` of `pbc.discovery`). The page
+   does not print the hidden values; it prints claims and their scores.
+2. **The familiar law is a hypothesis to test, not a starting point.** The
+   inverse-square fit holds the exponent at two and fits only the strength. It
+   is judged by the same rule as every baseline: its chi-square must be what
+   the noise alone gives.
+3. **The same protocol as the force-law lesson.** Budget, step limit, seed,
+   tolerance, tools, and the condition of prior knowledge (**partial**: the
+   names of the parameters, not the form) are equal; the task text is the same
+   word for word. Only the world differs.
+4. **The rules came before the run.** The world, the tolerance, and the rule
+   for reporting the agent were fixed in `pbc.discovery.force_lab` before the
+   run was recorded.
+5. **The agent is untrusted and its words are data.** The score is a function
+   of its tool calls.
+
+## Testing a familiar law {#explanation}
+
+A law is rejected by its residuals, not by its plausibility. Fit the familiar
+law $F = k\,m\,r^{-2}$ to the readings, with only $k$ free. With $N$ readings
+of noise $\sigma$, the chi-square of the residuals,
+
+$$
+\chi^2 = \sum_{i=1}^{N}\left(\frac{F_i - k\,m_i\,r_i^{-2}}{\sigma}\right)^2,
+$$
+
+has an expected value of $N-1$, the degrees of freedom, and a standard
+deviation of $\sqrt{2(N-1)}$ when the law is right. The protocol accepts a fit
+when the chi-square is within three standard deviations of its expectation. A
+chi-square far above that says the law does not describe the readings,
+whatever the strength.
+
+A modified exponent shows in a simple quantity: $F r^2/m$. Under the inverse
+square it is the same at every distance. Under $r^{-p}$ it changes as
+$r^{\,2-p}$, falling with distance if $p > 2$ and rising if $p < 2$. Its trend
+across the probed distances is the signature of the modification, and the free
+fit of the force-law lesson, with both $k$ and $p$ free, measures it.
+
+**In-sample and out-of-sample.** A fit that passes the chi-square has described
+the readings where they were taken. It need not predict anywhere else. A sum of
+several powers can follow a modified law closely over the probed distances and
+part from it beyond them, and the held-out settings of the protocol, beyond the
+largest distance the tools accept, are where that shows.
+
+### What the agent may and may not do
+
+```{python}
+#| echo: false
+result.display("allowlist")
+```
+
+The agent may call `measure` at most `{python} result["budget"]` times and `submit` to
+state its claim, in at most `{python} result["max-steps"]` messages of at most
+`{python} result["max-calls"]` tool calls each, and write text. It may not
+run code, read a file, reach the network, or call the judge.
+
+```{python}
+#| echo: false
+excerpt(experiment.same_task)
+```
+
+```{python}
+#| label: d3-same-task
+#| echo: false
+result.table("d3-same-task")
+```
+
+## Code
+
+The familiar-law baseline: the probes fitted with the exponent held at the
+inverse square. It is linear in the strength, so the fit is one sum.
+
+```{python}
+#| echo: false
+from pbc.discovery.baselines import sparse_identification
+from pbc.discovery.force_lab import fit_familiar
+
+excerpt(fit_familiar)
+```
+
+The sparse baseline looks for the force as a short sum of the terms
+$m\,r^{-n}$ for whole numbers `n`; a law with a fractional exponent
+is not such a sum, but a sum can resemble it over a range.
+
+```{python}
+#| echo: false
+excerpt(sparse_identification)
+```
+
+## Worked examples
+
+### The familiar law against the readings
+
+```{python}
+#| echo: false
+excerpt(experiment.the_familiar_law)
+```
+
+```{python}
+#| label: d3-familiar
+#| echo: false
+result.table("d3-familiar")
+```
+
+[The inverse-square law does not describe the readings of this world: its
+chi-square is far beyond what the noise gives, and its prediction at the
+held-out distances is off by more than the tolerance.]{.claim
+type="numerically-verified" scope="the simulated modified central force, the
+grid of the protocol's budget" evidence="d3-familiar"}
+
+### A baseline identifies the modified law
+
+```{python}
+#| echo: false
+excerpt(experiment.the_baselines)
+```
+
+```{python}
+#| label: d3-baselines
+#| echo: false
+result.table("d3-baselines")
+```
+
+[Least squares of the free family, on the grid and on random settings,
+recovers the modified law: its claim predicts the held-out distances within the
+tolerance.]{.claim type="numerically-verified" scope="the simulated modified
+central force, one seed, the protocol's budget" evidence="d3-baselines"} Its
+exponent is the claim of a fit, not the hidden value, and this page prints no
+hidden value. Sparse identification shows the other lesson of this world: its
+sum of whole powers is consistent with the readings, so the chi-square accepts
+it, and it still fails beyond the probed range. Its exponent column is empty
+because its claim is a sum of terms, not one power.
+
+### The agent's run
+
+```{python}
+#| echo: false
+excerpt(experiment.run, region="replay")
+```
+
+```{python}
+#| echo: false
+result.display("run")
+```
+
+The model was the Claude model of the force-law lesson, in a Claude Code
+session on `{python} result["recorded"]`, as a fresh sub-agent that knew
+nothing of that lesson's run. It was given the system prompt, the task, and
+the tool descriptions, and nothing else, and chose every call after reading the
+readings the harness computed.
+
+```{python}
+#| echo: false
+excerpt(experiment.score_table)
+```
+
+```{python}
+#| label: d3-score
+#| echo: false
+result.table("d3-score")
+```
+
+[The agent's claim is scored `{python} result["outcome"]` by the protocol: it did
+not fall back on the inverse square, and its law predicts the held-out
+distances within the tolerance.]{.claim type="numerically-verified" scope="one
+recorded run, one seed, the simulated modified central force"
+evidence="d3-score replay"} The agent spent `{python} result["probes"]` probes, and
+one more call was refused because the message held more calls than the harness
+runs. It submitted a round exponent, as the agent of the force-law lesson did,
+but not the familiar one.
+
+Is the round exponent what its readings support? Fit the free family and the
+familiar law to exactly the agent's readings:
+
+```{python}
+#| echo: false
+excerpt(experiment.the_agents_readings)
+```
+
+```{python}
+#| label: d3-agent-readings
+#| echo: false
+result.table("d3-agent-readings")
+```
+
+```{python}
+#| label: d3-agent-familiar
+#| echo: false
+result.table("d3-agent-familiar")
+```
+
+Even four readings reject the inverse square. The agent's exponent lies
+within one standard error of the fit to its readings. Its strength does not:
+the agent read it off its readings at a single distance, and it lies many
+standard errors from the fit. The difference is small against the tolerance,
+which is why the claim still recovers the law, but it is a difference between
+the claim and its evidence, and the score alone would not show it. The comparison of the agent with the
+baselines:
+
+```{python}
+#| echo: false
+excerpt(experiment.beside_the_baselines)
+```
+
+```{python}
+#| label: d3-comparison
+#| echo: false
+result.table("d3-comparison")
+```
+
+### The signature of the modification
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_unlearning)
+```
+
+```{python}
+#| label: fig-unlearning
+#| echo: false
+#| fig-status: simulated
+#| fig-cap: "The force times the distance squared, per unit mass, against the distance: under the inverse square it would be the horizontal line the familiar fit draws; the readings of the grid and of the agent fall with distance, along the free fit."
+#| fig-alt: "A chart of force times distance squared per unit mass against distance from one to four metres. A horizontal line is the inverse-square fit. A falling curve is the free fit. Grey dots of the grid baseline and four larger dots of the agent lie along the falling curve and cross the horizontal line, above it at short distance and below it at long distance."
+result.show("fig-unlearning")
+```
+
+The readings are simulated and recomputed by this build. A horizontal row of
+points would have meant the inverse square; the points fall instead, and the
+familiar fit, the best horizontal line, misses both ends. The free fit follows
+them, and the agent's exponent agrees with it within one standard error.
+
+### Run the agent yourself
+
+This needs your own key and costs a few cents. The build does not run it, so
+the commands are marked.
+
+::: {.not-verified}
+```bash
+uv sync --locked --no-dev --extra openai
+export OPENAI_API_KEY="..."
+cd site/lessons/agents-llm/07-a-modified-force-law
+uv run --locked --no-dev --extra openai python -m pbc.discovery.force_lab modified
+```
+:::
+
+A live run may fall back on the inverse square. If it does, the score says so,
+and so should anyone who reports it.
+
+## Limits {#limits}
+
+- **One run, and it succeeded.** The page shows that one agent, once, did not
+  fall back on the familiar law. It does not show that agents generally
+  unlearn it, and a different model or prompt may not.
+- **The modification is of one kind.** The law is still a power of the
+  distance, and the claim is a power. A modification of another form, a force
+  that changes sign or depends on the velocity, cannot be stated as a claim
+  here.
+- **A round claim and a fit agreed, in part.** The agent's exponent was round
+  and lay within one standard error of its readings; its strength did not. The score does not
+  distinguish a well-rounded measurement from a lucky guess; the force-law
+  lesson shows the same.
+- **Simulated, not measured.** Nothing here says that any force in nature is
+  modified, or that the inverse square fails anywhere.
+- **The recording is not an API run.** It is a Claude Code session, told by the
+  session to answer in the harness's format and to use no tool of its own; the
+  session reported no token count or price.
+
+::: {.exercise .self-check}
+Suppose the agent had submitted the inverse square, with a strength that fits
+the near readings, while least squares recovered the modified law. How should
+the page report the run?
+
+::: {.choices}
+::: {.choice}
+As a partial success, since the agent found the right strength at short
+distance.
+
+::: {.feedback}
+The protocol scores the claim at the held-out settings, and there the familiar
+law is far off. A partial success is a reading the score does not give.
+:::
+:::
+
+::: {.choice correct="true"}
+As a failure: the claim is not recovered at the held-out settings, the
+familiar law fails the chi-square, and the baseline shows that the readings
+allowed the modified law to be found.
+
+::: {.feedback}
+Right. The baseline is what makes the failure informative: it shows that the
+information was there.
+:::
+:::
+
+::: {.choice}
+By lowering the tolerance's strictness, since the modified law is unusual.
+
+::: {.feedback}
+The tolerance was fixed before the run. Widening it after seeing the result
+would turn a failure into a success by changing the test.
+:::
+:::
+:::
+
+::: {.solution}
+As a failure, with its score. The protocol's verdict depends on the held-out
+error alone, and the familiar law misses there by far more than the tolerance.
+The baseline's recovery from the same budget shows that the failure was the
+agent's and not the experiment's: the readings contained the modified law. A
+lesson that explained the failure away, by changing the tolerance or by
+crediting the right strength at short distance, would be reporting what it
+wished had happened.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+How small a modification can the familiar-law test detect with this budget and
+noise? Make worlds of your own with strength 12 and exponents 2.002, 2.005,
+2.01, 2.02, and 2.05, fit the inverse-square law to the grid of each, and
+compare the verdict of the chi-square with the held-out error.
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.small_modifications)
+```
+
+```{python}
+#| echo: false
+result.table("small-modifications")
+```
+
+The chi-square rejects the familiar law already at modifications whose
+held-out error is still within the tolerance. With twenty readings of this
+precision the test sees a modification before it matters for prediction at the
+held-out distances. The smallest modification the test catches is set by the
+noise and the budget; with noisier readings or fewer of them, a modified world
+could pass as the familiar one.
+:::
+:::
+
+::: {.exercise}
+Use the ratio formula of the force-law lesson on two of the agent's readings:
+the ones at 1 m and 4 m with a mass of 1 kg. What exponent do they give, and
+how does it compare with the agent's claim?
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.two_point_exponent)
+```
+
+```{python}
+#| echo: false
+result.table("two-point")
+```
+
+Two readings at the ends of the range already give an exponent close to the
+claim. The fit to all four readings is close to both, and its standard error
+says how much the noise allows. The agent's round number is consistent with
+both estimates.
+:::
+:::
+
+## Replay this experiment {#reproduce-this}
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/discovery/force_lab.py",
+        "src/pbc/discovery/environment.py",
+        "src/pbc/discovery/protocol.py",
+        "src/pbc/discovery/baselines.py",
+        "src/pbc/mechanics/experiments/modified_force_law.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_force_lab.py",
+        "tests/unit/test_discovery.py",
+        "tests/unit/test_modified_force_law_experiment.py",
+    ],
+)
+```

@@ -33,6 +33,7 @@ from pbc.authoring.repository import REPOSITORY_ROOT, build_commit, repository_u
 from pbc.authoring.website import page_href, project_root
 
 EVIDENCE_PAGE = "evidence.qmd"
+SITE_DIRECTORY = "site"  # the website project, relative to the root
 LESSONS_DIRECTORY = "lessons"
 REGISTER_FILE = "references.yaml"
 CARDS_DIRECTORY = "data/registry"
@@ -311,13 +312,13 @@ class Evidence:
             path, line = self.theorems[word]
             return Source("theorem", word, self._blob(path, line))
         if _REPLAY.fullmatch(word):
-            replay = (self.site / lesson).parent / f"{word}.json"
-            if replay.is_file():
-                return Source("replay", word, self._blob(self._relative(replay)))
+            fixture = Path(lesson).parent / f"{word}.json"
+            if (self.site / fixture).is_file():
+                # The fixture's path in the repository, also when the site
+                # built is a copy outside it (the determinism check).
+                path = (Path(SITE_DIRECTORY) / fixture).as_posix()
+                return Source("replay", word, self._blob(path))
         return None
-
-    def _relative(self, path: Path) -> str:
-        return path.relative_to(self.root).as_posix()
 
 
 # --- The check ----------------------------------------------------------------
