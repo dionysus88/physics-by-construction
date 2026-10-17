@@ -5,7 +5,12 @@
 Accepted with the approval of the planning of the change cycle
 `physics-next-phase` (2026-10-09). Adds the explicit, sandboxed
 opt-in that ADR 004 said would need a new ADR; ADR 004's harness is
-unchanged.
+unchanged. Extended by
+[ADR 019](019-agent-skills-audited-pinned-and-project-local.md)
+(2026-10-17): the boundary that the site and CI verify what was produced
+and never run an agent covers the agent skills of the development
+workflow, which no workflow, script, check, build step, or CI job
+invokes, installs, or fetches; the decisions below are unchanged.
 
 Date: 2026-10-09
 

@@ -3,7 +3,12 @@
 ## Status
 
 Accepted. The project owner decided this during F12 planning (Issue #31),
-settling unresolved question 2 of the requirements.
+settling unresolved question 2 of the requirements. Extended by
+[ADR 019](019-agent-skills-audited-pinned-and-project-local.md)
+(2026-10-17): the agent skills of the development workflow are audited,
+pinned, project-local guidance at `.agents/skills/`, read by agents on
+the maintainer's machine and never by the site, the build, or any CI job;
+the decision below is unchanged.
 
 Date: 2026-10-08
 

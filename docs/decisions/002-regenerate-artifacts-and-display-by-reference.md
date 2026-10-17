@@ -14,7 +14,17 @@ the lessons whose inputs changed. The consequence below that the
 by [ADR 016](016-learners-run-experiments-not-the-site-build.md)
 (2026-10-15): the learner runs the lesson's experiment entry point, which
 calls the same files the build ran, and is never instructed to render the
-page; the decisions of this record are unchanged.
+page; the decisions of this record are unchanged. Amended by
+[ADR 018](018-scientific-atelier-asset-classes-and-the-course-atlas.md)
+(2026-10-17), which adds an authored interface-artwork SVG under
+`site/assets/`, with its author and licence in a provenance register, as
+a third kind of committed input a build cannot regenerate: condition 2
+of the replay-fixture decision below, under which the committed-artifact
+check exempts the fixture location "and nothing else", now admits that
+one further declared exemption, a tracked `.svg` under `site/assets/`
+that the register names, and no raster and no other image type anywhere.
+Conceptual illustrations stay drawn by code in executed cells, and
+nothing generated is committed; the other decisions below are unchanged.
 
 Date: 2026-10-06
 
@@ -129,4 +139,8 @@ Negative, with mitigations:
 - Deterministic figures need explicit configuration and a check (F01, F02).
 - The committed-artifact check must tell prohibited outputs from permitted
   replay fixtures. It does so by location only: the declared fixture location
-  is exempt, and F09 registers its fixture there (F02, F09).
+  is exempt, and F09 registers its fixture there (F02, F09). Since ADR 018
+  it also tells a prohibited image file from a permitted authored
+  interface-artwork SVG, by location and the provenance register together:
+  a tracked `.svg` under `site/assets/` that the register names with an
+  author and a licence is exempt, and nothing else is (F123).

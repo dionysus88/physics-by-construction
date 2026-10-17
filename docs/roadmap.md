@@ -4,9 +4,11 @@ Project direction for Physics by Construction, derived from the approved
 `docs/PROJECT_REQUIREMENTS.md` (approved 2026-10-06, re-approved on
 2026-10-09 with the change request `docs/changes/physics-next-phase.md`,
 on 2026-10-12 with the change request
-`docs/changes/final-curriculum.md`, and on 2026-10-15 with the change
-request `docs/changes/pbc-planning-change-four-workstreams.md`) and
-consistent with `docs/architecture.md` and ADRs 001 to 017.
+`docs/changes/final-curriculum.md`, on 2026-10-15 with the change
+request `docs/changes/pbc-planning-change-four-workstreams.md`, and on
+2026-10-17 with the change request
+`docs/changes/scientific-atelier-atlas.md`) and consistent with
+`docs/architecture.md` and ADRs 001 to 019.
 
 Keep this high-level. GitHub Issues are the actionable backlog and the source
 of truth for a feature once its Issue exists. Each feature below has a stable
@@ -352,13 +354,159 @@ measurement record is short work: the runs above exist.
   owner accepts ADR 017; decisions 32 to 35 are covered by F114 to F121
   and ADR 015 to ADR 017.
 
+## State at the change cycle `scientific-atelier-atlas`
+
+Checked on 2026-10-17 at the base commit `b4baed1` of the planning branch
+`planning/scientific-atelier-atlas`, against the repository, `gh issue
+list --state all`, `gh pr list`, and the runs of
+`.github/workflows/ci.yml` on `main` read from the Actions API. This is
+the refresh that section 10 of `docs/changes/scientific-atelier-atlas.md`
+asks for ("all status claims are a dated snapshot and must be refreshed by
+the planner before implementation"); the request's reviewed baseline was
+`0aedaac`, one merge earlier. The files are the truth, this section is
+their summary at that commit.
+
+### Published lessons
+
+Thirty-two lessons in six strands, the same as at `0c958c8` (the tables
+under the two previous states): twenty-eight fill a slot of the reference
+curriculum, four are Lean lessons beyond the baseline, 87 of 115 slots
+are open, and the count when the curriculum is complete stays 119. F117
+(pull request #205, merged 2026-10-17) added no lesson: it gave every
+lesson a tested experiment entry point and the "Run this experiment"
+footer, and changed no lesson text, printed output, number, or figure
+(its pull request shows the pages unchanged in text, printed output, and
+pixels). Two lesson pull requests are open, both built to the F117
+contract: F66 (#208, D1 to D3) and F72 (#207, EM1 to EM3); if both merge
+the count is 38, within the interim full-run gate of 45 lessons.
+
+### Features: state
+
+| Feature, Issue | State at `b4baed1` | Note |
+|---|---|---|
+| F117, #202 | Pull request #205 merged on 2026-10-17 as partial: criteria 7 (a reviewer's clean-machine walkthrough) and 8 (the measured first full run after the switch) follow the merge; the Issue is open with the follow-ups #203 and #204 | The first run on `main` after the merge (39010505705) had a `build` job of 17 min 11 s with the experiment check in it and failed in the `code` job on the stochastic unit test `tests/unit/test_particles_in_a_box_experiment.py` (Issue #206, filed by the owner); it published no base and deployed nothing, so the latest successful run on `main` is 38930410769 at `0aedaac`, whose base pull requests keep using (a base is accepted by the record of its run, never by recency). Until #206 is fixed no run on `main` passes. Criterion 8's record is the first passing full run after the switch. ADR 016's status records the delivery. |
+| F114, #181 | Open; the style guide `docs/editorial-voice.md` merged (pull request #183) | The editorial programme is not complete: the guide is a draft until F116, and F115 (the pilot on mechanics 01 to 05 with the owner's approval) and F116 (the integration) have not started. |
+| F118, #180; F119, #185 | Delivered; the F119 measurements after the merge are recorded (pull request #199, `docs/release-readiness.md`) | ADR 017 decisions 7 and 8 are accepted and applied; the three tiers are in use. |
+| F120, #196 | Open; the staged evidence is recorded on the branch and the Issue; the owner's comment of 2026-10-16 supports incremental `main` in principle and asks for stronger enforced environment identity, runner-equivalence evidence, chain limits, provenance, fail-closed full verification, and a weekly full audit; no pull request is open | F121's preparation is permitted, its activation is not approved; ADR 017 decisions 1 to 6 and 9 stay proposed. `main` is not incremental. |
+| F113, #150 | Paused, not closed, not superseded | A fallback decision, not a task to restart. |
+| F61, #147 | Open; the selection is delivered and measured | Closure reconciles its remaining evidence on the Issue; the features that depend on F61 depend on the delivered selection. |
+| F64, #167 | **Closed**; delivered | The dated four-workstreams state said the manual checks were outstanding; the Issue is closed since. F125 and F126 build on the page, never reopen it. |
+| F62, #148; F63, #153; F65, #154; F68, #168; F70, #169; F71, #170 | Delivered | The curriculum file, the slots, the previews, the discovery foundation, and the first lessons of thermodynamics and waves; all built on by this cycle. |
+| F25, #56; F26, #53; F44, #45; F57, #49 | Delivered | The home narrative, the prerequisite graph, the visual system, the identity: built on, not reopened (requirements decision 36). Their blocks carry a note where decision 37 supersedes an out-of-scope line. |
+| F66, #189; F72, #187 | Open, with the pull requests #208 and #207 | Lesson features of waves C1, within the interim gate. |
+| F67, #190; F73, #188 | Open, no pull request | Lesson features of wave C1. |
+| F112, #151 | Open as a status report | Cannot declare completion with 87 slots open. |
+| The deferred findings #8, #34, #66, #138 and the workflow Issue #165 | Open | Assessed for applicability when relevant; not prerequisites of a lesson or of the atelier. |
+| #206 (new, 2026-10-17) | Open; a lesson fix, not a roadmap feature | Replaces the single-sample threshold of the gas lesson's pressure test by a statistically justified verification; until it merges, no run on `main` passes. It precedes the atelier in practice, because every feature of this cycle needs a passing `main` for its base and its deployment. |
+
+### The verification gate
+
+The owner's interim full-run gate (ADR 014 status, decided 2026-10-15):
+the one `build` job of a full run has a 60-minute timeout with a
+50-minute planning budget, approved for up to 45 lessons. The sentence of
+Phase 4 "no lesson feature takes the count past 32 before F113" is
+therefore superseded, as the Phase 4 gate paragraph now says: a
+dependency entry "F113" or "F113 by the lesson-shard rule" is satisfied
+for every lesson feature that keeps the count at or below 45; past 45 the
+gate needs a further decision of the owner, or ADR 017 accepted and F121
+delivered, or F113 resumed. F117 added a fourth execution of every lesson
+to the `build` job; the one measured run (39010505705, 17 min 11 s, cache
+state not read) is below the earlier 21 to 31 minutes, and F117's
+criterion 8 records the first passing full run. Reassess the capacity
+before the count approaches 45, not when the next lesson would exceed it.
+The atelier's features change shared inputs and are full runs on every
+pull request (ADR 014 decision 4); they add no lesson.
+
+### Architecture decisions of this change cycle
+
+- **ADR 018** records the scientific atelier as scoped CSS, shared
+  templates, and self-hosted fonts on the Quarto baseline of ADR 001; the
+  three visual asset classes of requirements decision 37 (interface
+  artwork, conceptual illustration, scientific result, with animation
+  allowed under conditions) with their sources in the repository; the
+  course atlas at the existing path address, generated from the
+  curriculum file, the front matter, and one validated map manifest,
+  with three explicit edge types, planned content never linked or
+  counted, every lesson reachable without scripts, and the atlas's
+  controls stored nowhere; the home page with a static verified opening
+  figure and without the rejected section; and the three-part rendered
+  review. It supersedes the blanket exclusion of decorative imagery and
+  animation that the earlier non-goal and the out-of-scope lines of F44,
+  F64, and F25 recorded (those blocks stay as history and carry a note).
+  It amends one decision of an ADR: condition 2 of the replay-fixture
+  decision of ADR 002, under which the committed-artifact check exempts
+  the fixture location "and nothing else", gains one declared exemption,
+  a provenance-registered authored interface-artwork SVG under
+  `site/assets/` (ADR 018 decision 2), the third committed input a build
+  cannot regenerate after the replay fixture of ADR 002 and the dataset
+  samples of ADR 007; no raster and no other image type is exempt
+  anywhere. Otherwise it extends ADR 002 and ADR 013 and supersedes no
+  other decision of an ADR. F123 to F127 deliver it; F128 the
+  interactive pendulum if the owner decides it.
+- **ADR 019** records the agent skills of requirements decision 38 as
+  audited, pinned, project-local guidance of the development workflow at
+  `.agents/skills/`, never a dependency of the site, the build, the
+  deployment, or any CI job and never evidence; the provenance record of
+  every third-party skill; the planner, implementer, reviewer, and
+  verification contract; the skills configuration check, the one check
+  that reads the directory, which fails visibly on a missing skill; and
+  the bounded pilots. It extends ADR 006 and ADR 010. F122 delivers it; F123
+  to F129 apply it.
+- No accepted ADR conflicts with the re-approved requirements. ADR 001
+  is reaffirmed; ADR 016's footer contract (the experiment section with
+  its anchor) is kept by the shared footer of F123; ADR 014 decision 4
+  makes every shared change of the atelier a full run, which the slices
+  respect.
+
+### Reconciliation notes
+
+- The change request's delivery slices map to features as follows
+  (section 8 of the request; IDs allocated here, none reused): slice A
+  (reconciliation) is this planning, with its design specification in
+  F123, its map data contract in F125, and its skill audit in F122; A2 is
+  F122; B is F123; C is F124; D is F125; E is F126; F is F127, which also
+  carries the publication-ready polish of G; G's validated pendulum is
+  F128; H is F129. The end-to-end preview the request asks for first is
+  the state after F123, F124, F125, and F126 (the home page, the atlas,
+  and one existing lesson in the new template), inspected by the owner
+  before F127 rolls the design out; it is a gate recorded on the Issues,
+  not a feature.
+- F25, F26, F44, and F64 are delivered and are built on. The out-of-scope
+  lines of F25 ("hero imagery"), F44 ("decorative imagery, any branding
+  graphic"), and F64 ("images that are not F63 previews; animation") are
+  superseded by requirements decision 37 and ADR 018 for interface
+  artwork, conceptual illustrations, the one verified opening figure, and
+  accessible animation; each block carries a bracketed note and is not
+  rewritten. The F63 preview contract is unchanged; map artwork never
+  replaces a preview.
+- The owner's answers recorded in the requirements (2026-10-17) narrow
+  the request: the home opening ships as a static figure from an
+  existing verified implementation (F124), the interactive pendulum is
+  its own gated feature (F128, unresolved question 14), the Manim pilot
+  is not scheduled (question 15), and each third-party skill's outcome is
+  the owner's per-candidate approval (question 13, F122).
+- The mockups that chose the direction are references; nothing of their
+  equations, plots, counts, or six-region structure enters the roadmap,
+  the manifest, or a page (ADR 018 decision 2 and 3).
+- Lesson authoring is not blocked by the atelier: the lesson features of
+  waves C1 to C4 proceed in their own worktrees within the interim gate;
+  the coordination rules under "Phase 6" say how a shared-template
+  change and a lesson feature in flight rebase, and no feature of this
+  cycle changes a scientific claim, a computed number, a figure's data,
+  or a verified artifact.
+- The "Later phases" bullets of the requirements for decisions 36 to 38
+  are covered by F122 to F129; nothing of the request falls outside the
+  approved requirements, and nothing of it is planned around them.
+
 ## Overview
 
 Phases: Phase 1 is the MVP; Phase 2 is the work the requirements placed
 after the MVP; Phase 3 is the change cycle `physics-next-phase`, ordered in
 waves R0 to R5 by dependency; Phase 4 is the change cycle
 `final-curriculum`, ordered in waves C0 to C4; Phase 5 is the change cycle
-`pbc-planning-change-four-workstreams`, the four workstreams F114 to F121
+`pbc-planning-change-four-workstreams`, the four workstreams F114 to F121;
+Phase 6 is the change cycle `scientific-atelier-atlas`, the atelier, the
+atlas, and the governed visual skills F122 to F129
 (see "Execution order"). A wave is a suggested grouping, not a gate: a
 feature may start when its
 dependencies are done. The gates of Phase 4 (F61 and F62 before every
@@ -517,6 +665,25 @@ the editorial pilot in one feature.
 The budget of change 3 (ADR 015) is no feature: it changes the statements
 of the typical-pull-request budget in this roadmap, the architecture, and
 the requirements, and the acceptance criterion 1 of F61.
+
+Phase 6, the change cycle `scientific-atelier-atlas` (2026-10-17): the
+scientific atelier, the course atlas, and the governed visual agent skills
+(requirements decisions 36 to 38; ADR 018 and ADR 019). The slice letters
+are those of section 8 of the change request. The preview gate (the
+owner's review of the home page, the atlas, and one lesson before the
+rollout) is a dependency of F127, recorded on the Issues of F124 and
+F126.
+
+| ID | Feature | Slice | Depends on | Risk |
+|---|---|---|---|---|
+| F122 | Governed visual agent skills: the audit, the pinned skills, the PBC Scientific Visualization skill, and the workflow contract | A (the skill audit), A2 | F119 (the targeted tier and the `verify.conf` groups the check joins); the owner's approval of each candidate's outcome (question 13) | High |
+| F123 | The atelier foundations: the design specification, tokens, typography and fonts, the shared header and footer, and the lesson template on one existing lesson | A (the design specification), B | F122, F44, F57, F63, F64, F117 (the merged pull request #205, not the closure of Issue #202) | Medium |
+| F124 | The home page of the atelier, with a static verified opening figure | C | F123, F125 (the curated, owner-approved map manifest, which the capstone highlights read), F25, F62, F68, F117 (the merged pull request #205, not the closure of Issue #202), F57 | Medium |
+| F125 | The map manifest and the static atlas: curated concepts and connections, the generated map with its textual equivalent | A (the map data contract), D | F122, F62, F63, F64, F26, F37, F41 | Medium |
+| F126 | The atlas interaction: the switch, selection, zoom, filters, and the phone's region selector | E | F123, F125, F64, F13, F14, F41 | Medium |
+| F127 | The rollout: course openings, every lesson in the reading-column template, the capstone and supporting-page templates, and the final visual acceptance | F, G (the polish) | F123, F124, F126, the owner's review of the preview | Medium |
+| F128 | The validated interactive pendulum on the home page | G | F124, F68, F07, F43, the owner's decision (question 14) | Medium |
+| F129 | The scientific-figure and conceptual-diagram skill pilots, and the owner's decision on authoring integration | H | F122, F32, F33, F05; coordinated with F114 to F116 | Medium |
 
 Risk levels follow `.agents/policies/autonomy.md`. Every feature that adds a
 lesson is at least Medium, because physics and proof content needs independent
@@ -1529,7 +1696,16 @@ line that F57 fills. Nothing a reader relies on changes meaning.
 
 **Out of scope.** A JavaScript build toolchain, a third-party CSS framework,
 a theme switch, decorative imagery, any branding graphic, any marketing
-surface. Content changes to lessons (the editorial passes).
+surface. Content changes to lessons (the editorial passes). [Note of the
+change cycle `scientific-atelier-atlas`, 2026-10-17: "decorative imagery,
+any branding graphic" is superseded by the three asset classes of
+requirements decision 37 and ADR 018: interface artwork (the project mark,
+the map's course areas, the openings), conceptual illustrations, and
+accessible animation are allowed where that record says, each with its
+source in the repository; the toolchain, framework, theme-switch, and
+marketing-surface exclusions stand. The tokens and components of F44 are
+extended by F123, not replaced. This block is the record of what F44
+delivered and is not rewritten.]
 
 **Dependencies.** F10.
 
@@ -1729,7 +1905,13 @@ attribution line F57 defined.
   the current path page).
 
 **Out of scope.** Any marketing tone, hero imagery, testimonials, claims of
-adoption, counters, or news. Changes to lessons.
+adoption, counters, or news. Changes to lessons. [Note of the change cycle
+`scientific-atelier-atlas`, 2026-10-17: the exclusion of hero imagery is
+superseded for the one opening figure of the home page, a static figure
+drawn by an existing verified implementation with its status and
+provenance (requirements decision 36, ADR 018 decision 4, F124); marketing
+tone, testimonials, claims of adoption, counters, and news stay excluded.
+This block is the record of what F25 delivered and is not rewritten.]
 
 **Dependencies.** F57 (the canonical description). F37 is not required;
 the page links to what exists.
@@ -3371,7 +3553,16 @@ block:
   ADR 017 is accepted and delivered, or F113 resumed by the owner. No
   lesson feature that takes the count past 32 starts before one of
   these exists; see "State at the change cycle
-  `pbc-planning-change-four-workstreams`".
+  `pbc-planning-change-four-workstreams`". **Since the owner's interim
+  full-run gate of 2026-10-15 (ADR 014 status; recorded in this roadmap by
+  the change cycle `scientific-atelier-atlas`):** the one `build` job of a
+  full run has a 60-minute timeout approved for up to 45 lessons, so the
+  entries "F113" and "F113 by the lesson-shard rule" are satisfied for
+  every lesson feature that keeps the count at or below 45; past 45 the
+  gate needs a further decision of the owner, or ADR 017 accepted and
+  F121 delivered, or F113 resumed. The capacity is reassessed before the
+  count approaches 45, with the cost of F117's experiment check measured
+  (see "State at the change cycle `scientific-atelier-atlas`").
 - **The invariants and the lesson model** of `docs/architecture.md`,
   including the reference curriculum and the slot (ADR 013), the
   verification selection (ADR 014), and the format-2 lesson checks of
@@ -4165,7 +4356,15 @@ lessons, and finds the dependency map at the bottom.
 
 **Out of scope.** New lessons; changes to lesson pages beyond the header's
 link to the path; a second catalogue; images that are not F63 previews;
-animation; a frontend framework; changing any address.
+animation; a frontend framework; changing any address. [Note of the change
+cycle `scientific-atelier-atlas`, 2026-10-17: "images that are not F63
+previews; animation" is superseded by requirements decision 37 and ADR
+018 for the interface artwork of the atlas (the course areas and their
+small illustrations, as a distinct asset class beside the previews, which
+stay the lesson rows' images) and for accessible animation; the second
+catalogue, the framework, and the address exclusions stand, and the page's
+index of F64 is built on by F125 and F126, never reopened. This block is
+the record of what F64 delivered and is not rewritten.]
 
 **Dependencies.** F62, F63, F26, F27, F37, F41, F44, F13, F14.
 
@@ -6417,6 +6616,1105 @@ explicit approval and security-focused review.
 
 **Detailed implementation plan expected.** Yes.
 
+## Phase 6 — The scientific atelier and the course atlas (change cycle `scientific-atelier-atlas`)
+
+Every feature in this phase comes from
+`docs/changes/scientific-atelier-atlas.md` (2026-10-17) and the
+requirements re-approved with it on 2026-10-17 (decisions 36 to 38), with
+ADR 018 (the atelier, the asset classes, the atlas) and ADR 019 (the agent
+skills) as their decision records. Each block names the slice of section 8
+of the change request it comes from. What they inherit from the earlier
+phases without repeating it: the invariants of `docs/architecture.md`
+(with I30 to I32 added by this cycle), the risk levels of
+`.agents/policies/autonomy.md`, the rule that a feature that changes CI,
+workflow permissions, a protected script, the merge gate, or the
+instructions of a write-capable agent is High and needs the owner's
+explicit approval, and the three local verification tiers of ADR 017
+decision 7.
+
+Rules of this phase:
+
+- **Every shared change is a full run.** `site/assets/site.css`, the
+  templates and includes, the fonts, `site/_quarto.yml`, and
+  `src/pbc/authoring` are shared inputs (ADR 014 decision 4): a pull
+  request that touches them executes every lesson, and no feature of this
+  phase claims a targeted-only tier for such a change. Each feature
+  changes shared inputs in as few pull requests as it can, and the
+  record of its verification names the full run.
+- **The preview gate.** F123 (the foundations and one lesson), F124 (the
+  home page), F125 and F126 (the atlas) together are the end-to-end
+  preview the change request asks for first. F127 (the rollout) starts
+  only after the owner's review of that preview at desktop, tablet, and
+  phone widths is recorded on the Issues of F124 and F126, with the
+  display label of the atlas and the navigation wording decided. Each of
+  the four also has its own three-part rendered review (ADR 018 decision
+  6).
+- **Skills first, never blocking.** F122 precedes every other feature of
+  the phase. A feature of this phase that produces a visual deliverable
+  classifies it in its plan and names the approved skills it selects, or
+  why none applies (ADR 019 decision 5); the first such plan is the one
+  that demonstrates deliberate selection. If F122 drops or adapts a
+  candidate, the feature proceeds with the recorded fallback: for F123,
+  which creates the design specification, the direction of the change
+  request's section 1 as recorded in requirements decision 36 and the
+  project-owned skill; for F124 to F129, the design specification
+  docs/atelier.md once it exists and the project-owned skill. Nothing
+  waits for a candidate that failed its audit.
+- **Lesson authoring is not blocked.** The lesson features of waves C1 to
+  C4 proceed in their own worktrees within the interim full-run gate. A
+  feature of this phase that changes a shared template, the lesson
+  header, or the CSS rebases on the lesson features that merged before
+  it, and a lesson feature in flight rebases on the merged foundations;
+  neither changes a scientific claim, a computed number, a figure's data,
+  a reference key, or a verified artifact, and the reproduction and
+  experiment checks prove it on every pull request. Nothing of this phase
+  is imposed retroactively on a lesson's text.
+- **Coordination with the editorial programme.** F127 and F129 touch
+  lesson pages that F115 edits (mechanics 01 to 05). F127 changes the
+  template and the CSS, never the prose; F129's figure pilot takes a
+  figure of a lesson outside mechanics 01 to 05, or its plan sequences
+  the pull requests with F115's. No "Observe, Predict, Build, Explain" or
+  other narrative structure is imposed on any lesson; the voice of
+  decision 32 stays F114 to F116's.
+- **One writing agent per worktree**, as everywhere; the features of this
+  phase that may run in parallel are named under "Execution order".
+
+### F122 — Governed visual agent skills: the audit, the pinned skills, the PBC Scientific Visualization skill, and the workflow contract
+
+**Source.** Change request section 7 (all of it) and section 8, slices A
+(the candidate skill audit) and A2; requirements decision 38, "External
+integrations" (visual agent skills), "Security and privacy constraints"
+(the supply chain), and unresolved question 13; ADR 019, proposed with
+this planning and accepted when it is approved.
+
+**Problem.** Every visual feature so far was guided by ad hoc prompting.
+The owner named five candidate skills, none of which is audited, pinned,
+or present in the repository; the only skills on the owner's machine are
+user-level ones that a feature worktree elsewhere does not see; the
+workflow runs two providers (Claude Code for the writing roles, Codex for
+the reviewing roles) with their own skill locations and read-only profiles
+that drop the user's configuration; and nothing records which skill, if
+any, shaped an artifact.
+
+**Goal.** Implement ADR 019: each candidate audited and decided by the
+owner (vendored at a pinned revision, replaced by a thin project-owned
+adapter, or dropped); the approved skills at `.agents/skills/` with a
+provenance record each; the project-owned PBC Scientific Visualization
+skill; discovery verified for every role and profile from a worktree; the
+skills configuration check, the one check that reads the directory, which
+fails visibly on a missing or moved skill; and
+the planner, implementer, reviewer, and verification contract introduced
+where it is supported, without a new mandatory review agent and without a
+change to the owner approval hierarchy.
+
+**User-visible outcome.** Nothing on the site. For the workflow: a
+feature plan names the skills it selects for each visual deliverable or
+says why none applies; a completion record names the skill and revision
+behind an artifact; a review checks the rendered or generated artifact
+against its sources and the selected guidance; a missing required skill
+stops a feature with a clear message instead of being silently omitted.
+
+**In scope.**
+
+- **The audit, one record per candidate** (Impeccable, Anthropic Frontend
+  Design, Diagram Design): the exact upstream repository and `SKILL.md`
+  at a named revision; every script and reference file it carries and
+  what a script would execute; its licence and the redistribution
+  decision; its dependencies and security assumptions; its compatibility
+  with the Quarto, `.qmd`, CSS, SVG, native MathML, Python, and GitHub
+  Pages stack and with both runners; what is removed or adapted. The
+  owner approves each outcome on the Issue (unresolved question 13); a
+  candidate that fails licensing, security, or quality review becomes an
+  adapter that references the approved source material, or is dropped
+  with the reason recorded. Manim is not audited (question 15: not
+  scheduled); FreeCAD and OpenSCAD are not candidates.
+- **The project-local copies** at `.agents/skills/<name>/`, with the
+  provenance record beside each (upstream, revision, licence, the
+  audit's findings, the review date, the update and re-review policy),
+  and the digest of the copied files recorded so that the check below
+  can tell a moved copy from the pinned one. Nothing is installed by a
+  third-party installer, fetched at run time, or placed in a user-level
+  directory.
+- **Discovery verified.** From a feature worktree, for each role's
+  permission profile and provider of `.agents/agents.conf` (write and
+  unattended for Claude Code; read-only for Codex; the other combinations
+  the configuration allows), a recorded demonstration that the runner
+  lists or reads the skill directory; where a profile does not load it
+  (the read-only profiles run without the user's configuration), the
+  role's instructions name the skill files to read, which the Read tool
+  of every profile allows.
+- **The PBC Scientific Visualization skill**: a concise, practical
+  `SKILL.md` with representative good and bad examples drawn from
+  existing lessons (a convergence figure of M5, a measured-versus-model
+  panel with residuals of M16, a conceptual diagram of F32, a preview of
+  F63) and the references of the existing rules (`docs/authoring.md`:
+  "Figures", "Visual design", "Lesson format 2", "Measured data";
+  `docs/validation-contract.md`; the design specification of F123 once it
+  exists). It covers: which visual to use (conceptual diagram, analytic
+  or numerical plot, experimental data plot, uncertainty or residual
+  display, animation, interface illustration); axes, units, scales,
+  legends, symbols, uncertainty bounds, captions, accessible palettes and
+  colour-independent encodings; comparisons of numerical, analytic, and
+  experimental results, convergence, conserved quantities, error sources,
+  and stability; reproducible Python generation with authoritative inputs,
+  deterministic seeds, retained sources, and provenance; the explicit
+  separation of decorative illustration from validated model or
+  measurement, with no invented result, equation, or datum in a final
+  figure; accessible static equivalents, reduced-motion controls, and no
+  unnecessary browser payload. It supplements the visual quality gate,
+  the authoring rules, and the scientific contracts and contradicts no
+  check.
+- **A README of the skills directory**: the set, the selection policy of
+  ADR 019 decision 2, how a plan selects and records, how a completion
+  record evidences, how a review verifies, how a pin is moved.
+- **The skills configuration check**, an ungrouped entry of
+  `scripts/verify.conf`, in the group `default` beside the other
+  structural checks (template-structure, shell-syntax, docs-scripts,
+  docs-references, documentation), run by the `workflow` job in CI and by
+  the targeted run (`./scripts/verify.sh --targeted`) locally; no new
+  group and no change to the CI workflow, so every group still runs in
+  exactly one CI job (ADR 012 decision 2). It verifies that
+  every directory under `.agents/skills/` has a `SKILL.md` and a
+  provenance record with the required fields and a matching digest; every
+  skill a committed feature plan under `.agents/plans/` names exists; a
+  violation fails with a message that names the skill. A test per case.
+  It is the one check that reads `.agents/skills/`, and it reads the
+  skills as data to validate, never as instructions to follow (ADR 019
+  decision 1); the site, the build, the lesson and built-site checks, the
+  deployment, and every CI job stay independent of the directory.
+- **The workflow contract where it is supported**: a short section of
+  `AGENTS.md` (the planner's classification and selection, the
+  implementer's evidence, the reviewer's verification, the rule that a
+  skill is no evidence); a section "Visual deliverables and skills" of
+  `docs/authoring.md`; the plan contents of `.agents/prompts/planner.md`
+  and the evidence rule of `.agents/prompts/implementer.md` and
+  `.agents/prompts/reviewer.md` where a line suffices, with every change
+  to a template-owned file (`.agents/prompts`, `AGENTS.md` in
+  `.agents/template.conf`) recorded so that `scripts/sync-template.sh`
+  keeps it, or carried in the project's own files instead; the review
+  criteria of `docs/evaluation.md` only if a line is needed. No new
+  mandatory review agent; the owner approval hierarchy unchanged.
+- **The boundary test**, created by this feature (no test under `tests/`
+  checks for an agent invocation today; F45 later extends it to coding
+  agents, I24): no workflow, script, check, build step, or CI job
+  invokes, installs, or fetches a skill, and the build and every check
+  except the skills configuration check pass with `.agents/skills/`
+  absent from a scratch copy.
+
+**Out of scope.** Any change to the site; a Manim pilot; CAD skills; the
+pilots of F129 beyond the examples the skill carries; the choice of
+providers and models (Issue #165); a skill that writes code or runs
+tools outside the audited scripts.
+
+**Dependencies.** F119 (the delivered workflow: the targeted tier for the
+evidence and the `default` group of `verify.conf` the check joins); the owner's
+approval of each candidate's outcome and of the contract. No other
+roadmap feature.
+
+**Visual deliverables and skills.** None: this feature produces no visual
+artifact; it produces the skills and the contract.
+
+**Acceptance criteria.**
+
+1. Each of the three candidates has an audit record with the fields
+   above and an owner-approved outcome on the Issue; a vendored skill is
+   at its pinned revision with its licence text; an adapter names its
+   approved source material; a dropped candidate has its reason.
+2. Discovery is demonstrated per role, profile, and provider from a
+   feature worktree and recorded; where a profile does not discover the
+   directory, the role's instructions name the files to read.
+3. The project-owned skill exists with the topics above, its examples
+   trace to existing lessons and their figure cells, its references
+   resolve, and the independent reviewer confirms that it contradicts no
+   rule of `docs/authoring.md`, `docs/validation-contract.md`, or
+   `scripts/verify.conf`.
+4. The skills configuration check fails on a missing skill, a missing or
+   incomplete provenance record, a digest that does not match, and a plan
+   that names an unknown skill, a test per case; it is an ungrouped entry
+   of `scripts/verify.conf` (the group `default`), runs in the targeted
+   run locally and in the `workflow` job in CI with no new group and no
+   workflow change, and it is the only check that reads
+   `.agents/skills/`.
+5. The contract is in `AGENTS.md` and `docs/authoring.md`, and in the role
+   instructions where a line suffices; every changed template-owned file
+   is recorded for the template sync; no new review agent exists and no
+   approval step moved.
+6. No workflow, script, check, build step, or CI job invokes, installs,
+   or fetches a skill, shown by a test; the build and every check except
+   the skills configuration check pass with `.agents/skills/` absent from
+   a scratch copy.
+7. The owner's explicit approval of the set and of the contract is
+   recorded on the Issue (the High-risk gate).
+
+**Risk.** High. Third-party instructions reach agents with write access
+to the repository, the role instructions of the workflow change, and the
+skills are a supply-chain input; the audit, the pins, the per-candidate
+approval, the skills configuration check, and the boundary test limit it.
+
+**Detailed implementation plan expected.** Yes: the audit template, the
+per-candidate decision table, the discovery matrix, the check, and the
+places the contract goes.
+
+### F123 — The atelier foundations: the design specification, tokens, typography and fonts, the shared header and footer, and the lesson template on one existing lesson
+
+**Source.** Change request sections 1, 3, 4 ("Remaining templates"),
+7 (the Home, atlas, and lesson preview pilot), 8 (slices A, the design
+specification, and B), and 9; requirements decision 36 ("Visual
+direction", "Shared templates"), decision 37, "Runtime and deployment
+constraints" (the rendered review), and the non-goals; ADR 018 decisions
+1, 2, 5, and 6; ADR 019 (Impeccable and Anthropic Frontend Design, as
+F122 approved them).
+
+**Problem.** The site runs on Quarto's default theme with the F44 tokens,
+one self-hosted font (the math font), Quarto's navigation bar, and no
+project mark, no shared header or opening template, no atelier
+typography, and no reading-column lesson layout. There is no document
+that says what the atelier is, so every later feature would invent it
+again.
+
+**Goal.** The foundations every later feature of the phase uses, in one
+place: the design specification; the tokens and component styles that
+extend F44; the serif, body, and monospace faces self-hosted with their
+licences; the shared header with the project mark, concise navigation,
+and the start link; the shared footer with attribution, source, licences,
+and secondary navigation; and the calm reading-column lesson template,
+applied to one existing lesson. The foundations reach the chrome of every
+page at once, so that the site never shows two headers; the lesson
+template reaches every lesson in F127.
+
+**User-visible outcome.** Every page shows the atelier: warm paper-white
+background, nearly black text, cobalt blue and vermilion accents, serif
+headings, readable body text, monospaced annotations, thin rules, and
+generous whitespace; the header with the project mark, the navigation,
+and a clear start link; the footer with attribution, source, and
+licences. One existing lesson (chosen in the Issue: a format-2 mechanics
+lesson with figures, code, equations, and a widget, for example
+"Numerical integrators" or "The harmonic oscillator") reads in a calm
+column of appropriate line length with a table of contents, its
+prerequisites, and previous and next, with nothing of its content
+changed.
+
+**In scope.**
+
+- **The design specification**, docs/atelier.md (a file this feature creates), registered in
+  `docs/project-map.md`: the direction and its reference mockups named
+  as inspiration and never as data; the tokens (colours defined once in
+  `src/pbc/authoring/design.py` and copied to `site/assets/site.css`
+  under the existing test; the type scale, spacing, rules); the
+  components; the three asset classes with an example each; the mobile
+  rule (a readable region selector, a focused view, and the list; a
+  desktop map never shrunk until its labels are unreadable); the
+  accessibility rules (WCAG 2.1 AA, 320 CSS px reflow, visible focus,
+  reduced motion); how a feature applies it; and what the selected skills
+  changed. The "Visual design" section of `docs/authoring.md` points to
+  it.
+- **Tokens and components** in `site/assets/site.css`, extending F44
+  (claim labels, figure status, tables, excerpts, "Go deeper",
+  self-checks, path rows, the graph keep their meaning and their
+  contrast); the contrast test extended to every new pair.
+- **Fonts**: the serif, body, and monospace faces as self-hosted woff2
+  subsets under `site/assets/fonts/` with their licence texts beside
+  them (an open licence such as the SIL Open Font License, recorded as
+  the math font's is), listed among the resources of `site/_quarto.yml`,
+  with the complete initial payload of every page measured; a face that
+  does not fit the budget is subset further or dropped.
+- **The shared header and footer** through Quarto's template partials
+  and includes: the project mark (interface artwork: an SVG produced by
+  code in the repository or an authored SVG source under `site/assets/`
+  with its author and licence recorded), concise primary navigation
+  (home, the atlas under the label the preview settles, glossary,
+  evidence, about, set up, contribute, source) that works without a
+  script, the start link; the footer with the F57 attribution line
+  unchanged and its check passing, the source link, the licences, and
+  secondary navigation; the skip link and the focus styles kept; the
+  "Run this experiment" section of every lesson untouched (ADR 016; the
+  F117 tests pass).
+- **The lesson reading-column template**: line length, the table of
+  contents, legible code and MathML, larger figures where useful, the
+  current prerequisites, previous and next, as CSS and the existing
+  header cell, applied by a page-level opt-in the plan chooses (a class
+  or a front-matter flag that the schema check allows) to the one lesson
+  of this feature; every executed cell, number, figure, claim, section
+  identifier, and footer command of that lesson unchanged.
+- **The design skills piloted**: the Impeccable and Anthropic Frontend
+  Design guidance of F122 applied to the typography, layout, hierarchy,
+  responsive presentation, and the components, and what they changed
+  recorded in the specification and in the completion evidence (ADR 019
+  decision 6); the comparison of the real responsive layouts, legibility,
+  and accessibility against the direction.
+- **The checks**: the contrast test; the payload check with the fonts;
+  the accessibility scan; the keyboard pass of F10's audit on the new
+  header; the reflow at 320 CSS px; the three-engine render of the
+  component sample page (`rendering-check.qmd`); every internal link; the
+  determinism check; the F57 identity check; the asset-source rule (every
+  SVG under `site/assets/` has a provenance entry: author and licence, or
+  the module that generates it; the register's file and format fixed in
+  the plan); the committed-artifact check narrowed to the one declared
+  exemption of ADR 018 decision 2 (amending ADR 002 decision 2): a
+  tracked `.svg` under `site/assets/` passes only when the provenance
+  register names it with an author and a licence, while an unregistered
+  SVG, a raster of any type anywhere, every other image type, and every
+  image file outside `site/assets/` stay rejected as today, with a
+  failing test per case written before the change, in the same pull
+  request as the register, so that the exemption and the provenance
+  entry are one mechanism; the experiment and reproduction checks of the
+  one lesson.
+- **The rendered review**: screenshots at desktop, tablet, and phone
+  widths of the home page as it is, the one lesson, the path page, and a
+  supporting page, as evidence artifacts; the reviewer's assessment with
+  the built HTML and the sources; the owner's pass recorded on the Issue.
+
+**Out of scope.** The home page's content and figure (F124); the map
+(F125, F126); the other lessons, the course openings, the capstone
+template, and the supporting pages' layout beyond the shared chrome
+(F127); any change to a lesson's text, numbers, or figures; a theme
+switch; animation; an experiment gallery.
+
+**Dependencies.** F122 (the approved design skills, or the recorded
+fallback: this feature creates the design specification, so its fallback
+is the direction of the change request's section 1 as recorded in
+requirements decision 36 and the project-owned skill, never
+docs/atelier.md itself), F44 (the tokens it extends), F57 (the attribution text and its
+check), F63 (the preview sizes), F64 (the path page the chrome frames),
+F117 (the footer contract: the entry-point contract and the footer merged
+by pull request #205, not the closure of Issue #202, whose criteria 7 and
+8 follow the merge; in practice a passing `main` after Issue #206, which
+every feature of the cycle needs for its base and its deployment).
+
+**Visual deliverables and skills.** Page and layout (the chrome, the
+lesson column): Impeccable and Anthropic Frontend Design as approved;
+interface artwork (the project mark): Anthropic Frontend Design as
+approved; no conceptual diagram and no scientific figure, so Diagram
+Design and the PBC Scientific Visualization skill do not apply, stated in
+the plan.
+
+**Acceptance criteria.**
+
+1. Every page carries the shared header (mark, navigation, start link)
+   and footer (attribution, source, licences, secondary navigation); the
+   F57 identity check passes unchanged; every lesson's experiment section
+   keeps its identifier and commands (the F117 tests pass).
+2. The fonts are served from the site's own origin with their licence
+   texts; no request leaves the origin; the initial payload of every page
+   is within the 3 MB budget with the sizes of the heaviest lesson, the
+   path page, and the home page recorded on the pull request.
+3. The one lesson in the reading-column template has its executed cells,
+   numbers, figures, claims, section identifiers, and footer commands
+   unchanged (the diff of the pull request, the reproduction check, and
+   the experiment check), and shows the table of contents, the
+   prerequisites, and previous and next.
+4. The accessibility scan passes on every page; the keyboard pass over
+   the header and the lesson is recorded; every page reflows at 320 CSS
+   px without two-way scrolling; reduced motion is respected; every new
+   colour pair passes the contrast test; the component sample renders in
+   the three engines, recorded with screenshots.
+5. The design specification docs/atelier.md exists, is registered in `docs/project-map.md`,
+   names the three asset classes with an example each, and is pointed to
+   by the authoring guide; every SVG under `site/assets/` has its
+   provenance entry, shown by the new check; the committed-artifact check
+   accepts a tracked `.svg` under `site/assets/` only when the register
+   names it with an author and a licence, and rejects an unregistered
+   SVG there, a raster of any type anywhere, every other image type, and
+   an image file outside `site/assets/`, each shown by a test that fails
+   before the change (ADR 018 decision 2; the one amendment of ADR 002
+   this cycle makes, and the only change to that check).
+6. The rendered review has its three parts on the Issue: the
+   implementer's screenshots at three widths, the reviewer's assessment,
+   and the owner's pass; the plan's skill selection and the observable
+   effect of each selected skill are recorded (ADR 019).
+7. The full verification run passes with no check weakened beyond the
+   declared exemption of criterion 5; the build is deterministic.
+
+**Risk.** Medium. The chrome and the tokens touch every page; the
+accessibility scan, the identity check, the payload check, the
+three-engine render, and the F64 and F117 tests catch regressions; the
+reading column is applied to one lesson only.
+
+**Detailed implementation plan expected.** Yes: the specification's
+outline, the token table, the partials, the font subsets, and the
+page-level opt-in.
+
+### F124 — The home page of the atelier, with a static verified opening figure
+
+**Source.** Change request sections 1 (the removed section), 4 ("Home"),
+6 (the homepage pendulum), and 8 (slice C); requirements decision 36
+("Home page"), the owner's answer of 2026-10-17 (the static figure), and
+unresolved question 14; ADR 018 decision 4; F25 as the delivered record it
+succeeds.
+
+**Problem.** The home page of F25 names the three activities with one
+example each, explains "One result, constructed and proved", and lists
+what is published and planned; it has no opening, no project structure in
+the atelier's sense, no capstone highlights, and its layout predates the
+foundations. The direction asks for an opening with a figure, which must
+be verified science, not an illustration that looks like one.
+
+**Goal.** The home page of decision 36: the shared header; the opening
+"Build a world. See if it obeys physics." with a static figure drawn by an
+existing verified implementation; the introduction of Part A and Part B
+from the real course structure with links into the atlas; capstone
+highlights grounded in the current delivery state; a short invitation to
+begin; the shared footer. The section "From a question to a working
+model" is absent and nothing renamed takes its place.
+
+**User-visible outcome.** A visitor sees, in one screen, what the site is
+and the opening figure with its provenance; reads what Part A (the eight
+courses) and Part B (the four method paths) are, with their real published
+counts; sees the three capstones labelled planned with their roadmap
+descriptions (the thermal project as a hypothetical accelerator, never a
+named chip; the tsunami reconstruction; the phased array); and is invited
+to begin with the atlas. No metric, testimonial, or progress claim.
+
+**In scope.**
+
+- **The opening figure**: a figure-writing function in `src/pbc` (the
+  pattern of ADR 016 decision 2, beside the lesson's experiment module)
+  called by an executed cell of `site/index.qmd`, drawing from the
+  double-pendulum implementation of `pbc.mechanics.chaos` (validated in
+  its lesson against its small-oscillation modes and its energy) if the
+  plan judges that validation sufficient, otherwise from another verified
+  mechanics figure, composed in the atelier language (the tokens, the
+  figure colours), scientifically faithful to the model, with the
+  `simulated` status, alt text, explicit dimensions, and the provenance
+  (the module and the commit) stated beside it. No script computes or
+  animates it; the figure is byte-stable.
+- **The structure**: the introduction (the three activities Construct,
+  Investigate, Verify stay named with their published examples, as the
+  project goal, not as a three-step teaching formula or a section of
+  steps); Part A and Part B from the curriculum file and the front matter
+  (`pbc.authoring.home` extended), with links into the atlas by course
+  and by path at the existing address and anchors; capstone highlights
+  from the curriculum file's capstone slots, labelled planned until a
+  capstone is published, their text the short explanation of each
+  capstone's concept in the map manifest of F125 (ADR 018 decision 3:
+  the one place that text lives, kept consistent with the roadmap's
+  description, the thermal project a hypothetical accelerator), read by
+  `pbc.authoring.home` through the same validated reader and typed into
+  neither `site/index.qmd` nor the module; the invitation;
+  the footer of F123. The sections "One result, constructed and proved"
+  and the hand-written parts of the F25 page are replaced only where this
+  structure replaces them; the published and planned lists stay derived.
+- **The tests**: the F25 and F62 tests adapted (counts and names from the
+  metadata; every planned item labelled and never linked; the examples
+  link to published lessons); a test that the capstone highlights render
+  only the manifest's explanation of each capstone's concept and no other
+  description; a test that the heading "From a question to
+  a working model" is absent; the no-script, accessibility, 320 CSS px,
+  payload, and determinism checks; the figure's source traced to its
+  module by the asset-source rule.
+- **The rendered review** of the page at three widths; the skills of
+  F122 as the plan selects them.
+
+**Out of scope.** Interactive controls or animation of the opening
+(F128); an experiment gallery; any lesson; a change to the identity text
+(F57; the owner approves copy); counters, testimonials, news.
+
+**Dependencies.** F123 (the foundations), F125 (the map manifest and its
+validated reader, which the capstone highlights read: the home page waits
+for the curated manifest, independently reviewed and approved by the
+owner as F125 delivers it, because the three capstone explanations it
+shows exist nowhere else; F125 does not land the capstone concepts
+separately), F25 (the page it
+succeeds), F62
+(the planned structure), F68 (the double-pendulum implementation), F117
+(the figure-writing pattern: the entry-point contract merged by pull
+request #205, not the closure of Issue #202, whose criteria 7 and 8
+follow the merge; in practice a passing `main` after Issue #206), F57
+(the identity text).
+
+**Visual deliverables and skills.** Page and layout: Impeccable and
+Anthropic Frontend Design as approved; a scientific figure (the opening):
+the PBC Scientific Visualization skill; no conceptual diagram.
+
+**Acceptance criteria.**
+
+1. The page has the header, the opening with the figure, the Part A and
+   Part B introduction with links into the atlas, the capstone highlights,
+   the invitation, and the footer; the heading "From a question to a
+   working model" is absent and no section presents a numbered teaching
+   formula, shown by a test and confirmed in review.
+2. The opening figure is drawn by an executed cell calling a function of
+   `src/pbc` over a verified implementation, carries its status, alt
+   text, and provenance, is byte-stable, and is computed by no script;
+   the plan records which implementation and why its validation suffices.
+3. Every count and name comes from the lesson metadata and the curriculum
+   file; every planned item, including the three capstones, is labelled
+   planned and never linked; each capstone's text is the manifest's
+   explanation of its concept and nothing else; the thermal capstone is
+   described as a hypothetical accelerator; shown by the adapted tests.
+4. The page is complete without JavaScript, passes the accessibility
+   scan, reflows at 320 CSS px, and is within the payload budget.
+5. A reviewer who did not write the page confirms that every sentence
+   about the site is true of the published site at that commit (F25's
+   criterion kept).
+6. The rendered review has its three parts on the Issue, with the owner's
+   pass as half of the preview gate; the selected skills and their
+   observable effect are recorded.
+7. The full verification run passes.
+
+**Risk.** Medium. The page is the site's front door and shows a
+scientific figure; the metadata tests, the asset-source rule, and the
+independent review of the figure's provenance guard it.
+
+**Detailed implementation plan expected.** Yes, short: the figure's
+module and validation, the page structure, the adapted tests.
+
+### F125 — The map manifest and the static atlas: curated concepts and connections, the generated map with its textual equivalent
+
+**Source.** Change request sections 4 ("Course atlas"), 5 (all of it), 7
+(the conceptual-diagram guidance where useful), and 8 (slices A, the map
+data contract, and D); requirements decision 36 ("Course atlas"), "Data
+and persistence" (the map manifest), and "UX expectations" (the Learning
+Path page); ADR 018 decision 3; ADR 013; ADR 019 (Diagram Design, as F122
+approved it).
+
+**Problem.** The path page of F64 is course-first and complete, but it
+has no map: no concepts, no placement, no scientific connections, and no
+illustrated view of the eight courses and the four paths. The only data
+the site holds are the curriculum file and the front matter; a map needs
+a small addition that must not become a second catalogue, must not infer
+concepts from titles, and must not draw a relationship it cannot state.
+
+**Goal.** The map manifest and its validation; the curated concepts and
+connections, reviewed as scientific claims about the curriculum; and the
+atlas as build-generated semantic HTML and inline SVG with a textual
+equivalent, placed on the path page above the index of F64 behind a
+switch that works without a script, with every published lesson reachable
+and every planned slot labelled.
+
+**User-visible outcome.** A reader of the path page sees, above the
+familiar index, a large illustrated map of the eight courses with their
+concepts, the four method paths as a connected research layer, the Lean
+and method views, the three kinds of connection drawn distinctly and
+explained in words, planned concepts visibly labelled, and the three
+capstones as planned projects; follows a concept to its lessons by plain
+links; and, without scripts, reads the same map as text.
+
+**In scope.**
+
+- **The map manifest**, one YAML file beside site/curriculum.yaml (named
+  in the plan; the architecture calls it the map manifest), read and
+  validated by `pbc.authoring`, holding exactly what the requirements
+  enumerate: concept identifiers with a short explanation each; display
+  placement (course area, position); the slots each concept belongs to
+  (capstone membership among them: an association whose slot is a
+  capstone slot); curated conceptual connections, each with its two
+  concepts, its type, and a short rationale. Nothing else: no reference
+  to the course areas' illustrations (the generator maps each course of
+  the curriculum file to its drawing) and no lesson reference (a lesson
+  reaches the map through its slot or through the Lean and method
+  views). Every capstone slot (T11, EM9, FL10) is represented by a
+  concept, and that concept's short explanation, kept consistent with
+  the roadmap's description of the capstone, is the planned description
+  the atlas reveals and the home page's highlights show (F124); it is
+  the concept's explanation, not a description field of its own, and the
+  curriculum file gains no field (ADR 013 decision 3 unchanged). The
+  rules, each with a failing test: every course, path, slot, and concept
+  reference resolves (the schema defines course, path, slot, and concept
+  references only and admits no lesson reference, so the requirements'
+  lesson-reference rule holds vacuously); every concept names at least one slot; every
+  capstone slot of the curriculum file is represented by exactly one
+  concept (the home page's highlights of F124 depend on it); no title,
+  description, outcome, prerequisite, publication state, or count is
+  written in it; no prerequisite edge is written in it; the schema
+  rejects an unknown field. Concept membership is never inferred from a
+  lesson's title.
+- **The curation**: concepts for the eight Part A courses and the four
+  Part B paths, limited to the approved curriculum (the 115 slots and the
+  Lean view), with the connections and their rationales; reviewed
+  independently as scientific claims before merge, with the owner's
+  approval of the file as of the curriculum file.
+- **The derivation at build time** (ADR 018 decision 3): the state of
+  every concept from the lessons that fill its slots; the prerequisite
+  edges between concepts from the lessons' prerequisites (an edge when a
+  lesson of one concept requires a lesson of the other; a planned lesson
+  has none); the capstone memberships from the manifest, linked only when
+  the capstone is published; the published counts from the lessons.
+- **The drawing** in Python (as the graph of F26): course areas with
+  subtle boundaries and meaningful small illustrations (interface
+  artwork, drawn by code, one drawing per course of the curriculum file
+  mapped by the generator with no reference in the manifest, with the
+  Diagram Design guidance of F122 where approved and useful), concept
+  positions from the manifest, the three edge types with distinct marks
+  (never colour alone), the method paths as a connected layer that keeps
+  their distinctions, the Lean and method views as part of the map
+  (every published lesson listed by its method tags from the front
+  matter, the lessons without a slot included, as links in the SVG's
+  view layer and as sentences in the textual equivalent, with no manifest
+  entry; a concept's lessons still come only from its slots), planned
+  concepts and slots labelled and distinguishable without colour, the
+  three capstones labelled planned with their planned descriptions from
+  the manifest (the explanation of each capstone's concept, consistent
+  with the roadmap's; the thermal project a hypothetical accelerator; EM9
+  kept in the index and on the map); no raster, no arbitrary geography.
+- **The page**: breadcrumb, title, and a short explanation; the switch
+  between the map and the index as anchors or native disclosures that
+  work without a script; the SVG with real links; the selected-concept
+  panels as native disclosures reachable by links, each with the short
+  explanation, the slots with their state, the canonical lesson links,
+  and the rationale of its conceptual connections; the visually hidden
+  textual equivalent (every concept with its course, its slots and their
+  state, and its edges as sentences); the F64 index, progress marks,
+  recommendations, filters, and search unchanged in content; the address
+  and every anchor and graph node address kept. Without a script on a
+  narrow screen, the map scrolls in its own focusable region at its
+  readable size, as the graph of F26 does, and the index is the primary
+  route; F126 adds the region selector and the focused view.
+- **The tests**: the manifest rules; all eight courses, four paths, and
+  the Lean and method views present; the published counts equal to the
+  lessons; the prerequisite edges equal to the front matter; every
+  conceptual edge with its type and rationale; every capstone link only
+  for a published capstone; no planned slot linked or counted; every
+  published lesson reachable without scripts through the map (the
+  lessons without a slot through the Lean and method views) and through
+  the index; the atlas rendering only the manifest's explanation as a
+  capstone's planned description; every previous address and graph node
+  resolving; the textual equivalent naming every concept, every edge,
+  and every lesson of the Lean and method views; the accessibility scan;
+  the keyboard pass; the reflow at 320 CSS px; the payload of the page;
+  byte-stable rebuilds; the search index unchanged in meaning.
+- **The rendered review** of the atlas at three widths.
+
+**Out of scope.** Selection, zoom, filters, the phone's region selector,
+and the switch as a script (F126); any change to the index's content, the
+progress or recommendation behaviour, or the search; new lessons; course
+openings (F127); a second catalogue; a raster map; an experiment gallery.
+
+**Dependencies.** F122 (Diagram Design as approved, or the fallback), F62
+(the curriculum file and the slots), F63 (the previews the index keeps),
+F64 (the page), F26 (the prerequisite graph's layout and data), F37 (the
+metadata), F41 (the search index).
+
+**Visual deliverables and skills.** Page and layout (the atlas section):
+Impeccable and Anthropic Frontend Design as approved; interface artwork
+(the course areas' illustrations): Diagram Design as approved, with the
+science of each illustration checked independently; no scientific figure
+(the previews are F63's); the PBC Scientific Visualization skill does not
+apply, stated in the plan.
+
+**Acceptance criteria.**
+
+1. The manifest validates under the rules above, a failing test per
+   violation; it holds no field the curriculum file or the front matter
+   holds and no prerequisite; every reference resolves; the owner
+   approved its content on the Issue after the independent review of the
+   connections as scientific claims.
+2. The map shows all eight Part A courses, the four Part B paths as a
+   connected layer, the Lean and method views listing every published
+   lesson by its method tags (the lessons without a slot included), and
+   the three capstones labelled planned with their planned descriptions
+   from the manifest (the explanation of each capstone's concept and
+   nothing else); EM9 is on the map and in the index; shown by a test
+   over the manifest, the curriculum file, and the page.
+3. The three edge types are explicit in the drawing and in the words of
+   the textual equivalent; the prerequisite edges equal the front matter
+   and none belongs to a planned lesson; every conceptual edge has its
+   type and rationale; capstone links exist only for a published
+   capstone; shown by tests.
+4. A planned concept or slot is labelled, distinguishable without colour
+   alone, never a lesson link, and never counted; the published counts
+   equal the lessons; shown by tests.
+5. With JavaScript disabled every published lesson is reachable through
+   the map's links and through the index; every previous address, anchor,
+   and graph node address resolves; the switch works by links or native
+   disclosures; shown by tests, whose cases include the lessons without
+   a slot, reached through the Lean and method views.
+6. The textual equivalent names every concept and every edge; the
+   accessibility scan passes; the keyboard pass and the screen-reader
+   reading order are recorded in the manual pass; the page reflows at
+   320 CSS px; the payload is within budget; the rebuild is byte-stable;
+   the search index is unchanged in meaning.
+7. The rendered review has its three parts on the Issue; the selected
+   skills and their observable effect are recorded; every illustration's
+   generating code is in the repository.
+8. The full verification run passes.
+
+**Risk.** Medium. The manifest is a curated scientific artifact and the
+page is the site's main navigation; the manifest rules, the F64 tests,
+and the independent review of the connections guard it.
+
+**Detailed implementation plan expected.** Yes: the manifest schema, the
+derivation rules, the layout approach, the curation and review process,
+the page sections.
+
+### F126 — The atlas interaction: the switch, selection, zoom, filters, and the phone's region selector
+
+**Source.** Change request sections 4 ("Course atlas", items 2 and 4, the
+mobile rule), 5 ("Accessible interactions"), and 8 (slice E);
+requirements decision 36 ("Course atlas"); ADR 018 decision 3.
+
+**Problem.** The static atlas of F125 is complete and reachable, but a
+large map is read by selecting, zooming, and filtering, and a phone needs
+a region at a time; without an enhancement the page is correct and
+laborious.
+
+**Goal.** Small dependency-free modules that enhance the generated atlas:
+the switch between map and index, selection with the selected-concept
+panel, the modes that show concepts and prerequisites separately, zoom,
+filters coordinated with the index's filters and the search, and the
+phone's region selector with a focused map view; storing nothing,
+requesting nothing, with every lesson still reachable without them. The
+display label of the atlas and the navigation wording are settled here,
+in the owner's review of the preview, with the address unchanged.
+
+**User-visible outcome.** A reader switches between the map and the
+index; selects a concept by pointer or keyboard and reads its panel;
+shows concepts or prerequisites apart; zooms a region; filters by course,
+path, method, difficulty, or publication state, with the search finding
+the same lessons; on a phone picks a region from a readable selector and
+sees it focused, with the ordinary list below. Nothing is remembered
+between pages; the progress marks and recommendations behave as before.
+
+**In scope.**
+
+- The modules in `site/learner/` under the convention of `path.js`
+  (dependency-free ES modules; without them the page is complete; no
+  request, cookie, or storage; nothing animated beyond the reduced-motion
+  rule); the switch, selection and the panel, the modes, zoom with
+  keyboard operation and visible focus, labelled controls, the filters
+  coordinated with F64's filters and the search index (which is built
+  from the page and never changed by a filter), the region selector and
+  the focused view on narrow screens; a desktop map never shrunk until
+  its labels are unreadable.
+- The display label ("the atlas" or the owner's choice) in the navigation
+  and the page title, decided in the owner's review and applied without
+  changing the address or any anchor.
+- The tests: the F125 tests pass unchanged with scripts disabled; the
+  scan of I16 extended to the modules (no request, cookie, or storage
+  while every control is operated); keyboard operation of every control
+  with visible focus; the accessibility scan; the reflow at 320 CSS px;
+  the payload of the enhancement measured apart from the page; the
+  progress, recommendation, and search tests of F13, F14, and F41
+  unchanged; the minimum rendered label size of the map at desktop and
+  tablet widths checked by a test, with the map scrolling instead of
+  shrinking below it.
+- The rendered review of the atlas at three widths, as the second half
+  of the preview gate.
+
+**Out of scope.** Changing the manifest or the drawing (F125); browser
+storage for any control; animation; a canvas map; new lessons; the
+course openings (F127).
+
+**Dependencies.** F123 (the foundations), F125 (the static atlas), F64
+(the index and its filters), F13 and F14 (the learner state and the
+recommendations keep their contract), F41 (the search).
+
+**Visual deliverables and skills.** Page and layout (the interaction and
+the phone view): Impeccable and Anthropic Frontend Design as approved; no
+diagram and no scientific figure, stated in the plan.
+
+**Acceptance criteria.**
+
+1. With JavaScript disabled nothing is lost: the F125 tests pass
+   unchanged.
+2. The modules make no request, set no cookie, and write to no browser
+   storage while every control is operated, shown by the extended scan;
+   `site/learner/progress.js` stays the only script that stores anything.
+3. Every control (switch, selection, modes, zoom, filters, region
+   selector) works by keyboard with visible focus and a label; the
+   accessibility scan passes; the screen-reader reading order is recorded
+   in the manual pass; reduced motion is respected.
+4. On a phone the region selector, the focused view, and the list are
+   present and the page reflows at 320 CSS px; at desktop and tablet
+   widths the map's labels stay at or above the minimum size, shown by a
+   test.
+5. The payload of the enhancement is measured and within budget; the
+   search finds the same lessons with and without the filters; the
+   progress marks and recommendations behave as before (the F13, F14, and
+   F41 tests pass).
+6. The display label and the navigation wording are decided by the owner
+   in the review of the preview and applied with the address and every
+   anchor unchanged, shown by the test over the previous addresses.
+7. The rendered review has its three parts on the Issue, and the owner's
+   pass over the preview (the home page of F124, this atlas, the lesson
+   of F123) at desktop, tablet, and phone widths is recorded here as the
+   preview gate; the selected skills and their observable effect are
+   recorded.
+8. The full verification run passes.
+
+**Risk.** Medium. The modules touch the site's main navigation; the
+no-script tests, the storage scan, and the keyboard tests guard them.
+
+**Detailed implementation plan expected.** Yes, short: the modules, the
+controls, the tests.
+
+### F127 — The rollout: course openings, every lesson in the reading-column template, the capstone and supporting-page templates, and the final visual acceptance
+
+**Source.** Change request sections 4 ("Remaining templates"), 6, 8
+(slice F, and the publication-ready polish of slice G), and 9;
+requirements decision 36 ("Shared templates"), decision 37, and the
+non-goals; ADR 018 decisions 2, 5, and 6.
+
+**Problem.** After the preview, the chrome is the atelier's but one
+lesson reads in the new column, the courses have no opening, no capstone
+template exists, and the About and supporting pages have the chrome
+without the language.
+
+**Goal.** Roll the design out across the site: course openings that reuse
+the existing course sections, every lesson in the reading-column
+template, the capstone template defined and sampled, the supporting pages
+in the same language with every function preserved, and the owner's final
+visual acceptance at desktop, tablet, and phone widths.
+
+**User-visible outcome.** The whole site reads as one scientific
+publication: each course opens with one relevant scientific illustration,
+an introduction, its prerequisites, and a compact lesson list; every
+lesson has the calm column, the table of contents, legible code and
+equations, larger figures where useful, its prerequisites, and previous
+and next; the glossary, evidence map, setup, contribution, search, and
+licence pages look like the rest and work as before.
+
+**In scope.**
+
+- **The migration plan**, written first: which pages, in which order, in
+  how many pull requests (each a full run), which routes are added (only
+  for a clear purpose named here; a course's opening is its section of
+  the atlas's index unless the plan justifies a page per course), and how
+  the lesson features in flight and F115 are sequenced or rebased.
+- **Course openings**: one relevant scientific illustration by asset
+  class with its source (a verified figure of the course's lessons, its
+  representative F63 preview, or interface artwork), an introduction, the
+  prerequisites, and the compact lesson list, reusing the course panels
+  of the index. A module is a grouping within a course that the migration
+  plan finds useful (a method path's lessons inside a course, for
+  example); none is invented without a purpose.
+- **Every lesson in the reading-column template**: the opt-in of F123
+  becomes the default; every executed cell, number, figure, claim,
+  section identifier, reference, and footer command unchanged (the diff
+  of the executed outputs, the reproduction check, and the experiment
+  check on every lesson in a full run).
+- **The capstone template**: the strong project opening and the spacious
+  model and results presentation, with the rule that dark navy may frame
+  visualizations while instructions stay readable (the contrast test),
+  specified in the design specification docs/atelier.md, implemented in the CSS, and sampled on
+  the component sample page; applied by the first capstone feature that
+  publishes a capstone (F80, F87, or F88), since none is published today.
+  A standalone interactive lab stays separately scoped.
+- **About and the supporting pages** (about, glossary, evidence, set up,
+  contribute, educators, the component sample page) in the same language
+  with every function preserved: the glossary's terms and links, the
+  evidence map's claims, the setup page's commands and its test, the
+  contribution forms, the search, the licences; the instructor packs
+  unaffected (F59).
+- **The polish**: the owner's final visual acceptance across the
+  representative pages at three widths, recorded on the Issue; what it
+  changes is applied in the same feature.
+- **The tests**: every existing page test (F41, F42, F19, F39, F57, F59,
+  F62, F64, F117); the accessibility scan, the keyboard pass, the reflow
+  at 320 CSS px, reduced motion, and the payload on every page; the
+  asset-source rule for every illustration; every internal link, anchor,
+  and previous address; determinism.
+
+**Out of scope.** Any change to a lesson's prose (F115, F116), numbers,
+figures, or claims; animation; the interactive pendulum (F128); an
+experiment gallery; a route without a purpose named in the migration
+plan; a published capstone (the capstone features).
+
+**Dependencies.** F123, F124, F126, and the owner's recorded review of
+the preview (the preview gate); coordinated with F115 and F116 and with
+the lesson features in flight, as the rules of this phase say.
+
+**Visual deliverables and skills.** Page and layout (the openings, the
+lessons, the supporting pages, the capstone template): Impeccable and
+Anthropic Frontend Design as approved; interface artwork (an opening's
+illustration where it is artwork): Diagram Design as approved; a
+scientific figure where an opening reuses one: the PBC Scientific
+Visualization skill for its composition, with the figure's data and
+values unchanged.
+
+**Acceptance criteria.**
+
+1. Every lesson renders in the reading-column template with its executed
+   cells, numbers, figures, claims, section identifiers, references, and
+   footer commands unchanged, shown by the diff of the executed outputs
+   and by the reproduction and experiment checks of a full run.
+2. Every course that has a lesson has an opening with one illustration
+   whose class and source are recorded, an introduction, its
+   prerequisites, and its compact lesson list; routes exist only as the
+   migration plan says; every existing address, anchor, and link
+   resolves, shown by the test over the previous addresses.
+3. The supporting pages keep every function: the tests of F41, F42, F19,
+   F39, F57, F59, F62, F64, and F117 pass unchanged.
+4. The accessibility scan passes on every page; the keyboard pass, the
+   reflow at 320 CSS px, reduced motion, and the payload hold on every
+   page, with the sizes recorded.
+5. The capstone template is specified, implemented, and sampled with the
+   navy framing and readable instructions passing the contrast test, and
+   named by the capstone features' definition of done.
+6. The rendered review has its three parts for the representative pages,
+   and the owner's final visual acceptance is recorded on the Issue; the
+   selected skills and their observable effect are recorded.
+7. Every full verification run of the feature passes with no check
+   weakened; the build is deterministic.
+
+**Risk.** Medium. Every page changes layout; the tests of every earlier
+page feature, the reproduction and experiment checks, and the rendered
+review catch regressions; nothing scientific changes.
+
+**Detailed implementation plan expected.** Yes: the migration plan is the
+plan.
+
+### F128 — The validated interactive pendulum on the home page
+
+**Source.** Change request sections 4 ("Home", item 2), 6 (the homepage
+pendulum), and 8 (slice G); requirements decision 36 (the owner's answer
+of 2026-10-17) and unresolved question 14; ADR 018 decision 4; the widget
+rules of F07 and F43 and the verified display forms. **Gate:** this
+feature starts only when the owner decides question 14 by creating its
+Issue; until then the home opening stays the static figure of F124.
+
+**Problem.** The opening figure of F124 is static by decision. An
+interactive double pendulum would let a visitor play with the model, but
+physics computed in the browser must agree with the verified Python
+implementation, must not drift from it, and must stay optional,
+accessible, and honest about what is validated.
+
+**Goal.** A widget under the F07 convention that integrates the double
+pendulum in the browser, validated numerically and checked against the
+Python reference across languages, with play, pause, and reset, parameter
+controls with units and sensible limits, starting paused or under reduced
+motion, with the static figure as its fallback and a label that says what
+is validated.
+
+**User-visible outcome.** The opening figure gains controls: a visitor
+starts, pauses, and resets the pendulum, changes a parameter within its
+limits, and reads what the animation does and does not establish; without
+scripts, or under reduced motion, the static figure stands.
+
+**In scope.** The numerical validation record of the model in Python
+(the existing checks of M9: the small-oscillation modes and the energy;
+a reference trajectory at fixed parameters and step with a stated
+tolerance, and a convergence check); the browser implementation as a
+dependency-free module that integrates the same equations with the same
+scheme; the cross-language reference check as a built-site test (the
+browser trajectory at the reference parameters compared with the Python
+reference embedded by an executed cell, within the stated tolerance); the
+controls, units, limits, and the paused start; the reduced-motion rule;
+keyboard operation and visible focus; the static fallback kept; no
+request, cookie, or storage; the payload; the label that distinguishes
+the validated model from an illustration (the step, the regime, the
+sensitivity to initial conditions); an independent scientific review.
+
+**Out of scope.** A physics engine or any library; canvas without a
+static equivalent; other animations; an experiment gallery; a standalone
+interactive lab (separately scoped); a change to the M9 lesson beyond
+reusing its code.
+
+**Dependencies.** F124, F68 (the implementation), F07 and F43 (the widget
+convention and the observed-value test), the owner's decision (question
+14).
+
+**Visual deliverables and skills.** An animation of a scientific result:
+the PBC Scientific Visualization skill; the interaction: Anthropic
+Frontend Design as approved; no diagram.
+
+**Acceptance criteria.**
+
+1. The validation record exists and the Python reference trajectory and
+   tolerance are stated.
+2. The browser trajectory equals the Python reference within the
+   tolerance at the reference parameters, shown by the built-site test;
+   a changed browser implementation that drifts fails it.
+3. Play, pause, and reset work by keyboard with visible focus; the
+   parameters have units and limits; the widget starts paused and stays
+   static under reduced motion; the static figure is the fallback without
+   scripts.
+4. The widget makes no request, sets no cookie, uses no storage, and
+   stays within the payload budget, shown by the F07 checks.
+5. The label states what is validated and what is not; the independent
+   scientific review confirms it.
+6. The rendered review has its three parts on the Issue; the full
+   verification run passes.
+
+**Risk.** Medium. Physics computed in the browser; the cross-language
+test and the independent review are the guard.
+
+**Detailed implementation plan expected.** Yes, short.
+
+### F129 — The scientific-figure and conceptual-diagram skill pilots, and the owner's decision on authoring integration
+
+**Source.** Change request section 7 ("Bounded pilots and approval": the
+conceptual-diagram pilot and the scientific-figure pilot) and section 8
+(slice H); requirements decision 38 (the pilots) and unresolved question
+15 (no Manim pilot); ADR 019 decision 6.
+
+**Problem.** The project-owned skill and the approved Diagram Design
+guidance of F122 are untested on real material. Whether they improve a
+figure or a diagram, at what cost, and whether they should reach the
+lesson templates is unknown, and must not be decided by applying them
+everywhere.
+
+**Goal.** Two bounded pilots on existing material, each with before and
+after artifacts, qualitative rubric findings, build and runtime cost,
+known limitations, and the owner's decision, with the verified values and
+commands preserved; and the owner's decision on whether and how the
+skills reach future lesson templates, coordinated with F116.
+
+**User-visible outcome.** At most one lesson's conceptual diagram and one
+lesson's figure read more clearly, with the same values, commands, and
+claims; nothing else changes.
+
+**In scope.** The conceptual-diagram pilot: one existing mechanics
+concept (chosen in the Issue, from a lesson of F32 or F33), redrawn with
+the Diagram Design guidance (or, if F122 dropped it, with the
+project-owned skill's conceptual guidance and the design specification,
+stated) and compared with the existing simpler verified SVG, for learner
+value without a new heavyweight dependency; its science checked
+independently. The scientific-figure pilot: one existing mechanics or
+numerical-integration plot (chosen in the Issue; a lesson outside
+mechanics 01 to 05, or sequenced with F115), recomposed under the
+project-owned skill in its figure-writing function with the values at
+displayed precision, the commands, and the claims unchanged (the
+experiment check and the reproduction check), evaluated for clarity,
+uncertainty display, and reproducibility. The record of both pilots
+(before and after artifacts as evidence, the rubric findings, the cost,
+the limitations) on the Issue or in a document registered in
+`docs/project-map.md`; the owner's decision on expansion recorded; what
+the decision changes in the skill, the specification, or the authoring
+guide applied in the same feature, nothing applied to any other lesson.
+
+**Out of scope.** A Manim pilot (not scheduled); any other lesson;
+mandating a skill on lessons; the lesson template and the authoring
+guide's editorial sections (F116); changing a value, a command, or a
+claim; an authored committed SVG as the lesson's diagram (the redrawn
+diagram stays an executed cell with its `conceptual` label, ADR 018
+decision 2; if the pilot finds a need the code-drawn form cannot meet,
+the record says so and a later ADR decides).
+
+**Dependencies.** F122 (the skills), F32 and F33 (the diagrams), F05 (the
+numerical-integration figures); coordinated with F114 to F116.
+
+**Visual deliverables and skills.** A conceptual diagram: Diagram Design
+as approved; a scientific figure: the PBC Scientific Visualization skill;
+no page or layout work, so Impeccable and Anthropic Frontend Design do not
+apply, stated in the plan.
+
+**Acceptance criteria.**
+
+1. Both pilots have before and after artifacts, the rubric findings, the
+   build and runtime cost, and the known limitations recorded.
+2. The piloted lesson's values at displayed precision, commands, claims,
+   and references are unchanged, shown by the experiment and reproduction
+   checks and the diff.
+3. The diagram's science and semantics are checked independently of the
+   skill and recorded.
+4. The owner's decision on expansion is recorded; nothing is applied
+   beyond the two pilots; whatever the decision changes in the skill, the
+   specification, or the authoring guide is applied here, coordinated
+   with F116.
+5. The selected skills and their observable effect are recorded in the
+   completion evidence; the independent review names the artifacts it
+   evaluated.
+6. The verification tier the change needs passes (a figure function
+   change selects its lesson; a shared change is a full run).
+
+**Risk.** Medium. One figure and one diagram of published lessons change
+presentation; the experiment check and the independent scientific review
+guard them.
+
+**Detailed implementation plan expected.** Yes, short: the two choices,
+the rubric, the record.
+
 ## Candidate mapping
 
 Every candidate of the change request and its outcome. "Kept" means a
@@ -6825,7 +8123,37 @@ are done is met for them by the delivered pull requests.
 
 Every lesson feature of waves C1 to C4 that takes the count past 32
 waits for the interim gate F118 records and the owner approves, for
-F121, or for F113 resumed (the amended full-run gate under "Phase 4").
+F121, or for F113 resumed (the amended full-run gate under "Phase 4");
+since 2026-10-15 that gate is recorded (60 minutes for the one `build`
+job, up to 45 lessons).
+
+Phase 6, the change cycle `scientific-atelier-atlas` (2026-10-17), by
+dependency. The skills come first; the preview (the foundations with one
+lesson, the home page, the static atlas, the interaction) is inspected by
+the owner before the rollout; the pilots run beside the preview once the
+skills exist; the pendulum waits for the owner's decision. Every feature
+of the phase that changes a shared input is a full run on each pull
+request and adds no lesson.
+
+| Wave | Order within the wave | Outcome |
+|---|---|---|
+| Atelier 0 | F122, with the owner's approval of each candidate's outcome; nothing else of the phase before it | The audited, pinned skills, the project-owned visualization skill, the skills configuration check, and the contract |
+| Atelier 1, the preview | F123 and F125 in parallel worktrees after F122; F124 after F123 and F125 (its capstone highlights read the manifest); F126 after F123 and F125; the owner's review of the preview (home, atlas, one lesson) at desktop, tablet, and phone widths recorded on the Issues of F124 and F126, with the display label and the navigation wording decided | The atelier's foundations on every page, the home page with its verified opening figure, the atlas with its manifest and its interaction, one lesson in the reading column: the end-to-end preview, inspected before any broad rollout |
+| Atelier 2 | F127 after the preview gate, by its migration plan, sequenced with F115 and the lesson features in flight; F129 after F122, beside the preview, with its figure pilot outside mechanics 01 to 05 or sequenced with F115 | The rollout to every course, lesson, and supporting page with the owner's final visual acceptance; the two skill pilots and the owner's decision on authoring integration |
+| Atelier 3, optional | F128 when the owner decides unresolved question 14 | The validated interactive pendulum on the home page |
+
+Beside the atelier, the order the change request suggests (section 11)
+for the rest of the roadmap: the fix of Issue #206 and F117's post-merge
+evidence (criteria 7 and 8, the follow-ups #203 and #204), because no run
+on `main` passes until #206 merges and every feature needs a passing
+`main`; F114's tracking reconciled and the editorial pilot F115 and the
+integration F116; the runner-equivalence evidence and the owner's decision
+on F120 and F121, with F113 paused unless resumed; the eligible lesson
+features within the interim capacity, reassessed before 45 lessons; and
+F112 for completion reporting only when the slots and the checks support
+it. This is a scheduling recommendation, not a gate: nothing of the
+atelier requires the verification work to finish first, and no lesson
+waits for the atelier.
 
 Features F13 (#89) and F14 (#94) are delivered with their approved scope;
 F64 keeps their progress marks and recommendations on the redesigned path.
@@ -6894,6 +8222,21 @@ Added by the change cycle `pbc-planning-change-four-workstreams`:
 | The full run and the interim gate | The measured `build` job of a full run at the lesson count of the day, recorded with the run identifiers and the cache state, and the lesson count the approved timeout covers; a projection is labelled as one | F118 |
 | Inherited results on `main` (only if ADR 017 is accepted) | A full and a selective verification of the same commit produce the same publishable site except the documented provenance fields; a missing, expired, invalid, stale, or incompatible base, a changed shared input, a changed check, and a changed environment identity each fail closed to execution, a test per case; every inherited result carries its origin and no pull request artifact or unverified run is accepted as a base; `deploy` publishes the verified artifact and builds nothing; the exceptional full run is invocable and finishes under its approved timeout | F120 (evidence), F121 (delivery) |
 
+Added by the change cycle `scientific-atelier-atlas`:
+
+| Artifact | Check | Feature |
+|---|---|---|
+| The agent skills | The skills configuration check, the one check that reads `.agents/skills/` (as data to validate; an ungrouped entry of `scripts/verify.conf` in the group `default`, run by the `workflow` job in CI and by the targeted run locally): every directory under it has a `SKILL.md` and a provenance record with the required fields and a matching digest, and every skill a committed feature plan names exists; the boundary test: no workflow, script, check, build step, or CI job invokes, installs, or fetches a skill, and the build and every check except the skills configuration check pass with the directory absent from a scratch copy; a test per case. Discovery per role, profile, and provider is a recorded demonstration, not a check | F122 |
+| The map manifest | Schema (course, path, slot, and concept references only: no illustration reference, no lesson reference); every course, path, slot, and concept reference resolves (the requirements' lesson-reference rule holds vacuously); every concept names at least one slot; every capstone slot of the curriculum file represented by exactly one concept; no field the curriculum file or the front matter holds; no prerequisite written; an unknown field rejected; a failing test per rule | F125 |
+| The atlas | All eight courses, the four paths, and the Lean and method views present, the views listing every published lesson by its method tags; the published counts equal the lessons; the prerequisite edges equal the front matter and none belongs to a planned lesson; every conceptual edge has its type and rationale; a capstone link only for a published capstone; no planned slot linked or counted, and planned content distinguishable without colour alone; a capstone's planned description is the manifest's explanation of its concept and nothing else; every published lesson reachable without scripts through the map (the lessons without a slot through the Lean and method views) and through the index; every previous address, anchor, and graph node address resolving; the textual equivalent naming every concept and edge; the accessibility scan, the keyboard pass, the reflow at 320 CSS px; the payload of the page and of the enhancement; the modules making no request, cookie, or storage while every control is operated, and `progress.js` the only storing script; the map's labels at or above the minimum size at desktop and tablet widths; the search index unchanged in meaning; byte-stable rebuilds | F125, F126 |
+| Visual assets and their sources | Every SVG under `site/assets/` has a provenance entry (author and licence, or the generating module); the committed-artifact check exempts a tracked `.svg` under `site/assets/` only when the register names it with an author and a licence, and rejects an unregistered SVG, every raster, every other image type, and every image file outside `site/assets/` as before (ADR 018 decision 2 amending ADR 002; a failing test per case); no raster committed; no other-origin resource; every figure cell carries its status; an illustration in an opening has its class and source recorded; a conceptual illustration in a lesson is an executed cell, never a committed file; no image presents artwork or a mockup as a result (review) | F123, F127 |
+| The home page | Counts and names from the metadata and the curriculum file; every planned item labelled and never linked; the opening figure drawn by an executed cell of a verified module with its status, alt text, and provenance, byte-stable, computed by no script; the heading "From a question to a working model" absent; every sentence true (review) | F124 |
+| Fonts and payload | Every font served from the site's origin with its licence text; the initial payload of every page within 3 MB with the sizes recorded; every new colour pair passing the contrast test | F123 |
+| The lesson template | On every lesson it reaches, the executed cells, numbers, figures, claims, section identifiers, references, and footer commands unchanged: the diff of the executed outputs, the reproduction check, and the experiment check in a full run | F123, F127 |
+| Rendered review | Three parts on every feature that changes a user-facing visual surface: the implementer's screenshots at desktop, tablet, and phone widths as evidence artifacts (never committed site assets); the independent reviewer's assessment with the built HTML and the sources; the owner's manual pass, which is the final visual acceptance. Never a pixel comparison or a full render on an ordinary lesson change | F123 to F128 |
+| The interactive pendulum, if decided | The browser trajectory equal to the Python reference within the stated tolerance at the reference parameters (a built-site test); starts paused; reduced motion; the controls by keyboard; the static fallback; no request, cookie, or storage; the payload | F128 |
+| The skill pilots | The piloted lesson's values at displayed precision, commands, claims, and references unchanged (the experiment and reproduction checks); the diagram's science reviewed independently; the record with before and after artifacts, cost, limitations, and the owner's decision | F129 |
+
 Manual gates that stay manual: independent physics and pedagogy reviews per
 lesson (through the existing review workflow); the human's approval of
 identity copy, of the sandbox profile, of any CI or ruleset change, of
@@ -6902,7 +8245,15 @@ Issues, and of the curriculum file; a screen-reader pass per release;
 since `pbc-planning-change-four-workstreams`, also the human's approval of
 the editorial pilot before the voice reaches another lesson, the owner's
 decision on the interim full-run gate (unresolved question 10), and the
-owner's acceptance or rejection of ADR 017 (question 9).
+owner's acceptance or rejection of ADR 017 (question 9); since
+`scientific-atelier-atlas`, also the owner's approval of each skill
+candidate's outcome and of the workflow contract (question 13, F122), the
+owner's review of the map manifest as a curriculum artifact (F125), the
+owner's review of the preview before the rollout and the final visual
+acceptance (decision 36, F126, F127), the owner's decision on the
+interactive pendulum (question 14, F128), the owner's naming of an
+explanation for a Manim pilot (question 15), and the owner's decision
+after the skill pilots (F129).
 
 ## Not on the roadmap
 
@@ -6923,8 +8274,13 @@ machine-learning curriculum; the nuclear and particle, plasma, and
 geophysics and climate expansions; a capstone presented as a calibrated
 digital twin, a fabricated or validated device, or an operational
 forecast, and any capstone beyond T11, EM9, and FL10; a heavyweight
-solver as a mandatory build or CI dependency; and decorative, stock,
-hand-copied, or externally hosted images. Since the change cycle
+solver as a mandatory build or CI dependency; and stock, hand-copied, or
+externally hosted images (the exclusion of decorative images and
+animation that stood here until 2026-10-17 is superseded by the asset
+classes of requirements decision 37 and ADR 018 since the change cycle
+`scientific-atelier-atlas`: interface artwork, conceptual illustrations,
+and accessible animation are allowed where that record says, nothing for
+decoration's own sake). Since the change cycle
 `pbc-planning-change-four-workstreams`, also: a uniform editorial register
 forced on every lesson, a rewrite of the whole curriculum in one feature,
 a mandatory editorial agent, optimisation against AI-content detectors;
@@ -6934,5 +8290,21 @@ verification audit, a new sharding mechanism, or substantial verification
 infrastructure without separate evidence and the owner's approval; and the
 removal of the internal CI site build, the deployment of the verified
 artifact, provenance, accessibility, scientific checks, or the ability to
-run complete verification. Adding any of them is a
+run complete verification. Since the change cycle
+`scientific-atelier-atlas`, also: a frontend framework, a Node or
+JavaScript bundler, a second site generator, KaTeX or another equation
+renderer in place of native MathML, a backend, authentication, a hosting
+migration, a runtime service, or a paid model or API requirement for the
+atelier, the atlas, or the skills; a CAD or parametric-modelling tool
+(FreeCAD, OpenSCAD) as a skill or dependency; routine animation rendering
+in CI; a generated raster image as the map's navigation surface; browser
+storage for the map's controls; an experiment gallery before enough real
+browser experiments exist, empty or linking to experiments that do not
+exist; JavaScript physics or illustrative motion on the home page that
+the build did not verify; a globally installed or run-time-fetched agent
+skill, a third-party installer in CI, or a skill as a dependency of the
+build, the deployment, or any CI job; an additional mandatory review agent or a change to the owner
+approval hierarchy; a Manim pilot without the owner's named explanation;
+a narrative structure imposed on every lesson by the redesign; and a
+curriculum change by way of the map manifest. Adding any of them is a
 requirements change that returns to Project Grill.

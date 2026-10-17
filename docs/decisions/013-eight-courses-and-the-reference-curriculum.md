@@ -8,6 +8,14 @@ accepted when that planning is approved. Supersedes decision 4 of
 only through F15) and amends its decisions 1, 3, and 5; the other decisions
 of ADR 008 stand. Decision 8 replaces the rule of F02 that a prerequisite
 comes earlier in the linear order with a rule over the prerequisite graph.
+Extended by
+[ADR 018](018-scientific-atelier-asset-classes-and-the-course-atlas.md)
+(2026-10-17): the course atlas adds one map manifest beside the
+curriculum file, holding only concept identifiers, display placement,
+concept-to-slot associations, and curated conceptual connections with
+their rationale; the curriculum file stays the one declared source of the
+planned structure and gains no field, and the decisions below are
+unchanged.
 
 Date: 2026-10-12
 
