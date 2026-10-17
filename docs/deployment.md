@@ -46,10 +46,20 @@ pull request -> CI jobs, check verify -> merge to main -> CI jobs on main
    of `ci.yml` that the runs API records as a `push` run on `main` of this
    repository that completed with success, whose job `verify` concluded with
    success, and that holds exactly one unexpired artifact of that name whose
-   recorded digest is the digest of the download. The name of an artifact,
-   its recency, and its contents decide nothing; an artifact of a pull
-   request run, a fork, or a failed run is not accepted, and a pull request
-   cannot upload one (the job `base` does not run for it). The archive is
+   recorded digest is the digest of the download. The record names the
+   branch only by its short name, which a tag push fills with the tag's
+   name, so the full ref is established from the repository and from the
+   run itself: the commit of the run must be on the history of
+   `refs/heads/main` (the compare API), no tag `refs/tags/main` may exist,
+   and the base must hold `provenance.json`, which `collect-base.sh` writes
+   from the run's own `GITHUB_REF`, naming `refs/heads/main`, that commit,
+   and that run. The record is trusted because the commit is on `main`, so
+   the `ci.yml` that wrote it is the reviewed one; a tag push of a commit on
+   `main`, even one whose tag is deleted later, is rejected, and so is a base
+   without the record. The name of an artifact, its recency, and its
+   contents never make a base acceptable; an artifact of
+   a pull request run, a fork, or a failed run is not accepted, and a pull
+   request cannot upload one (the job `base` does not run for it). The archive is
    unpacked only when it holds plain relative paths, no link, and the three
    parts of a base; nothing in it is executed or read as configuration. The
    `e2e` jobs take the very base the `build` job took, by its run number, and
