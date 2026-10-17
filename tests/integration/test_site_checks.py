@@ -599,6 +599,11 @@ def test_excerpt_that_differs_from_its_source_is_reported(
 
 
 _REGION_MODULE = """\
+# region: start
+dt = 0.1
+# endregion: start
+
+
 def update(x, v, dt):
     # region: move
     x = x + v * dt
@@ -647,19 +652,30 @@ def test_annotated_excerpt_of_a_region_and_of_lines_passes(
     body = _annotated(
         "pbc.example:update", _MOVE, ["x = x + v * dt"], region="move"
     ) + _annotated("pbc.example:update", "    return x, v", [], lines="6-6")
+    # A part of the module itself: the values an experiment starts from.
+    body += _annotated("pbc.example:", "dt = 0.1", [], region="start")
 
     assert _violations(make_site, browser, repository, body) == []
 
 
 @pytest.mark.parametrize(
-    "attributes",
-    [{"region": "missing"}, {"lines": "5-9"}],
-    ids=["missing-region", "lines-past-the-end"],
+    "source, attributes",
+    [
+        ("pbc.example:update", {"region": "missing"}),
+        ("pbc.example:update", {"lines": "5-9"}),
+        ("pbc.example:", {"region": "missing"}),
+        ("pbc.example:", {}),
+    ],
+    ids=["missing-region", "lines-past-the-end", "module-region", "whole-module"],
 )
 def test_excerpt_of_a_part_that_does_not_exist_is_reported(
-    make_site: Site, browser: Browser, repository: Path, attributes: dict[str, str]
+    make_site: Site,
+    browser: Browser,
+    repository: Path,
+    source: str,
+    attributes: dict[str, str],
 ):
-    body = _annotated("pbc.example:update", _MOVE, [], **attributes)
+    body = _annotated(source, _MOVE, [], **attributes)
 
     violations = _violations(make_site, browser, repository, body)
 

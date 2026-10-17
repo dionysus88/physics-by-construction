@@ -228,6 +228,42 @@ main blockquote {
   overflow-wrap: anywhere;
 }
 
+/* The layout of code listings, which Pandoc writes into a page only when the
+   page has a highlighted code cell of its own. A lesson whose code is all
+   shown by reference (the excerpts of its experiment, F117) has none, so the
+   rules are here for every page: the listing box that the scroll-regions
+   filter makes focusable is the one that scrolls, and its lines keep their
+   shape. The colours come from Quarto's highlighting stylesheet. */
+pre > code.sourceCode {
+  white-space: pre;
+  position: relative;
+}
+pre > code.sourceCode > span {
+  display: inline-block;
+  line-height: 1.25;
+}
+pre > code.sourceCode > span:empty {
+  height: 1.2em;
+}
+.sourceCode {
+  overflow: visible;
+}
+code.sourceCode > span {
+  color: inherit;
+  text-decoration: inherit;
+}
+div.sourceCode {
+  margin: 1em 0;
+}
+pre.sourceCode {
+  margin: 0;
+}
+@media screen {
+  div.sourceCode {
+    overflow: auto;
+  }
+}
+
 /* The build evidence of a Lean lesson: what compiled the proofs, and where to
    read them. */
 .lean-evidence {
@@ -238,7 +274,7 @@ main blockquote {
   font-size: 0.9375em;
 }
 
-/* The "Reproduce this" section and the Lean evidence show a short summary
+/* The last section (the experiment or the proof check) and the Lean evidence show a short summary
    and keep the full listing in a closed details element. */
 .reproduce-details,
 .lean-evidence-details {

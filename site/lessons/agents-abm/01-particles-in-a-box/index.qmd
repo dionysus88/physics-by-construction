@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-speeds
+  experiment: pbc.thermodynamics.experiments.particles_in_a_box
   prerequisites:
     lessons: [momentum-and-collisions]
     outside:
@@ -28,8 +29,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.abm import gas
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.thermodynamics.experiments import particles_in_a_box as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -240,9 +244,6 @@ approach each other.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.abm import gas
-
 excerpt(gas.step)
 ```
 
@@ -264,154 +265,73 @@ excerpt(gas.virial_correction)
 
 ## Worked examples
 
-```{python}
-#| echo: false
-import numpy as np
-
-from pbc.authoring import table
-```
-
 ### Many collisions turn one speed into a distribution
 
-The gas has `{python} gas.N_DISCS` discs of radius
-`{python} f"{gas.RADIUS * 1000:.0f}"` mm in a box of side
-`{python} f"{gas.SIDE:.0f}"` m. They start at
-`{python} f"{gas.SPEED:.0f}"` m/s in random directions, and the time step is
-`{python} f"{gas.DT * 1000:.0f}"` ms, so a disc at the starting speed
-moves `{python} f"{gas.SPEED * gas.DT / (2 * gas.RADIUS):.2f}"` of its diameter in
+The gas has `{python} result["n-discs"]` discs of radius
+`{python} result["radius-mm"]` mm in a box of side
+`{python} result["side"]` m. They start at
+`{python} result["speed"]` m/s in random directions, and the time step is
+`{python} result["dt-ms"]` ms, so a disc at the starting speed
+moves `{python} result["diameters-per-step"]` of its diameter in
 one step and the packing fraction is
-`{python} f"{gas.initial_gas(gas.N_DISCS, gas.RADIUS, gas.SIDE, gas.SPEED, np.random.default_rng(0)).packing_fraction:.3f}"`. A first run records the ratio
+`{python} result["packing-fraction"]`. A first run records the ratio
 $\langle v^4\rangle / \langle v^2\rangle^2$ over time, averaged over six
 seeds.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.relaxation_history)
+```
+
+```{python}
 #| label: relaxation-history
-from pbc.abm.gas import (
-    DT,
-    EVERY,
-    N_DISCS,
-    RADIUS,
-    RELAX,
-    SIDE,
-    SPEED,
-    initial_gas,
-    mean_and_error,
-    measure,
-    run,
-    speed_ratio,
-    virial_correction,
-)
+#| echo: false
+result.table("relaxation-history")
+```
 
-SEEDS = range(6)
-THRESHOLD = 1.9  # the ratio that counts as settled; the Maxwell value is 2
-
-histories = []
-for seed in SEEDS:
-    start = initial_gas(N_DISCS, RADIUS, SIDE, SPEED, np.random.default_rng(seed))
-    recorded = run(start, 1.5, DT, EVERY)
-    histories.append([speed_ratio(row) for row in recorded.speeds])
-times = recorded.times
-ratio_history = np.mean(histories, axis=0)
-
-assert (ratio_history > THRESHOLD).any(), "the ratio never reached the threshold"
-settled = times[np.argmax(ratio_history > THRESHOLD)]
-assert settled < RELAX, "the gas settled after the relaxation time"
-
-table(
-    [
-        ("start", times[0], ratio_history[0]),
-        ("first above the threshold", settled, ratio_history[np.argmax(ratio_history > THRESHOLD)]),
-        ("end of the run", times[-1], ratio_history[-1]),
-    ],
-    [("moment", "", ""), ("time", "s", ".2f"), ("ratio of the moments", "", ".2f")],
-    "The ratio of the fourth moment of the speed to the square of the second, averaged over six runs, at three moments of the relaxation.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.draw_relaxation)
 ```
 
 ```{python}
 #| label: fig-relaxation
+#| echo: false
 #| fig-cap: "The ratio of the moments starts near one, because all discs have the same speed, and reaches the Maxwell value before the measurement begins. Nothing in the rules asks for it."
 #| fig-alt: "Line plot of the ratio against time in seconds. The solid line starts near one and rises quickly, then fluctuates around a dashed horizontal line at two for the rest of the time."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(times, ratio_history, color="#00429d", marker="o", markersize=3, label="gas")
-ax.axhline(2.0, color="#93003a", linestyle="--", label="Maxwell distribution")
-ax.set_xlabel("time (s)")
-ax.set_ylabel(r"$\langle v^4\rangle / \langle v^2\rangle^2$")
-ax.legend()
-plt.show()
+result.show("fig-relaxation")
 ```
 
 [Starting from one speed, the gas approaches the Maxwell value of the moment
-ratio, passing a ratio of `{python} f"{THRESHOLD}"`, before the measurement begins.]{.claim type="numerically-verified"
+ratio, passing a ratio of `{python} result["threshold"]`, before the measurement begins.]{.claim type="numerically-verified"
 scope="this gas, six seeds, the stated time step" evidence="relaxation-history"}
-The ratio starts at `{python} f"{ratio_history[0]:.2f}"`, close to the one of
-equal speeds, and first exceeds `{python} f"{THRESHOLD}"` after
-`{python} f"{settled:.2f}"` s, before the measurement begins at
-`{python} f"{RELAX:.1f}"` s. The data are six simulated runs and the check is the
+The ratio starts at `{python} result["first-ratio"]`, close to the one of
+equal speeds, and first exceeds `{python} result["threshold"]` after
+`{python} result["settled"]` s, before the measurement begins at
+`{python} result["relax"]` s. The data are six simulated runs and the check is the
 Maxwell value, two.
 
 ### The relaxed gas against kinetic theory
 
 Now the measurement. Each of the six seeds runs a gas, relaxes it for
-`{python} f"{gas.RELAX:.1f}"` s, and measures it for the next
-`{python} f"{gas.DURATION:.1f}"` s.
+`{python} result["relax"]` s, and measures it for the next
+`{python} result["duration"]` s.
+
+```{python}
+#| echo: false
+excerpt(experiment.kinetic_theory_check)
+```
 
 ```{python}
 #| label: kinetic-theory-check
-measurements = [measure(seed) for seed in SEEDS]
-
-table(
-    [
-        (seed, m.kt, m.pressure / m.ideal_pressure, speed_ratio(m.speeds))
-        for seed, m in zip(SEEDS, measurements)
-    ],
-    [
-        ("seed", "", "d"),
-        ("k_B T", "J", ".4f"),
-        ("P / P_ideal", "", ".3f"),
-        ("ratio of the moments", "", ".2f"),
-    ],
-    "The temperature, the pressure in units of the ideal gas pressure of points, and the moment ratio, for each of the six runs.",
-)
-
-ratio_mean, ratio_error = mean_and_error(
-    np.array([speed_ratio(m.speeds) for m in measurements])
-)
-pressure_mean, pressure_error = mean_and_error(
-    np.array([m.pressure / m.ideal_pressure for m in measurements])
-)
-predicted = virial_correction(measurements[0].packing_fraction)
-
-table(
-    [
-        ("moment ratio", ratio_mean, ratio_error, 2.0, abs(ratio_mean - 2.0) / ratio_error),
-        (
-            "P / P_ideal",
-            pressure_mean,
-            pressure_error,
-            predicted,
-            abs(pressure_mean - predicted) / pressure_error,
-        ),
-        (
-            "P / P_ideal against the ideal gas law alone",
-            pressure_mean,
-            pressure_error,
-            1.0,
-            (pressure_mean - 1.0) / pressure_error,
-        ),
-    ],
-    [
-        ("quantity", "", ""),
-        ("mean over six runs", "", ".3f"),
-        ("standard error", "", ".3f"),
-        ("theory", "", ".3f"),
-        ("difference", "standard errors", ".1f"),
-    ],
-    "Each quantity averaged over six runs, with its standard error, the theory, and the difference between them in standard errors.",
-)
+#| echo: false
+result.table("kinetic-theory-check")
 ```
 
 The kinetic energy is the same in every run, because the collisions and bounces
@@ -422,35 +342,28 @@ the tolerance of four standard errors, and the pressure agrees with the virial
 prediction that includes the area of the discs.]{.claim
 type="numerically-verified" scope="a dilute gas of hard discs in two
 dimensions, six seeds, four standard errors" evidence="kinetic-theory-check"}
-The ratio is `{python} f"{ratio_mean:.2f}"` with a standard error of
-`{python} f"{ratio_error:.2f}"` over the six runs, within
-`{python} f"{abs(ratio_mean - 2.0) / ratio_error:.1f}"` standard errors of two.
-The pressure is `{python} f"{pressure_mean:.3f}"` times that of ideal points, and
-the prediction with the area of the discs is `{python} f"{predicted:.3f}"`, a
-difference of `{python} f"{abs(pressure_mean - predicted) / pressure_error:.1f}"`
+The ratio is `{python} result["ratio-mean"]` with a standard error of
+`{python} result["ratio-error"]` over the six runs, within
+`{python} result["ratio-distance"]` standard errors of two.
+The pressure is `{python} result["pressure-mean"]` times that of ideal points, and
+the prediction with the area of the discs is `{python} result["predicted"]`, a
+difference of `{python} result["pressure-distance"]`
 standard errors. The ideal gas law alone is off by
-`{python} f"{(pressure_mean - 1.0) / pressure_error:.0f}"` standard errors, so the
+`{python} result["ideal-distance"]` standard errors, so the
 area of the discs matters and the check can tell the two apart.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_speeds)
+```
+
+```{python}
 #| label: fig-speeds
+#| echo: false
 #| fig-cap: "The pooled speeds of the six relaxed runs follow the Maxwell curve at the measured temperature; the agreement is judged by eye here, and by the moment ratio in the table."
 #| fig-alt: "Histogram of disc speeds in metres per second. The bars rise from zero at zero speed to a single peak and fall off in a long tail, and a dashed curve of the Maxwell distribution follows the tops of the bars closely."
 #| fig-status: simulated
-from pbc.abm.gas import rayleigh_pdf, temperature
-
-pooled = np.concatenate([m.speeds.ravel() for m in measurements])
-kt = temperature(pooled, 1.0)
-v = np.linspace(0.0, pooled.max(), 200)
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.hist(pooled, bins=40, density=True, color="#9ecae1", label="gas")
-ax.plot(v, rayleigh_pdf(v, kt, 1.0), color="#93003a", linestyle="--",
-        label="Maxwell distribution")
-ax.set_xlabel("speed (m/s)")
-ax.set_ylabel("probability density (s/m)")
-ax.legend()
-plt.show()
+result.show("fig-speeds")
 ```
 
 The histogram pools the speeds of all discs of the six runs, which is allowed
@@ -509,26 +422,13 @@ The packing fraction is $N \pi r^2 / L_\text{free}^2$, with $L_\text{free}$
 the side the centres can reach, so $N = \varphi L_\text{free}^2 / (\pi r^2)$.
 
 ```{python}
-free = SIDE - 2.0 * RADIUS
-n_dense = round(0.05 * free**2 / (np.pi * RADIUS**2))
-dense = measure(0, n=n_dense)
-table(
-    [
-        (
-            n_dense,
-            dense.packing_fraction,
-            virial_correction(dense.packing_fraction),
-            dense.pressure / dense.ideal_pressure,
-        )
-    ],
-    [
-        ("discs", "", "d"),
-        ("packing fraction", "", ".3f"),
-        ("predicted P / P_ideal", "", ".3f"),
-        ("measured P / P_ideal", "", ".3f"),
-    ],
-    "The denser gas of one seed: the number of discs, the packing fraction, and the predicted and measured pressure.",
-)
+#| echo: false
+excerpt(experiment.denser_gas)
+```
+
+```{python}
+#| echo: false
+result.table("denser-gas")
 ```
 
 One seed is one run, so its pressure differs from the prediction by about
@@ -547,25 +447,23 @@ random, so the same seed gives the same run, bit for bit, and another seed
 gives another.
 
 ```{python}
-def final_speeds(seed):
-    gas0 = initial_gas(N_DISCS, RADIUS, SIDE, SPEED, np.random.default_rng(seed))
-    return run(gas0, 0.5, DT, 250).speeds[-1]
+#| echo: false
+excerpt(experiment.final_speeds)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.same_seed)
+```
 
-first, again, other = final_speeds(0), final_speeds(0), final_speeds(1)
-table(
-    [
-        ("seed 0 twice", "yes" if np.array_equal(first, again) else "no"),
-        ("seed 0 against seed 1", "yes" if np.array_equal(first, other) else "no"),
-    ],
-    [("comparison", "", ""), ("identical final speeds", "", "")],
-    "Whether the final speeds of two runs are identical.",
-)
+```{python}
+#| echo: false
+result.table("same-seed")
 ```
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -573,10 +471,13 @@ reproduce_this(
     code=[
         "src/pbc/abm/gas.py",
         "src/pbc/mechanics/particles.py",
+        "src/pbc/thermodynamics/experiments/particles_in_a_box.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_gas.py",
         "tests/unit/test_particles.py",
+        "tests/unit/test_particles_in_a_box_experiment.py",
     ],
 )
 ```

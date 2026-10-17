@@ -20,6 +20,7 @@ lesson:
   related: [agent-experiment]
   format: 2
   preview: fig-throw-with-and-without-drag
+  experiment: pbc.mechanics.experiments.projectile_with_drag
   prerequisites:
     lessons: [newtons-laws]
     outside:
@@ -29,10 +30,11 @@ lesson:
 
 ```{python}
 #| echo: false
-import numpy as np
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import drag, projectile
+from pbc.mechanics.experiments import projectile_with_drag as experiment
 
-from pbc.authoring import lesson_header
-
+result = experiment.run()
 lesson_header()
 ```
 
@@ -135,40 +137,17 @@ nothing like a parabola.
 The two laws differ in how fast the drag grows with the speed.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_drag_against_speed)
+```
+
+```{python}
 #| label: fig-drag-against-speed
+#| echo: false
 #| fig-cap: "Drag against speed for the linear and the quadratic law. The quadratic drag is smaller at low speed and larger above the crossing."
 #| fig-status: conceptual
 #| fig-alt: "Sketch of drag force against speed. A solid line, the linear law, rises in a straight line from the origin. A dashed curve, the quadratic law, starts flatter and below the line, crosses it, and then climbs above it ever more steeply."
-import matplotlib.pyplot as plt
-import numpy as np
-
-from pbc.authoring import FIGURE_COLOURS
-from pbc.authoring.design import PAGE
-from pbc.authoring.diagrams import arrow, canvas, text
-
-fig, ax = canvas(6.4, 3.6, (0, 10), (0, 6))
-ax.set_aspect("auto")
-origin, width, height = 0.6, 8.6, 4.6
-arrow(ax, (origin, origin), (9.8, origin), colour=PAGE["muted"])
-arrow(ax, (origin, origin), (origin, 5.7), colour=PAGE["muted"])
-text(ax, (9.8, origin - 0.18), r"speed $|v|$", colour=PAGE["muted"], ha="right")
-text(ax, (origin + 0.1, 5.7), "drag force", colour=PAGE["muted"], ha="left")
-share = np.linspace(0.0, 1.0, 100)
-ax.plot(origin + width * share, origin + height * share / 2, color=FIGURE_COLOURS[0], linewidth=1.6)
-ax.plot(
-    origin + width * share,
-    origin + height * share**2,
-    color=FIGURE_COLOURS[1],
-    linewidth=1.6,
-    linestyle="--",
-)
-# The line height * share / 2 and the curve height * share**2 are equal at
-# share = 1/2, where both are height / 4: the marker is on both.
-ax.plot([origin + width / 2], [origin + height / 4], marker="o", color=FIGURE_COLOURS[2])
-text(ax, (6.6, 1.2), r"linear: $b\,|v|$", colour=0, ha="left")
-text(ax, (3.2, 3.9), r"quadratic: $c\,|v|^{2}$", colour=1, ha="right")
-text(ax, (4.7, 3.4), "the curves cross", colour=2, ha="right")
-plt.show()
+result.show("fig-drag-against-speed")
 ```
 
 The sketch has no scale, and where the curves cross depends on $b$ and $c$.
@@ -261,9 +240,6 @@ The force model and the constant it needs:
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import drag, projectile
-
 excerpt(drag.quadratic_drag)
 ```
 
@@ -317,99 +293,53 @@ a sphere in this range of speeds, [about 0.5]{.not-verified}, are inputs of
 the model, not results of it.
 
 ```{python}
-from scipy.constants import g  # standard gravity, m/s^2
-
-from pbc.authoring import table
-from pbc.mechanics.drag import drag_constant, quadratic_drag
-from pbc.mechanics.dynamics import newton, weight
-from pbc.mechanics.projectile import (
-    drag_free_range,
-    fly,
-    landing,
-    launch,
-    projectile_range,
-)
-
-mass = 0.058  # kg
-diameter = 0.067  # m
-air_density = 1.2  # kg/m^3
-air_viscosity = 1.8e-5  # Pa s
-drag_coefficient = 0.5
-c = drag_constant(air_density, drag_coefficient, np.pi * (diameter / 2) ** 2)
-terminal_speed = np.sqrt(mass * g / c)
-
-speed = 25.0  # launch speed, m/s
-angle = 45.0  # launch angle, degrees
-dt = 0.001  # time step, s
-reynolds = air_density * speed * diameter / air_viscosity
-stable_step = mass / (c * speed)  # largest stable step at the launch speed, s
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-The drag constant is $c$ = `{python} f"{c:.2e}"` kg/m and the terminal speed
-`{python} f"{terminal_speed:.1f}"` m/s. The ball is thrown at about its
+The drag constant is $c$ = `{python} result["c"]` kg/m and the terminal speed
+`{python} result["terminal-speed"]` m/s. The ball is thrown at about its
 terminal speed: the drag over the weight at launch is
-`{python} f"{(speed / terminal_speed) ** 2:.2f}"`. The Reynolds number at
-launch is `{python} f"{reynolds:.1e}"`, in the Newtonian drag regime, where
+`{python} result["drag-over-weight"]`. The Reynolds number at
+launch is `{python} result["reynolds"]`, in the Newtonian drag regime, where
 a constant drag coefficient is a reasonable model, and the
 largest stable time step at the launch speed is
-`{python} f"{stable_step:.1f}"` s, far above the time step
-`{python} f"{dt}"` s used here.
+`{python} result["stable-step"]` s, far above the time step
+`{python} result["dt"]` s used here.
 
 The next cell simulates the throw with and without drag and tabulates what a
 thrower would want to know.
 
 ```{python}
-down = [0.0, -g]
-ball_in_air = newton(mass, weight(mass, down), quadratic_drag(c))
-ball_in_vacuum = newton(mass, weight(mass, down))
-with_drag = fly(launch(speed, angle), ball_in_air, dt)
-without_drag = fly(launch(speed, angle), ball_in_vacuum, dt)
-
-table(
-    [
-        (name, landing(flight).x, landing(flight).t, flight.x[:, 1].max())
-        for name, flight in (("with drag", with_drag), ("without drag", without_drag))
-    ],
-    columns=[
-        ("throw", "", ""),
-        ("range", "m", ".2f"),
-        ("time of flight", "s", ".2f"),
-        ("highest point", "m", ".2f"),
-    ],
-    caption="Range, time of flight, and highest point of the same throw "
-    "with and without quadratic drag.",
-)
+#| echo: false
+excerpt(experiment.throws)
 ```
 
-Drag takes away `{python} f"{100 * (1 - landing(with_drag).x / landing(without_drag).x):.0f}"`
+```{python}
+#| echo: false
+result.table("throws")
+```
+
+Drag takes away `{python} result["range-lost"]`
 per cent of the range. The exact drag-free range is
-`{python} f"{drag_free_range(speed, angle):.2f}"` m, and the drag-free
+`{python} result["exact-range"]` m, and the drag-free
 simulation is within
-`{python} f"{100 * (landing(without_drag).x - drag_free_range(speed, angle)):.0f}"` cm
+`{python} result["range-excess-cm"]` cm
 of it; the next example looks at that remaining difference.
 The paths show where the range goes:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_throw_with_and_without_drag)
+```
+
+```{python}
 #| label: fig-throw-with-and-without-drag
+#| echo: false
 #| fig-cap: "Drag removes the symmetry of the path: the ball with drag rises less, peaks early, and comes down steeply, because the drag has taken most of the horizontal velocity by then."
 #| fig-status: simulated
 #| fig-alt: "Plot of height against horizontal distance in metres. The drag-free path is a symmetric parabola. The path with drag rises less high, peaks well before the midpoint of its flight, and comes down steeply to land little more than half as far."
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(
-    without_drag.x[:, 0],
-    without_drag.x[:, 1],
-    color="#555555",
-    linestyle=":",
-    label="without drag",
-)
-ax.plot(with_drag.x[:, 0], with_drag.x[:, 1], color="#93003a", label="with drag")
-ax.set_ylim(bottom=0.0)
-ax.set_xlabel("horizontal distance (m)")
-ax.set_ylabel("height (m)")
-ax.legend()
-plt.show()
+result.show("fig-throw-with-and-without-drag")
 ```
 
 The path with drag is not a parabola. It comes down more steeply than it went
@@ -426,31 +356,18 @@ predicts the error to be about $v_x\,\Delta t$, the horizontal velocity times
 the time step.
 
 ```{python}
-exact = drag_free_range(speed, angle)
-v_x = launch(speed, angle).v[0]
-steps = [0.1 / 2**k for k in range(8)]
+#| echo: false
+excerpt(experiment.drag_free_convergence)
+```
 
-free_ranges = [projectile_range(speed, angle, mass, 0.0, step) for step in steps]
-
-table(
-    [
-        (step, computed, computed - exact, v_x * step)
-        for step, computed in zip(steps, free_ranges, strict=True)
-    ],
-    columns=[
-        ("time step", "s", ".6f"),
-        ("range", "m", ".4f"),
-        ("error", "m", ".4f"),
-        ("v_x times time step", "m", ".4f"),
-    ],
-    caption="Range of the drag-free throw for each time step, its error "
-    "against the exact range, and the error the first lesson predicts.",
-)
+```{python}
+#| echo: false
+result.table("drag-free-convergence")
 ```
 
 The error halves with the step and matches the prediction from the first
 lesson to within the small interpolation error: at the smallest step the two
-differ by `{python} f"{abs(free_ranges[-1] - exact - v_x * steps[-1]):.1e}"` m.
+differ by `{python} result["prediction-gap"]` m.
 The simulation reproduces the one case that can be solved by hand, including
 the way it misses it.
 
@@ -461,73 +378,38 @@ the difference to the previous one, the observed order, and the Richardson
 estimate of the limit from each pair of steps.
 
 ```{python}
-ranges = np.array([projectile_range(speed, angle, mass, c, step) for step in steps])
-differences = np.diff(ranges)
-orders = np.log2(differences[:-1] / differences[1:])
-limits = 2 * ranges[1:] - ranges[:-1]
+#| echo: false
+excerpt(experiment.richardson)
+```
 
-best_estimate = limits[-1]
-error_estimate = abs(differences[-1])
-
-table(
-    [
-        (
-            step,
-            ranges[i],
-            differences[i - 1] if i else None,
-            orders[i - 2] if i >= 2 else None,
-            limits[i - 1] if i else None,
-        )
-        for i, step in enumerate(steps)
-    ],
-    columns=[
-        ("time step", "s", ".6f"),
-        ("range", "m", ".4f"),
-        ("difference", "m", ".4f"),
-        ("observed order", "", ".3f"),
-        ("estimated limit", "m", ".4f"),
-    ],
-    caption="Range with drag for each time step, the difference to the "
-    "previous result, the observed order, and the Richardson estimate of "
-    "the limit.",
-)
+```{python}
+#| echo: false
+result.table("richardson")
 ```
 
 The differences halve and the observed order is
-`{python} f"{orders[-1]:.3f}"` at the finest step, so the method behaves as a
+`{python} result["last-order"]` at the finest step, so the method behaves as a
 first-order method should on this problem too, and the Richardson estimates
 settle on a limit long before the direct results do. The range with drag is
-`{python} f"{best_estimate:.3f}"` m, and the finest direct result is
-still `{python} f"{1000 * error_estimate:.0f}"` mm from the previous one. The
+`{python} result["best-estimate"]` m, and the finest direct result is
+still `{python} result["error-estimate-mm"]` mm from the previous one. The
 Richardson estimate assumes that the error is proportional to the time step;
 the observed orders are the check of that assumption, not a proof. On
 logarithmic axes the error of the direct results against the extrapolated
 limit is a straight line of slope one:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_convergence_of_the_range)
+```
+
+```{python}
 #| label: fig-convergence-of-the-range
+#| echo: false
 #| fig-cap: "The error of the range with drag falls in proportion to the time step, parallel to the reference line, so the extrapolated limit is a trustworthy reference."
 #| fig-status: simulated
 #| fig-alt: "Log-log plot of the error of the computed range in metres against the time step in seconds. The points lie on a straight line parallel to a dotted reference line of slope one: the error falls in proportion to the time step, over a wide span of both."
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.loglog(
-    steps,
-    np.abs(ranges - best_estimate),
-    color="#93003a",
-    marker="o",
-    label="computed range, against the extrapolated limit",
-)
-ax.loglog(
-    steps,
-    np.array(steps) * v_x,
-    color="#555555",
-    linestyle=":",
-    label="slope 1",
-)
-ax.set_xlabel("time step (s)")
-ax.set_ylabel("size of the error (m)")
-ax.legend()
-plt.show()
+result.show("fig-convergence-of-the-range")
 ```
 
 ### The range against the launch angle
@@ -539,51 +421,29 @@ puts the error well below a decimetre, and then finds the angle of the longest
 throw to a tenth of a degree with a one-dimensional minimiser from SciPy.
 
 ```{python}
-from scipy.optimize import minimize_scalar
+#| echo: false
+excerpt(experiment, region="scan")
+```
 
-scan_dt = 0.002  # s
-angles = np.arange(10.0, 80.5, 2.5)
-ranges_with_drag = np.array(
-    [projectile_range(speed, a, mass, c, scan_dt) for a in angles]
-)
-ranges_without = np.array(
-    [projectile_range(speed, a, mass, 0.0, scan_dt) for a in angles]
-)
+```{python}
+#| echo: false
+excerpt(experiment.best_angle)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.longest_throws)
+```
 
-def best_angle(drag, ball_mass=mass):
-    """The launch angle of the longest throw, to a tenth of a degree."""
-    result = minimize_scalar(
-        lambda a: -projectile_range(speed, a, ball_mass, drag, scan_dt),
-        bounds=(20.0, 60.0),
-        method="bounded",
-        options={"xatol": 0.05},
-    )
-    return result.x, -result.fun
-
-
-best_with, furthest_with = best_angle(c)
-best_without, furthest_without = best_angle(0.0)
-
-table(
-    [
-        ("with drag", furthest_with, best_with),
-        ("without drag", furthest_without, best_without),
-    ],
-    columns=[
-        ("throw", "", ""),
-        ("longest range", "m", ".2f"),
-        ("best angle", "degrees", ".1f"),
-    ],
-    caption="Longest range and the launch angle that gives it, found by a "
-    "one-dimensional minimiser.",
-)
+```{python}
+#| echo: false
+result.table("longest-throws")
 ```
 
 Without drag the longest throw is at $45^\circ$, as the formula says, and the
 simulation finds it to the resolution asked of the minimiser:
-`{python} f"{best_without:.1f}"` degrees. With drag the best angle is
-`{python} f"{best_with:.1f}"` degrees, lower. [With quadratic drag the
+`{python} result["best-without"]` degrees. With drag the best angle is
+`{python} result["best-with"]` degrees, lower. [With quadratic drag the
 longest throw is flatter than $45^\circ$ for this ball.]{.claim
 type="numerically-verified" scope="tennis ball at its launch speed"
 evidence="fig-range-against-angle"} The lesson does not derive why. A steeper
@@ -592,33 +452,17 @@ which is the direction of the effect, but a flat throw also climbs less; the
 size of the shift comes from the simulation, not from this argument.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_range_against_angle)
+```
+
+```{python}
 #| label: fig-range-against-angle
+#| echo: false
 #| fig-cap: "With drag the range is lower, its peak moves to a flatter angle, and the curve is lopsided: a throw that is too steep costs more than one that is too flat."
 #| fig-status: simulated
 #| fig-alt: "Line plot of range in metres against launch angle in degrees. The drag-free curve is a symmetric arch peaking at a dashed vertical line at the forty-five degree mark. The curve with drag is much lower, peaks a few degrees to the left of the line, and is asymmetric: it falls off more steeply towards high angles than towards low ones."
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(
-    angles,
-    ranges_without,
-    color="#555555",
-    linestyle=":",
-    marker="s",
-    markersize=3,
-    label="without drag",
-)
-ax.plot(
-    angles,
-    ranges_with_drag,
-    color="#93003a",
-    marker="o",
-    markersize=3,
-    label="with drag",
-)
-ax.axvline(45.0, color="#00429d", linestyle="--", linewidth=0.8)
-ax.set_xlabel("launch angle (degrees)")
-ax.set_ylabel("range (m)")
-ax.legend()
-plt.show()
+result.show("fig-range-against-angle")
 ```
 
 The curve with drag is not only lower but lopsided: it falls off more
@@ -701,24 +545,19 @@ $g - (c/m)\,v\,|v|$, and the same functions run it with one-component
 vectors.
 
 ```{python}
-from pbc.mechanics.dynamics import State, simulate
-
-dropped = State(t=0.0, x=0.0, v=0.0)
-falling = newton(mass, weight(mass, [g]), quadratic_drag(c))
-fall = simulate(dropped, falling, 0.001, 15_000)
-speeds = fall.v[:, 0]
-reached = fall.t[np.argmax(speeds >= 0.95 * terminal_speed)]
+#| echo: false
+excerpt(experiment.terminal_fall)
 ```
 
-The terminal speed from the formula is `{python} f"{terminal_speed:.3f}"` m/s;
-the speed after `{python} f"{fall.t[-1]:.0f}"` s of falling is
-`{python} f"{speeds[-1]:.3f}"` m/s, and [95 per cent]{.given} of the terminal speed is
-reached after `{python} f"{reached:.2f}"` s. The speed creeps up to the
+The terminal speed from the formula is `{python} result["terminal-speed-3"]` m/s;
+the speed after `{python} result["fall-time"]` s of falling is
+`{python} result["final-speed"]` m/s, and [95 per cent]{.given} of the terminal speed is
+reached after `{python} result["reached"]` s. The speed creeps up to the
 terminal speed and stays below it, as it must: once the drag balances the
 weight there is no force left to accelerate the ball. The natural time scale
 is $v_T / g$, the time gravity alone would need to produce the terminal
 speed; [95 per cent]{.given} of it is reached after
-`{python} f"{reached / (terminal_speed / g):.1f}"` of those.
+`{python} result["reached-in-time-constants"]` of those.
 :::
 :::
 
@@ -735,42 +574,20 @@ the estimates halve with the step, so every extra decimal digit costs a
 little more than three halvings.
 
 ```{python}
-within_a_centimetre = [
-    step
-    for step, error in zip(steps[1:], np.abs(differences), strict=True)
-    if error < 0.01
-]
+#| echo: false
+excerpt(experiment.refine)
+```
 
-tolerance = 0.001  # m
-step = steps[-1]
-previous = ranges[-1]
-refinement = []
-while True:
-    step /= 2
-    current = projectile_range(speed, angle, mass, c, step)
-    estimate = abs(current - previous)
-    refinement.append((step, current, estimate))
-    if estimate < tolerance:
-        break
-    previous = current
-
-table(
-    refinement,
-    columns=[
-        ("time step", "s", ".6f"),
-        ("range", "m", ".4f"),
-        ("estimated error", "m", ".5f"),
-    ],
-    caption="Further halvings of the time step until the estimated error "
-    "is below the tolerance.",
-)
+```{python}
+#| echo: false
+result.table("refinement")
 ```
 
 The steps of the table with an estimated error below one centimetre are the
-`{python} len(within_a_centimetre)` finest, from
-`{python} f"{within_a_centimetre[0]:.6f}"` s down. A millimetre needs a step of
-`{python} f"{step * 1e3:.2f}"` ms, that is
-`{python} f"{int(round(landing(with_drag).t / step))}"` steps for one throw.
+`{python} result["within-a-centimetre"]` finest, from
+`{python} result["first-within"]` s down. A millimetre needs a step of
+`{python} result["millimetre-step-ms"]` ms, that is
+`{python} result["millimetre-steps"]` steps for one throw.
 That is still cheap here, but a first-order method pays for every extra digit
 with ten times the work. The integrators lesson introduces methods that get
 the same digit for a small fraction of the steps.
@@ -787,50 +604,21 @@ terminal speed.
 
 ::: {.solution}
 ```{python}
-steel_mass = 1.23  # kg
-steel_terminal_speed = np.sqrt(steel_mass * g / c)
-steel_range = projectile_range(speed, 45.0, steel_mass, c, scan_dt)
-steel_best, steel_furthest = best_angle(c, steel_mass)
-tennis_range = projectile_range(speed, 45.0, mass, c, scan_dt)
-free_range = projectile_range(speed, 45.0, mass, 0.0, scan_dt)
+#| echo: false
+excerpt(experiment.steel_and_tennis)
+```
 
-table(
-    [
-        (
-            "steel",
-            steel_terminal_speed,
-            (speed / steel_terminal_speed) ** 2,
-            steel_range,
-            100 * (1 - steel_range / free_range),
-            steel_best,
-        ),
-        (
-            "tennis",
-            terminal_speed,
-            (speed / terminal_speed) ** 2,
-            tennis_range,
-            100 * (1 - tennis_range / free_range),
-            best_with,
-        ),
-    ],
-    columns=[
-        ("ball", "", ""),
-        ("terminal speed", "m/s", ".1f"),
-        ("drag over weight at launch", "", ".3f"),
-        ("range at 45 degrees", "m", ".2f"),
-        ("range lost to drag", "per cent", ".1f"),
-        ("best angle", "degrees", ".1f"),
-    ],
-    caption="The steel ball and the tennis ball, launched at the same speed.",
-)
+```{python}
+#| echo: false
+result.table("steel-and-tennis")
 ```
 
 For the steel ball the drag at launch is
-`{python} f"{100 * (speed / steel_terminal_speed) ** 2:.0f}"` per cent of the
+`{python} result["steel-drag-per-cent"]` per cent of the
 weight, so the path is nearly a parabola, the range is shortened by
-`{python} f"{100 * (1 - steel_range / free_range):.1f}"` per cent, and the
+`{python} result["steel-lost"]` per cent, and the
 best angle is just below $45^\circ$. The tennis ball, thrown at its terminal
-speed, loses `{python} f"{100 * (1 - tennis_range / free_range):.0f}"` per
+speed, loses `{python} result["tennis-lost"]` per
 cent of its range, and its best angle moves several degrees down. The one
 number that matters is $(v_0 / v_T)^2$, the drag over the weight at launch:
 it is set by the launch speed and the mass, size, and shape of the ball, and
@@ -839,7 +627,7 @@ not.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -848,11 +636,14 @@ reproduce_this(
         "src/pbc/mechanics/dynamics.py",
         "src/pbc/mechanics/drag.py",
         "src/pbc/mechanics/projectile.py",
+        "src/pbc/mechanics/experiments/projectile_with_drag.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_dynamics.py",
         "tests/unit/test_drag.py",
         "tests/unit/test_projectile.py",
+        "tests/unit/test_projectile_with_drag_experiment.py",
     ],
 )
 ```

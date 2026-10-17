@@ -20,6 +20,7 @@ lesson:
   related: []
   format: 2
   preview: fig-modes-spectrum
+  experiment: pbc.waves.experiments.interference_and_resonance
   prerequisites:
     lessons: [wave-equation]
     outside:
@@ -29,10 +30,11 @@ lesson:
 
 ```{python}
 #| echo: false
-import numpy as np
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.waves import modes, wave
+from pbc.waves.experiments import interference_and_resonance as experiment
 
-from pbc.authoring import lesson_header
-
+result = experiment.run()
 lesson_header()
 ```
 
@@ -194,9 +196,6 @@ The modes, the spectrum of a recording, and the sum of two sources are in
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.waves import modes, wave
-
 excerpt(modes.spectrum_peaks)
 ```
 
@@ -212,32 +211,6 @@ excerpt(wave.numerical_angular_frequency)
 
 ## Worked examples
 
-```{python}
-#| echo: false
-import matplotlib.pyplot as plt
-
-from pbc.authoring import table
-from pbc.waves.modes import (
-    centroid,
-    measured_frequency,
-    spectrum_peaks,
-    string_frequency,
-    triangle,
-    triangle_mode_amplitude,
-    two_source_amplitude,
-    two_source_pattern,
-    wave_packet,
-)
-from pbc.waves.wave import (
-    driven_mode_amplitude,
-    error_norm,
-    grid,
-    numerical_angular_frequency,
-    numerical_group_velocity,
-    solve,
-)
-```
-
 ### Pulses pass through each other
 
 The string is [1 m]{.given} long with the wave speed [100 m/s]{.given}. Two
@@ -246,54 +219,40 @@ the middle, one pointing up and one down. Both ends are fixed. The Courant
 number is one half, with four hundred cells.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment, region="linearity")
+```
+
+```{python}
 #| label: superposition-run
-LENGTH = 1.0  # string length, m
-SPEED = 100.0  # wave speed, m/s
-cells = 400
-dx = LENGTH / cells
-dt = 0.5 * dx / SPEED
-x = grid(LENGTH, cells)
+#| echo: false
+excerpt(experiment.superposition)
+```
 
-
-def pulse(centre, sign):
-    return sign * np.exp(-(((x - centre) / 0.04) ** 2))
-
-
-up = pulse(0.2, +1.0)
-down = pulse(0.8, -1.0)
-steps = round(0.0045 / dt)
-kwargs = dict(c=SPEED, dx=dx, dt=dt, n_steps=steps, every=1)
-both = solve(up + down, np.zeros_like(x), **kwargs)
-only_up = solve(up, np.zeros_like(x), **kwargs)
-only_down = solve(down, np.zeros_like(x), **kwargs)
-linearity_gap = error_norm(both.u, only_up.u + only_down.u)
-LINEARITY_BOUND = 1e-12
-assert linearity_gap < LINEARITY_BOUND, "the sum of two solutions is not the solution of the sum"
+```{python}
+#| echo: false
+excerpt(experiment.draw_superposition)
 ```
 
 ```{python}
 #| label: fig-superposition
+#| echo: false
 #| fig-cap: "Two pulses of opposite sign run towards each other. At the moment they overlap, the field is the sum and nearly cancels; afterwards each continues as if the other had not been there."
 #| fig-alt: "Four stacked curves of displacement against position on a string, at increasing times. In the top curve a positive bump near the left and a negative bump near the right. In the second they are closer. In the third they overlap in the middle and the sum is small. In the fourth the positive bump has moved to the right half and the negative to the left half."
 #| fig-status: simulated
-times = [0.0, 0.0025, 0.004, 0.0045]
-fig, ax = plt.subplots(figsize=(6.4, 4.2))
-for row, t in enumerate(times):
-    j = int(np.argmin(np.abs(both.t - t)))
-    ax.plot(x, both.u[j] - 2.4 * row, color="#00429d")
-    ax.text(1.02, -2.4 * row, f"{both.t[j] * 1000:.1f} ms", va="center")
-ax.set_xlabel("position (m)")
-ax.set_ylabel("displacement, shifted for each time")
-ax.set_yticks([])
-ax.set_xlim(0, 1.15)
-plt.show()
+result.show("fig-superposition")
 ```
 
 [The field of two pulses released together equals the sum of the fields of
 each released alone.]{.claim type="numerically-verified"
 scope="two Gaussian pulses, fixed ends, Courant number one half" evidence="superposition-run"}
 The largest difference between the two, over every node and every step of the
-run, is below `{python} f"{LINEARITY_BOUND:.0e}"`, which is round-off. The
+run, is below `{python} result["linearity-bound"]`, which is round-off. The
 figure shows what that means: after they overlap, each pulse continues with
 its own shape and sign. The data are simulated, and the check is the linearity
 of the scheme, not a measurement of any real string.
@@ -306,67 +265,33 @@ hundredths of the length, for twenty periods of the fundamental, and the
 spectrum of the record is read.
 
 ```{python}
-#| label: modes-run
-n_cells = 200
-dx = LENGTH / n_cells
-dt = 0.5 * dx / SPEED
-xs = grid(LENGTH, n_cells)
-steps = round(0.4 / dt)
-pluck = solve(
-    triangle(xs, length=LENGTH, at=LENGTH / 3),
-    np.zeros_like(xs),
-    c=SPEED, dx=dx, dt=dt, n_steps=steps,
-)
-probe = round(0.45 * n_cells)
-record = pluck.u[:, probe]
-found = spectrum_peaks(record, dt, count=4)
-present = [1, 2, 4, 5]  # the third mode has a node at the pluck
-analytic = np.array([string_frequency(n, length=LENGTH, c=SPEED) for n in present])
-scheme = np.array(
-    [
-        numerical_angular_frequency(n * np.pi / LENGTH, c=SPEED, dx=dx, dt=dt)
-        / (2 * np.pi)
-        for n in present
-    ]
-)
-deviation = np.abs(found - analytic) / analytic
-MODE_TOLERANCE = 2e-3  # a chosen tolerance on the relative difference
-assert np.all(deviation < MODE_TOLERANCE), "a mode is not where the formula puts it"
-assert np.all(np.abs(found - scheme) / scheme < 1e-4), "a peak is off the grid's own frequency"
-assert abs(triangle_mode_amplitude(3, length=LENGTH, at=LENGTH / 3)) < 1e-12
+#| echo: false
+excerpt(experiment, region="mode-tolerance")
+```
 
-table(
-    [
-        (n, a, f, d * 100)
-        for n, a, f, d in zip(present, analytic, found, deviation)
-    ],
-    [
-        ("mode", "", "d"),
-        ("analytic n c / 2L", "Hz", ".2f"),
-        ("simulated", "Hz", ".2f"),
-        ("difference", "%", ".3f"),
-    ],
-    "The frequencies of the four strongest peaks of the spectrum of a plucked string, against the analytic mode frequencies, to two decimals.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.modes_run)
+```
+
+```{python}
+#| label: modes-run
+#| echo: false
+result.table("modes-run")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_modes_spectrum)
 ```
 
 ```{python}
 #| label: fig-modes-spectrum
+#| echo: false
 #| fig-cap: "The spectrum of the displacement of one node of a plucked string. The peaks stand at the whole multiples of the fundamental, marked by dashed lines; the third mode, which has a node at the pluck, is missing."
 #| fig-alt: "Line plot of spectrum magnitude against frequency from zero to three hundred hertz. A tall peak near fifty hertz, a lower one near one hundred, none near one hundred fifty, and lower ones near two hundred and two hundred fifty. Dashed vertical lines run through each whole multiple of fifty hertz including the empty one."
 #| fig-status: simulated
-size = 8 * record.size
-spectrum = np.abs(np.fft.rfft((record - record.mean()) * np.hanning(record.size), size))
-frequency = np.arange(spectrum.size) / (size * dt)
-band = frequency < 320.0
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(frequency[band], spectrum[band], color="#00429d")
-for n in range(1, 7):
-    ax.axvline(string_frequency(n, length=LENGTH, c=SPEED), color="#93003a",
-               linestyle="--", linewidth=0.8)
-ax.set_xlabel("frequency (Hz)")
-ax.set_ylabel("spectrum magnitude (arbitrary units)")
-plt.show()
+result.show("fig-modes-spectrum")
 ```
 
 [The peaks of the spectrum of a simulated plucked string lie at the analytic
@@ -375,11 +300,11 @@ pluck.]{.claim type="numerically-verified"
 scope="a string plucked at a third, fixed ends, two hundred cells, twenty periods recorded"
 evidence="modes-run"}
 The largest relative difference between a peak and the analytic frequency is
-`{python} f"{deviation.max() * 100:.3f}"` per cent, inside the chosen tolerance
-of `{python} f"{MODE_TOLERANCE * 100:.1f}"` per cent. The grid
+`{python} result["largest-deviation"]` per cent, inside the chosen tolerance
+of `{python} result["mode-tolerance"]` per cent. The grid
 accounts for it: the frequencies of the scheme itself differ from the analytic
 ones by up to
-`{python} f"{np.max(np.abs(scheme - analytic) / analytic) * 100:.3f}"` per cent
+`{python} result["scheme-shift"]` per cent
 for these four modes, and the peaks of the record agree with those. The data
 are simulated; the check is the formula.
 
@@ -391,73 +316,37 @@ read by projecting the field on the shape of the mode, and compared with the
 exact formula.
 
 ```{python}
+#| echo: false
+excerpt(experiment.resonance_run)
+```
+
+```{python}
 #| label: resonance-run
-n_cells = 100
-dx = LENGTH / n_cells
-dt = 0.5 * dx / SPEED
-xs = grid(LENGTH, n_cells)
-shape = np.sin(np.pi * xs / LENGTH)
-omega1 = np.pi * SPEED / LENGTH
-steps = round(0.2 / dt)
+#| echo: false
+result.table("resonance-run")
+```
 
-
-def driven(drive):
-    result = solve(
-        np.zeros_like(xs), np.zeros_like(xs),
-        c=SPEED, dx=dx, dt=dt, n_steps=steps,
-        forcing=lambda t: shape * np.cos(drive * t),
-    )
-    amplitude = result.u @ shape / (shape @ shape)
-    exact = driven_mode_amplitude(
-        result.t, length=LENGTH, n=1, c=SPEED, drive=drive
-    )
-    return result.t, amplitude, exact
-
-
-t_on, amp_on, exact_on = driven(omega1)
-t_off, amp_off, exact_off = driven(0.7 * omega1)
-gap_on = np.max(np.abs(amp_on - exact_on)) / np.max(np.abs(exact_on))
-gap_off = np.max(np.abs(amp_off - exact_off)) / np.max(np.abs(exact_off))
-assert gap_on < 0.02 and gap_off < 0.02
-growth = np.max(np.abs(amp_on[-steps // 5 :])) / np.max(np.abs(amp_on[: steps // 5]))
-
-table(
-    [
-        ("at the mode frequency", np.max(np.abs(amp_on)), gap_on * 100),
-        ("at seven tenths of it", np.max(np.abs(amp_off)), gap_off * 100),
-    ],
-    [
-        ("drive", "", ""),
-        ("largest amplitude of the mode in the run", "", ".2e"),
-        ("largest gap from the exact amplitude", "% of its largest value", ".2f"),
-    ],
-    "The largest amplitude of the first mode in a run of ten periods, and how far the simulation is from the exact formula, for the two drives.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.draw_resonance)
 ```
 
 ```{python}
 #| label: fig-resonance
+#| echo: false
 #| fig-cap: "The amplitude of the first mode of the driven string. At its own frequency the envelope grows in proportion to the time; away from it the amplitude beats at a fixed size. Dashed lines are the exact formulas."
 #| fig-alt: "Line plot of the amplitude against time over ten periods. One curve oscillates with an envelope that rises steadily to a few times its start. A second curve oscillates in beats with a small constant envelope. Dashed curves of the exact formulas lie on both."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(t_on * 1000, amp_on, color="#00429d", label="at the mode frequency")
-ax.plot(t_on * 1000, exact_on, color="#00429d", linestyle="--", linewidth=0.8)
-ax.plot(t_off * 1000, amp_off, color="#93003a", label="at seven tenths of it")
-ax.plot(t_off * 1000, exact_off, color="#93003a", linestyle="--", linewidth=0.8)
-ax.set_xlabel("time (ms)")
-ax.set_ylabel("amplitude of the first mode (arbitrary units)")
-ax.legend()
-plt.show()
+result.show("fig-resonance")
 ```
 
 [A force at the frequency of a mode makes its amplitude grow in proportion to
 the time, and a force at another frequency leaves it bounded; the simulation
 follows both exact formulas.]{.claim type="numerically-verified"
 scope="the first mode, fixed ends, one hundred cells, ten periods" evidence="resonance-run"}
-The amplitude in the last fifth of the run is `{python} f"{growth:.1f}"` times
+The amplitude in the last fifth of the run is `{python} result["growth"]` times
 the amplitude in the first fifth at resonance, while away from it the
-amplitude never exceeds `{python} f"{np.max(np.abs(amp_off)):.1e}"`, in the same units, set by the
+amplitude never exceeds `{python} result["off-largest"]`, in the same units, set by the
 distance of the two frequencies. In a real string the growth stops where loss
 balances the push, and this model has none.
 
@@ -469,40 +358,19 @@ to the shortest the grid holds nearly, and compared with the analytic frequency
 and with the formula of the grid.
 
 ```{python}
-#| label: dispersion-run
-n_cells = 100
-dx = LENGTH / n_cells
-dt = 0.5 * dx / SPEED
-xs = grid(LENGTH, n_cells)
-mode_numbers = [1, 5, 10, 20, 40, 60, 80]
-steps = round(0.3 / dt)
-rows = []
-for n in mode_numbers:
-    result = solve(
-        np.sin(n * np.pi * xs / LENGTH), np.zeros_like(xs),
-        c=SPEED, dx=dx, dt=dt, n_steps=steps,
-    )
-    antinode = max(1, round(n_cells / (2 * n)))
-    measured = measured_frequency(result.u[:, antinode], result.t)
-    k = n * np.pi / LENGTH
-    formula = numerical_angular_frequency(k, c=SPEED, dx=dx, dt=dt) / (2 * np.pi)
-    exact_f = SPEED * k / (2 * np.pi)
-    rows.append((n, k * dx / np.pi, exact_f, formula, measured, measured / exact_f))
-agreement = max(abs(row[4] / row[3] - 1.0) for row in rows)
-assert agreement < 1e-3, "the measured frequency is not the one of the scheme"
+#| echo: false
+excerpt(experiment, region="dispersion")
+```
 
-table(
-    rows,
-    [
-        ("mode", "", "d"),
-        ("wavenumber over the largest the grid holds", "", ".2f"),
-        ("analytic", "Hz", ".1f"),
-        ("formula of the grid", "Hz", ".1f"),
-        ("measured", "Hz", ".1f"),
-        ("measured over analytic", "", ".3f"),
-    ],
-    "The frequency of seven standing modes of the grid: analytic, from the dispersion relation of the scheme, and read from the zero crossings of a run, with the ratio of the measured to the analytic value.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.dispersion_run)
+```
+
+```{python}
+#| label: dispersion-run
+#| echo: false
+result.table("dispersion-run")
 ```
 
 [The frequencies of the scheme follow its dispersion relation, which
@@ -511,10 +379,10 @@ type="numerically-verified"
 scope="one hundred cells, Courant number one half, modes from the first to the eightieth"
 evidence="dispersion-run"}
 The measured frequency agrees with the formula of the grid to
-`{python} f"{agreement:.1e}"` in relative terms, for every mode, and falls
-below the analytic frequency by `{python} f"{(1 - rows[-1][5]) * 100:.0f}"` per
+`{python} result["agreement"]` in relative terms, for every mode, and falls
+below the analytic frequency by `{python} result["finest-shortfall"]` per
 cent for the highest mode shown, which has barely
-`{python} f"{2 * n_cells / mode_numbers[-1]:.1f}"` cells per wavelength.
+`{python} result["cells-per-wavelength"]` cells per wavelength.
 
 A packet shows the second consequence. A packet with a carrier of
 [1.2 radians per cell]{.given} is released at rest on a longer string, and its
@@ -522,26 +390,14 @@ right-going half travels for a few milliseconds; the speed of its centre is read
 
 ```{python}
 #| label: packet-run
-n_cells = 400
-dx = LENGTH / n_cells
-dt = 0.5 * dx / SPEED
-xs = grid(LENGTH, n_cells)
-carrier = 1.2 / dx
-packet = wave_packet(xs, centre=0.25, width=0.05, k=carrier)
-steps = round(0.0025 / dt)
-packet_run = solve(
-    packet, np.zeros_like(xs), c=SPEED, dx=dx, dt=dt, n_steps=steps, every=steps
-)
-right_half = packet_run.u[-1] * (xs > 0.3)
-packet_speed = (centroid(xs, right_half) - 0.25) / packet_run.t[-1]
-group = float(numerical_group_velocity(carrier, c=SPEED, dx=dx, dt=dt))
-assert abs(packet_speed / group - 1.0) < 0.02
+#| echo: false
+excerpt(experiment.packet_run)
 ```
 
-The centre of the packet moves at `{python} f"{packet_speed:.1f}"` m/s over
-`{python} f"{packet_run.t[-1] * 1000:.1f}"` ms; the group velocity of the grid is
-`{python} f"{group:.1f}"` m/s, and the wave speed of the string is
-`{python} f"{SPEED:.0f}"` m/s. [A packet of short waves on the grid travels
+The centre of the packet moves at `{python} result["packet-speed"]` m/s over
+`{python} result["packet-time-ms"]` ms; the group velocity of the grid is
+`{python} result["group"]` m/s, and the wave speed of the string is
+`{python} result["speed"]` m/s. [A packet of short waves on the grid travels
 slower than the wave speed of the equation it solves, at the group velocity of
 the scheme.]{.claim type="numerically-verified"
 scope="one packet, carrier of a few cells per wavelength, Courant number one half"
@@ -557,37 +413,28 @@ each of many points of a screen [20 km]{.given} away, in units of the
 wavelength, and the intensity is compared with the formula of the far field.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="sources")
+```
+
+```{python}
 #| label: interference-run
-wavelength = 1.0
-separation = 5.0 * wavelength
-distance = 20000.0 * wavelength
-angle = np.linspace(-0.2, 0.2, 801)
-summed = two_source_amplitude(
-    angle, separation=separation, wavelength=wavelength, distance=distance
-)
-intensity = (summed * distance) ** 2  # one source gives 1 at this distance
-formula = two_source_pattern(angle, separation=separation, wavelength=wavelength)
-pattern_gap = np.max(np.abs(intensity - formula))
-PATTERN_TOLERANCE = 5e-3  # in units of the intensity of one source
-assert pattern_gap < PATTERN_TOLERANCE
-bright = np.arcsin(np.arange(-1, 2) * wavelength / separation)
-bright_values = two_source_pattern(bright, separation=separation, wavelength=wavelength)
+#| echo: false
+excerpt(experiment.interference_run)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_interference)
 ```
 
 ```{python}
 #| label: fig-interference
+#| echo: false
 #| fig-cap: "The intensity on a far screen of two coherent sources, in units of the intensity of one source: the waves added one by one (solid) and the cosine-squared formula (dashed). The dashed line at two is the sum of the two intensities."
 #| fig-alt: "Line plot of intensity against angle from minus point two to plus point two radians. A periodic series of bright humps reaching four and dark points reaching zero, regularly spaced. A dashed horizontal line at the value two lies in the middle between them, and a dashed curve lies on the solid curve."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(angle, intensity, color="#00429d", label="waves added")
-ax.plot(angle, formula, color="#93003a", linestyle="--", linewidth=0.8,
-        label="formula")
-ax.axhline(2.0, color="gray", linestyle=":", label="sum of two intensities")
-ax.set_xlabel("angle (rad)")
-ax.set_ylabel("intensity (units of one source)")
-ax.legend(loc="upper right", fontsize=8)
-plt.show()
+result.show("fig-interference")
 ```
 
 [The intensity of two coherent sources, found by adding their waves, follows
@@ -596,8 +443,8 @@ type="numerically-verified"
 scope="two sources five wavelengths apart, a screen twenty thousand wavelengths away"
 evidence="interference-run"}
 The largest difference between the summed intensity and the formula is
-`{python} f"{pattern_gap:.1e}"` units of the intensity of one source, and the
-formula reaches `{python} f"{bright_values.max():.0f}"` at the bright fringes,
+`{python} result["pattern-gap"]` units of the intensity of one source, and the
+formula reaches `{python} result["bright"]` at the bright fringes,
 at angles that satisfy $\sin\theta = m\lambda/d$, twice the sum of the two
 intensities. Energy is not created: the pattern averages to that sum and
 moves energy from the dark lines to the bright ones. The data are simulated;
@@ -674,20 +521,12 @@ The solver takes `left` and `right`. The first peak is the lowest.
 
 ::: {.solution}
 ```{python}
-n_cells = 200
-dx = LENGTH / n_cells
-dt = 0.5 * dx / SPEED
-xs = grid(LENGTH, n_cells)
-free = solve(
-    triangle(xs, length=LENGTH, at=0.2 * LENGTH), np.zeros_like(xs),
-    c=SPEED, dx=dx, dt=dt, n_steps=round(0.8 / dt), right="free",
-)
-peaks = spectrum_peaks(free.u[:, round(0.6 * n_cells)], dt, count=3, floor=0.05)
-expected = np.array([(2 * n - 1) * SPEED / (4 * LENGTH) for n in (1, 2, 3)])
+#| echo: false
+excerpt(experiment.free_end)
 ```
 
-The peaks are at `{python} ", ".join(f"{p:.1f}" for p in peaks)` Hz and the
-formula gives `{python} ", ".join(f"{p:.1f}" for p in expected)` Hz. They are
+The peaks are at `{python} result["free-peaks"]` Hz and the
+formula gives `{python} result["free-expected"]` Hz. They are
 the odd multiples of the fundamental of a string half as long: the free end
 is an antinode, and a quarter of a wavelength fits in the length for the first
 mode.
@@ -704,18 +543,15 @@ Add the two sines with the sum-to-product identity of the lesson.
 
 ::: {.solution}
 ```{python}
-f1, f2 = 100.0, 104.0
-t = np.linspace(0.0, 1.0, 20001)
-total = np.sin(2 * np.pi * f1 * t) + np.sin(2 * np.pi * f2 * t)
-envelope = 2 * np.abs(np.cos(np.pi * (f1 - f2) * t))
-beat_rate = abs(f1 - f2)
+#| echo: false
+excerpt(experiment.beats)
 ```
 
 The sum equals $2\cos(\pi(f_1 - f_2)t)\,\sin(\pi(f_1 + f_2)t)$: a tone at
-the mean frequency under an envelope that vanishes `{python} f"{beat_rate:.0f}"`
+the mean frequency under an envelope that vanishes `{python} result["beat-rate"]`
 times per second, the difference of the frequencies. The largest value of the
-sum over one second is `{python} f"{np.max(np.abs(total)):.2f}"`, near the
-largest value `{python} f"{envelope.max():.0f}"` of the envelope.
+sum over one second is `{python} result["beat-largest"]`, near the
+largest value `{python} result["envelope-largest"]` of the envelope.
 :::
 :::
 
@@ -729,22 +565,30 @@ The path difference is half a wavelength.
 
 ::: {.solution}
 ```{python}
-first_dark = np.arcsin(0.5 * wavelength / separation)
-value = two_source_pattern(first_dark, separation=separation, wavelength=wavelength)
+#| echo: false
+excerpt(experiment.first_dark_fringe)
 ```
 
 The first dark line is at $\sin\theta = \lambda/2d$, which is
-`{python} f"{first_dark:.4f}"` rad here, and the formula gives the intensity
-`{python} f"{float(value):.3f}"` there, zero to round-off.
+`{python} result["first-dark"]` rad here, and the formula gives the intensity
+`{python} result["dark-value"]` there, zero to round-off.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/waves/wave.py", "src/pbc/waves/modes.py"],
-    tests=["tests/unit/test_waves.py"],
+    code=[
+        "src/pbc/waves/wave.py",
+        "src/pbc/waves/modes.py",
+        "src/pbc/waves/experiments/interference_and_resonance.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_waves.py",
+        "tests/unit/test_interference_and_resonance_experiment.py",
+    ],
 )
 ```

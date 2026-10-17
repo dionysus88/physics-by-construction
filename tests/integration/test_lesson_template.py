@@ -110,7 +110,11 @@ def test_lesson_made_from_the_template_builds_with_every_construct(
             browser, server, built, REPO_ROOT
         )
         assert site_checks.excerpt_sources(browser, server, page) == [
-            "pbc.mechanics.kinematics:euler_step"
+            "pbc.mechanics.kinematics:euler_step",
+            "pbc.mechanics.experiments.lesson_template:",
+            "pbc.mechanics.experiments.lesson_template:braking_cart",
+            "pbc.mechanics.experiments.lesson_template:draw_replace_with_a_name",
+            "pbc.mechanics.experiments.lesson_template:largest_error",
         ]
     assert not violations, describe(violations)
     # The marker of the template reached the page as a block and as a phrase.
@@ -131,7 +135,7 @@ def test_lesson_made_from_the_template_builds_with_every_construct(
     # The path page shows each lesson once as a row of its course, which links
     # the lesson, its prerequisites, and its related lessons; the panel links
     # the first lesson of the course, and the new lesson, which has a
-    # "Reproduce this" section, links it. The methods and the paths list a
+    # "Run this experiment" section, links it. The methods and the paths list a
     # lesson as a link of another kind, and the maps are drawings.
     path_page = (built / "path/index.html").read_text()
     new = Lesson(

@@ -156,9 +156,14 @@ def test_each_finding_carries_its_evidence():
 # --- The gallery stays a gallery. ---
 
 
-# The one module of src that may import the gallery: the review lesson (F18)
-# reviews a correct stepper and a faulty one, and its live run needs both.
-GALLERY_IMPORTERS = ["src/pbc/agents/review_lab.py"]
+# The modules of src that may import the gallery: the review lesson (F18)
+# reviews a correct stepper and a faulty one, and its live run needs both;
+# the experiment of the verification lesson runs the checks on the gallery,
+# which its page shows (F117).
+GALLERY_IMPORTERS = [
+    "src/pbc/agents/review_lab.py",
+    "src/pbc/mechanics/experiments/verifying_scientific_code.py",
+]
 
 
 def test_no_module_of_src_imports_the_faulty_steppers_but_the_review_lesson():
@@ -175,7 +180,7 @@ def test_no_module_of_src_imports_the_faulty_steppers_but_the_review_lesson():
             )
             if any(name.endswith("verification.faulty") for name in names):
                 importers.append(path.relative_to(ROOT).as_posix())
-    assert importers == GALLERY_IMPORTERS
+    assert sorted(importers) == GALLERY_IMPORTERS
 
 
 def test_the_gallery_module_says_in_its_docstring_that_it_is_wrong_on_purpose():

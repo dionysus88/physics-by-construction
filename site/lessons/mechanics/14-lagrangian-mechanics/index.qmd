@@ -21,6 +21,7 @@ lesson:
   related: [hamiltonian-mechanics]
   format: 2
   preview: fig-planet-orbit
+  experiment: pbc.mechanics.experiments.lagrangian_mechanics
   prerequisites:
     lessons: [energy-conservation, double-pendulum-chaos]
     outside:
@@ -31,8 +32,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import lagrangian
+from pbc.mechanics.experiments import lagrangian_mechanics as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -206,9 +210,6 @@ stepping interface, so the simulations of the earlier lessons apply.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import lagrangian
-
 excerpt(
     lagrangian.euler_lagrange,
     notes={
@@ -279,73 +280,44 @@ the accelerations of the two at several angles, and then simulates the
 Lagrangian pendulum and compares its period with the elliptic integral.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.pendulum_check)
+```
+
+```{python}
 #| label: pendulum-check
-import numpy as np
-from scipy.constants import g
-
-from pbc.authoring import table
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.integrators import rk4_step
-from pbc.mechanics.lagrangian import (
-    coupled_springs_lagrangian,
-    double_pendulum_lagrangian,
-    energy_function,
-    euler_lagrange,
-    generalised_momentum,
-    pendulum_lagrangian,
-)
-from pbc.mechanics.pendulum import pendulum_force, pendulum_period
-
-mass, length = 1.0, 1.0
-from_lagrangian = euler_lagrange(pendulum_lagrangian(mass, length))
-newtonian = newton(mass, pendulum_force(mass, length))
-
-rows = []
-for angle in (0.1, 1.0, 2.0, 3.0):
-    theta, rate = np.array([angle]), np.array([0.7])
-    a_lagrange = length * from_lagrangian(0.0, theta, rate)[0]
-    a_newton = newtonian(0.0, length * theta, rate)[0]
-    rows.append((angle, a_newton, a_lagrange, abs(a_lagrange / a_newton - 1.0)))
-
-table(
-    rows,
-    columns=[
-        ("angle", "rad", ".1f"),
-        ("acceleration along the arc, Newton", "m/s²", ".5f"),
-        ("from the Lagrangian", "m/s²", ".5f"),
-        ("relative difference", "", ".1e"),
-    ],
-    caption="Acceleration of the pendulum bob along the arc at four angles, from the tangential weight and from the Euler-Lagrange equation, with the relative difference.",
-)
+#| echo: false
+result.table("pendulum-check")
 ```
 
 [The equation from the Lagrangian is the Newtonian one]{.claim
 type="numerically-verified" scope="the pendulum, four angles, any velocity
 because the force does not depend on it" evidence="pendulum-check"}: the
-largest relative difference is `{python} f"{max(r[3] for r in rows):.0e}"`, which is the
+largest relative difference is `{python} result["pendulum-difference"]`, which is the
 accuracy of the central differences. A simulation then has to reproduce a
 result that nothing but the exact equation gives, the period at large
 amplitude:
 
 ```{python}
-#| label: pendulum-period
-amplitude = 1.5  # rad
-dt = 0.01  # s
-run = simulate(State(0.0, [amplitude], [0.0]), from_lagrangian, dt, 400, step=rk4_step)
-below = np.where((run.x[:-1, 0] > 0) & (run.x[1:, 0] <= 0))[0][0]
-quarter = run.t[below] + run.x[below, 0] / (run.x[below, 0] - run.x[below + 1, 0]) * dt
+#| echo: false
+excerpt(experiment.pendulum_period_check)
+```
 
-table(
-    [(amplitude, pendulum_period(length, amplitude), 4 * quarter)],
-    columns=[("amplitude", "rad", ".1f"), ("period, elliptic integral", "s", ".5f"), ("period, simulation", "s", ".5f")],
-    caption="Period of the Lagrangian pendulum at a large amplitude, from the closed form and from the simulation, to five decimals.",
-)
+```{python}
+#| label: pendulum-period
+#| echo: false
+result.table("pendulum-period")
 ```
 
 [The simulated period of the Lagrangian pendulum is the closed-form
 one]{.claim type="numerically-verified" scope="amplitude of one and a half
 radians, classical Runge-Kutta method" evidence="pendulum-period"}, to a
-relative `{python} f"{abs(4 * quarter / pendulum_period(length, amplitude) - 1.0):.0e}"`.
+relative `{python} result["period-difference"]`.
 
 ### Two coupled springs
 
@@ -358,36 +330,15 @@ Newton's law and compares the paths.
 
 ```{python}
 #| label: coupled-springs
-from pbc.mechanics.oscillator import spring
-
-m_spring, k_wall, k_mid = 0.5, 4.0, 1.5
-springs = euler_lagrange(coupled_springs_lagrangian(m_spring, k_wall, k_mid))
-
-rows = []
-for label, mode, stiffness in (("in phase", [1.0, 1.0], k_wall), ("out of phase", [1.0, -1.0], k_wall + 2 * k_mid)):
-    q = 0.3 * np.array(mode)
-    a = springs(0.0, q, np.zeros(2))
-    rows.append((label, np.sqrt(stiffness / m_spring), np.sqrt(-a[0] / q[0])))
-
-table(
-    rows,
-    columns=[("mode", "", ""), ("closed form", "rad/s", ".5f"), ("from the Lagrangian", "rad/s", ".5f")],
-    caption="Angular frequency of the two normal modes of the coupled springs, from the closed form and from the accelerations of the Lagrangian, to five decimals.",
-)
-
-wall, between = spring(k_wall), lambda t, x, v: k_mid * np.array([-(x[0] - x[1]), x[0] - x[1]])
-newtonian_springs = newton(m_spring, wall, between)
-start = State(0.0, [0.3, -0.1], [0.2, 0.5])
-by_lagrange = simulate(start, springs, 0.01, 1000, step=rk4_step)
-by_newton = simulate(start, newtonian_springs, 0.01, 1000, step=rk4_step)
-path_gap = np.max(np.abs(by_lagrange.x - by_newton.x))
+#| echo: false
+excerpt(experiment.coupled_springs)
 ```
 
 [The Lagrangian reproduces both normal-mode frequencies]{.claim
 type="numerically-verified" scope="the stated masses and springs"
 evidence="coupled-springs"} and the two simulations, of the same start with
 the Lagrangian and with the forces, differ by at most
-`{python} f"{path_gap:.0e}"` m over ten seconds, which is round-off: for a Lagrangian that is
+`{python} result["path-gap"]` m over ten seconds, which is round-off: for a Lagrangian that is
 quadratic in both the coordinates and the rates, the central differences have
 no truncation error, so the agreement here is far better than in the
 nonlinear examples.
@@ -404,37 +355,19 @@ operator, and runs one period, which has a closed form from the semi-major
 axis $a$, $T = 2\pi a^{3/2}/\sqrt{G M}$, with $a$ from the energy.
 
 ```{python}
+#| echo: false
+excerpt(experiment.planet_lagrangian)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.planet)
+```
+
+```{python}
 #| label: planet
-def planet_lagrangian(gm, m):
-    """Polar coordinates (r, phi): L = m (r'^2 + r^2 phi'^2) / 2 + G M m / r."""
-    def lagrangian(q, qdot):
-        return 0.5 * m * (qdot[0] ** 2 + q[0] ** 2 * qdot[1] ** 2) + gm * m / q[0]
-    return lagrangian
-
-
-gm, m_planet = 4.0, 1.0
-r0, speed = 1.0, 1.5
-orbit = euler_lagrange(planet_lagrangian(gm, m_planet))
-planet_energy = 0.5 * m_planet * speed**2 - gm * m_planet / r0
-semi_major = -gm * m_planet / (2.0 * planet_energy)
-orbital_period = 2.0 * np.pi * np.sqrt(semi_major**3 / gm)
-
-start = State(0.0, [r0, 0.0], [0.0, speed / r0])
-steps = round(orbital_period / 0.005)
-orbit_run = simulate(start, orbit, orbital_period / steps, steps, step=rk4_step)
-lagr = planet_lagrangian(gm, m_planet)
-momentum = np.array([generalised_momentum(lagr, x, v)[1] for x, v in zip(orbit_run.x, orbit_run.v, strict=True)])
-energies = np.array([energy_function(lagr, x, v) for x, v in zip(orbit_run.x, orbit_run.v, strict=True)])
-turns = (orbit_run.x[-1, 1] - orbit_run.x[0, 1]) / (2 * np.pi)
-
-table(
-    [
-        ("angular momentum", momentum[0], np.max(np.abs(momentum / momentum[0] - 1.0))),
-        ("energy", energies[0], np.max(np.abs(energies / energies[0] - 1.0))),
-    ],
-    columns=[("quantity", "", ""), ("start", "", ".5f"), ("largest relative change", "", ".1e")],
-    caption="Angular momentum and energy of the planet over one orbit, from the Lagrangian, at the start and the largest relative change.",
-)
+#| echo: false
+result.table("planet")
 ```
 
 [The angular momentum $p_\phi$ and the energy are constant over the orbit to
@@ -442,33 +375,25 @@ the accuracy of the method]{.claim type="numerically-verified"
 scope="one bound orbit, classical Runge-Kutta method" evidence="planet"}, as
 the form of $L$ says: the angular momentum is conserved because the angle is
 absent from it, and it changes by a relative
-`{python} f"{np.max(np.abs(momentum / momentum[0] - 1.0)):.0e}"`. The orbit is
+`{python} result["momentum-change"]`. The orbit is
 closed, as the closed form of the period says: after one period the radius is
-`{python} f"{orbit_run.x[-1, 0]:.5f}"` m, back to its start, and the angle has
-advanced by `{python} f"{turns:.5f}"` turns. The radial period of the Kepler
+`{python} result["final-radius"]` m, back to its start, and the angle has
+advanced by `{python} result["turns"]` turns. The radial period of the Kepler
 orbit equals the angular one, which is the statement that the orbit does not
 precess.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_planet_orbit)
+```
+
+```{python}
 #| label: fig-planet-orbit
+#| echo: false
 #| fig-cap: "The orbit of the planet from the Euler-Lagrange equations in polar coordinates, drawn in Cartesian axes. The path closes on itself after one period, an ellipse with the attracting centre at one focus, as the period from the semi-major axis requires."
 #| fig-alt: "Plot of the orbit in the plane with equal axes. A closed elongated ellipse with a point marking the centre of attraction near one end of the ellipse, inside it, and a marker for the starting point at the far end of the ellipse."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-from pbc.authoring import FIGURE_COLOURS
-
-x_plane = orbit_run.x[:, 0] * np.cos(orbit_run.x[:, 1])
-y_plane = orbit_run.x[:, 0] * np.sin(orbit_run.x[:, 1])
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(x_plane, y_plane, color=FIGURE_COLOURS[0], linestyle="-", label="orbit")
-ax.plot([0.0], [0.0], marker="*", color=FIGURE_COLOURS[1], linestyle="", markersize=10, label="centre")
-ax.plot([x_plane[0]], [y_plane[0]], marker="o", color=FIGURE_COLOURS[2], linestyle="", label="start")
-ax.set_aspect("equal")
-ax.set_xlabel("x (m)")
-ax.set_ylabel("y (m)")
-ax.legend(loc="upper right")
-plt.show()
+result.show("fig-planet-orbit")
 ```
 
 The figure is the simulation of the table, from the same run, and the closing
@@ -483,30 +408,19 @@ the program takes the derivatives. The cell compares the two at random states,
 and then follows both from a regular start.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="double-pendulum")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.double_pendulum_check)
+```
+
+```{python}
 #| label: double-pendulum-check
-from pbc.mechanics.chaos import double_pendulum
-
-masses, lengths = (1.0, 2.0), (1.0, 0.7)
-closed_form = double_pendulum(*masses, *lengths)
-derived = euler_lagrange(double_pendulum_lagrangian(*masses, *lengths))
-
-rng = np.random.default_rng(7)
-worst = 0.0
-for _ in range(200):
-    q, qdot = rng.uniform(-3.0, 3.0, 2), rng.uniform(-3.0, 3.0, 2)
-    a_closed, a_derived = closed_form(0.0, q, qdot), derived(0.0, q, qdot)
-    worst = max(worst, np.max(np.abs(a_derived - a_closed) / (1.0 + np.abs(a_closed))))
-
-regular = State(0.0, [0.3, 0.2], [0.0, 0.0])
-path_closed = simulate(regular, closed_form, 0.01, 1000, step=rk4_step)
-path_derived = simulate(regular, derived, 0.01, 1000, step=rk4_step)
-path_difference = np.max(np.abs(path_closed.x - path_derived.x))
-
-table(
-    [(worst, path_difference)],
-    columns=[("largest relative difference of the accelerations", "", ".1e"), ("largest difference of the angles over ten seconds", "rad", ".1e")],
-    caption="The equations of the double pendulum from the Lagrangian against the closed form of the previous lesson, at two hundred random states and along one regular motion.",
-)
+#| echo: false
+result.table("double-pendulum-check")
 ```
 
 [The closed-form accelerations of the double pendulum agree with the
@@ -578,27 +492,29 @@ the sum of the masses, and the potential energy the difference.
 
 ::: {.solution}
 ```{python}
-m_heavy, m_light = 3.0, 1.0
+#| echo: false
+excerpt(experiment, region="atwood")
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.atwood)
+```
 
-def atwood(q, qdot):
-    return 0.5 * (m_heavy + m_light) * qdot[0] ** 2 + (m_heavy - m_light) * g * q[0]
+```{python}
+#| echo: false
+excerpt(experiment.atwood_machine)
+```
 
-
-a_program = euler_lagrange(atwood)(0.0, np.array([0.0]), np.array([0.0]))[0]
-a_exact = (m_heavy - m_light) / (m_heavy + m_light) * g
-
-table(
-    [(a_exact, a_program, abs(a_program / a_exact - 1.0))],
-    columns=[("from Newton's law", "m/s²", ".5f"), ("from the Lagrangian", "m/s²", ".5f"), ("relative difference", "", ".1e")],
-    caption="Acceleration of the Atwood machine from the tension of the rope and from the Lagrangian, to five decimals.",
-)
+```{python}
+#| echo: false
+result.table("atwood")
 ```
 
 The two agree to the accuracy of the derivatives. The Lagrangian has no
 tension in it. Newton's law needs the tension to be eliminated between the two
 masses, and gives it as a by-product,
-`{python} f"{2 * m_heavy * m_light / (m_heavy + m_light) * g:.2f}"` N, which the
+`{python} result["tension"]` N, which the
 Lagrangian never computes.
 :::
 :::
@@ -617,26 +533,17 @@ subtracting nearly equal numbers.
 
 ::: {.solution}
 ```{python}
-rows = []
-for h in (1e-1, 1e-2, 1e-3, 1e-4, 1e-5):
-    candidate = euler_lagrange(double_pendulum_lagrangian(*masses, *lengths), h=h)
-    rng = np.random.default_rng(7)
-    worst_h = 0.0
-    for _ in range(50):
-        q, qdot = rng.uniform(-3.0, 3.0, 2), rng.uniform(-3.0, 3.0, 2)
-        a_closed = closed_form(0.0, q, qdot)
-        worst_h = max(worst_h, np.max(np.abs(candidate(0.0, q, qdot) - a_closed) / (1.0 + np.abs(a_closed))))
-    rows.append((h, worst_h))
+#| echo: false
+excerpt(experiment.difference_steps)
+```
 
-table(
-    rows,
-    columns=[("difference step", "rad", ".0e"), ("largest relative difference", "", ".1e")],
-    caption="Largest relative difference between the accelerations from the Lagrangian and the closed form, for five difference steps.",
-)
+```{python}
+#| echo: false
+result.table("difference-steps")
 ```
 
 The error falls with the step, as the square of it, down to a step of about
-`{python} f"{min(rows, key=lambda r: r[1])[0]:.0e}"`, and then rises again. The first part is the
+`{python} result["best-step"]`, and then rises again. The first part is the
 truncation of the second difference. The second is round-off: a second
 difference divides a small difference of values of order one by the square of
 the step, so the error of a double-precision number is multiplied by the
@@ -645,7 +552,7 @@ why the module uses it and why a smaller step would not be better.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -657,12 +564,15 @@ reproduce_this(
         "src/pbc/mechanics/chaos.py",
         "src/pbc/mechanics/pendulum.py",
         "src/pbc/mechanics/oscillator.py",
+        "src/pbc/mechanics/experiments/lagrangian_mechanics.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_lagrangian.py",
         "tests/unit/test_chaos.py",
         "tests/unit/test_pendulum.py",
         "tests/unit/test_oscillator.py",
+        "tests/unit/test_lagrangian_mechanics_experiment.py",
     ],
 )
 ```

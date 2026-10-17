@@ -18,6 +18,7 @@ lesson:
   related: []
   format: 2
   preview: fig-momentum-residual
+  experiment: pbc.mechanics.experiments.collision_momentum_proved
   prerequisites:
     lessons: [momentum-and-collisions, proving-what-the-simulation-showed]
     outside:
@@ -28,8 +29,10 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header
+from pbc.mechanics.experiments import collision_momentum_proved as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -158,33 +161,13 @@ change of the total momentum. The theorem says the change is zero for all of
 them. Doubles show it to the round-off of their arithmetic.
 
 ```{python}
-import numpy as np
+#| echo: false
+excerpt(experiment.random_collisions)
+```
 
-from pbc.authoring import table
-from pbc.mechanics.particles import hard_sphere_collision
-
-rng = np.random.default_rng(7)
-rows = []
-for sample in range(6):
-    m1, m2 = rng.uniform(0.1, 10.0, size=2)
-    v1, v2 = rng.normal(size=(2, 3))
-    n = rng.normal(size=3)
-    n /= np.linalg.norm(n)
-    w1, w2 = hard_sphere_collision(m1, v1, m2, v2, n)
-    before = m1 * v1 + m2 * v2
-    after = m1 * w1 + m2 * w2
-    rows.append((m1, m2, np.max(np.abs(after - before)), np.linalg.norm(before)))
-
-table(
-    rows,
-    [
-        ("m1", "kg", ".2f"),
-        ("m2", "kg", ".2f"),
-        ("largest change of a momentum component", "kg m/s", ".1e"),
-        ("size of the total momentum", "kg m/s", ".2f"),
-    ],
-    "The change of the total momentum in a collision, for six random draws.",
-)
+```{python}
+#| echo: false
+result.table("random-collisions")
 ```
 
 The change is many orders of magnitude below the momentum itself, as the
@@ -195,28 +178,22 @@ The same check over many more collisions, with the mass ratio over six
 orders of magnitude, shows what the table suggests.
 
 ```{python}
+#| echo: false
+excerpt(experiment.momentum_residuals)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_momentum_residual)
+```
+
+```{python}
 #| label: fig-momentum-residual
+#| echo: false
 #| fig-cap: "Change of the total momentum, relative to its size, in two thousand random collisions against the mass ratio. The rule never changes it by more than round-off."
 #| fig-alt: "Scatter plot with a logarithmic horizontal axis, the ratio of the two masses, and a logarithmic vertical axis, the relative change of the total momentum. The points form a flat band far below one, with no trend as the mass ratio changes."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-ratio, change = [], []
-for _ in range(2000):
-    m1, m2 = 10 ** rng.uniform(-3, 3, size=2)
-    v1, v2 = rng.normal(size=(2, 3))
-    n = rng.normal(size=3)
-    n /= np.linalg.norm(n)
-    w1, w2 = hard_sphere_collision(m1, v1, m2, v2, n)
-    before = m1 * v1 + m2 * v2
-    ratio.append(m1 / m2)
-    change.append(np.linalg.norm(m1 * w1 + m2 * w2 - before) / np.linalg.norm(before))
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.loglog(ratio, np.maximum(change, 1e-18), ".", color="#00429d", markersize=3)
-ax.set_xlabel("mass ratio m1 / m2")
-ax.set_ylabel("relative change of the momentum")
-plt.show()
+result.show("fig-momentum-residual")
 ```
 
 The points lie on a band at the level of double precision, and the band does
@@ -233,25 +210,18 @@ directions. Every part of the statement still looks plausible. The cell shows
 that the momentum is not conserved.
 
 ```{python}
-m1, m2 = 1.0, 3.0  # kg
-v1 = np.array([2.0, 0.5, 0.0])
-v2 = np.array([-1.0, 0.0, 0.5])
-n = np.array([1.0, 0.0, 0.0])
-approach = (v1 - v2) @ n
+#| echo: false
+excerpt(experiment, region="example")
+```
 
-wrong = (v1 - approach * n, v2 + approach * n)  # coefficient 1 for any masses
-right = hard_sphere_collision(m1, v1, m2, v2, n)
-before = m1 * v1 + m2 * v2
+```{python}
+#| echo: false
+excerpt(experiment.two_rules)
+```
 
-rule_rows = [
-    ("rule with equal coefficients", *(m1 * wrong[0] + m2 * wrong[1] - before)),
-    ("rule of the momentum lesson", *(m1 * right[0] + m2 * right[1] - before)),
-]
-table(
-    rule_rows,
-    [("rule", "", ""), ("x", "kg m/s", ".1e"), ("y", "kg m/s", ".1e"), ("z", "kg m/s", ".1e")],
-    "The change of the total momentum along each axis, for two rules.",
-)
+```{python}
+#| echo: false
+result.table("two-rules")
 ```
 
 The first rule changes the momentum along the line of contact. It fails the
@@ -310,8 +280,13 @@ hypotheses are stated and not only the conclusion. The physics needs positive
 masses anyway.
 
 ```{python}
-total = m1 + m2
-print(f"the rule divides by m1 + m2 = {total:.1f} kg for the example masses")
+#| echo: false
+excerpt(experiment.total_mass)
+```
+
+```{python}
+#| echo: false
+print(result.output("total-mass"), end="")
 ```
 :::
 :::
@@ -329,16 +304,18 @@ equal to the same expression with `v₁ i` and `v₂ i`, and the proof is
 `collision_momentum` followed by `congrArg`.
 
 ```{python}
-w1, w2 = right
-centre_before = (m1 * v1 + m2 * v2) / (m1 + m2)
-centre_after = (m1 * w1 + m2 * w2) / (m1 + m2)
-print(f"largest change of the centre-of-mass velocity: "
-      f"{np.max(np.abs(centre_after - centre_before)):.1e} m/s")
+#| echo: false
+excerpt(experiment.centre_of_mass_velocity)
+```
+
+```{python}
+#| echo: false
+print(result.output("centre-of-mass-velocity"), end="")
 ```
 :::
 :::
 
-## Reproduce this
+## Check this proof {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -346,7 +323,12 @@ reproduce_this(
     code=[
         "lean/PhysicsByConstruction/Mechanics/Collision.lean",
         "src/pbc/mechanics/particles.py",
+        "src/pbc/mechanics/experiments/collision_momentum_proved.py",
+        "src/pbc/experiment.py",
     ],
-    tests=["tests/unit/test_particles.py"],
+    tests=[
+        "tests/unit/test_particles.py",
+        "tests/unit/test_collision_momentum_proved_experiment.py",
+    ],
 )
 ```

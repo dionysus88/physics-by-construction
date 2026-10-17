@@ -120,7 +120,9 @@ longer does.
 ## Pathway without AI
 
 The assignment needs no AI tool and no account. Everything runs from a clone of
-the repository, set up as the lesson's "Reproduce this" section describes.
+the repository with Git and uv, set up as the setup page of the site and the
+lesson's "Run this experiment" section describe: `uv sync --locked --no-dev`,
+then the lesson's experiment.
 Students who use an assistant should state where; the rubric rewards the
 student's own numbers and reading of them, which an assistant cannot supply
 without running the code.

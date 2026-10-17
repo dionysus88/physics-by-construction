@@ -20,6 +20,7 @@ lesson:
   related: []
   format: 2
   preview: fig-range-sweep
+  experiment: pbc.mechanics.experiments.automated_analysis_pipelines
   prerequisites:
     lessons: [projectile-with-drag]
     outside:
@@ -28,8 +29,12 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.data import pipeline
+from pbc.mechanics import analysis
+from pbc.mechanics.experiments import automated_analysis_pipelines as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -121,9 +126,6 @@ listings are read from the files when the site is built.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.data import pipeline
-
 excerpt(pipeline.sweep)
 ```
 
@@ -146,14 +148,8 @@ and the change is read in the diff of the commit.
 
 ### A simulated throw: the angle sweep
 
-```{python}
-#| echo: false
-from pbc.mechanics import analysis
-from pbc.mechanics.analysis import SPEED, SPEED_SIGMA
-```
-
-A baseball is thrown at a speed of `{python} f"{SPEED:.0f}"` m/s with a standard uncertainty of
-`{python} f"{SPEED_SIGMA:.1f}"` m/s, in air at sea level. The function that the whole
+A baseball is thrown at a speed of `{python} result["speed"]` m/s with a standard uncertainty of
+`{python} result["speed-sigma"]` m/s, in air at sea level. The function that the whole
 pipeline reuses is the range of one throw. The step is fixed and the stepper is
 the classical fourth-order method, so the integration error is far below the
 uncertainties that follow.
@@ -169,67 +165,45 @@ drag, which is the closed form of the earlier lessons.
 
 ```{python}
 #| label: angle-sweep
-from pbc.authoring import table
-
-scan = analysis.angle_sweep()
-table(
-    scan.rows("range", "sigma", "no_drag"),
-    columns=[
-        ("launch angle", "deg", ".0f"),
-        ("range", "m", ".2f"),
-        ("standard uncertainty", "m", ".2f"),
-        ("range without drag", "m", ".2f"),
-    ],
-    caption="Range of the throw for each launch angle, with the uncertainty from the launch speed, to two decimals.",
-)
-loss = 100 * (1 - scan.results["range"] / scan.results["no_drag"])
-relative = 100 * scan.results["sigma"] / scan.results["range"]
+#| echo: false
+excerpt(experiment.angle_sweep)
 ```
 
 The range with drag is below the drag-free range at every angle, by
-`{python} f"{loss.min():.0f}"` to `{python} f"{loss.max():.0f}"` per cent of it, and the uncertainty is
-`{python} f"{relative.min():.1f}"` to `{python} f"{relative.max():.1f}"` per cent of the range. The maximum of the coarse grid is at
-`{python} f"{scan.argmax('range'):.0f}"` degrees. A finer sweep around it finds the angle that gives the
+`{python} result["loss-min"]` to `{python} result["loss-max"]` per cent of it, and the uncertainty is
+`{python} result["relative-min"]` to `{python} result["relative-max"]` per cent of the range. The maximum of the coarse grid is at
+`{python} result["coarse-best"]` degrees. A finer sweep around it finds the angle that gives the
 longest throw:
 
 ```{python}
+#| echo: false
+excerpt(experiment.fine_sweep)
+```
+
+```{python}
 #| label: fine-sweep
-fine = analysis.fine_sweep()
-best = fine.argmax("range")
-print(f"best angle on the fine grid: {best:.1f} degrees")
+#| echo: false
+print(result.output("fine-sweep"), end="")
 ```
 
 [Drag moves the angle of the longest throw below the drag-free value of forty-five
-degrees, to `{python} f"{best:.1f}"` degrees on the grid.]{.claim type="numerically-verified"
+degrees, to `{python} result["best"]` degrees on the grid.]{.claim type="numerically-verified"
 scope="this ball, speed, and air" evidence="fine-sweep"}
 The sweep finds the effect without a formula; why drag moves the angle is the
 subject of the earlier lesson on drag.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_range_sweep)
+```
+
+```{python}
 #| label: fig-range-sweep
+#| echo: false
 #| fig-cap: "Range of the throw against launch angle. With drag the range is lower and its maximum lies at a smaller angle than without; the band is one standard uncertainty from the launch speed."
 #| fig-status: simulated
 #| fig-alt: "Line plot of range in metres against launch angle in degrees. A dashed curve for the throw without drag rises to a maximum at forty-five degrees and falls symmetrically. A solid curve for the throw with drag lies below it, with a maximum at a smaller angle. A shaded band about the solid curve shows one standard uncertainty, a little more than a metre wide on each side."
-import matplotlib.pyplot as plt
-
-from pbc.authoring import FIGURE_COLOURS
-
-angles = scan.values
-range_fig, range_ax = plt.subplots(figsize=(6.4, 3.6))
-range_ax.plot(angles, scan.results["no_drag"], color=FIGURE_COLOURS[1], linestyle="--", label="without drag")
-range_ax.fill_between(
-    angles,
-    scan.results["range"] - scan.results["sigma"],
-    scan.results["range"] + scan.results["sigma"],
-    color=FIGURE_COLOURS[0],
-    alpha=0.3,
-    label="one standard uncertainty",
-)
-range_ax.plot(angles, scan.results["range"], color=FIGURE_COLOURS[0], marker="o", label="with drag")
-range_ax.set_xlabel("launch angle (deg)")
-range_ax.set_ylabel("range (m)")
-range_ax.legend()
-plt.show()
+result.show("fig-range-sweep")
 ```
 
 The figure puts the sweep, the uncertainty, and the limiting case on one
@@ -238,28 +212,24 @@ form that the earlier lesson checked the simulation against.
 
 The first-order uncertainty assumes that the range is a straight line in the
 speed over the width of $\sigma_v$. The Monte Carlo run does not: it draws
-`{python} analysis.SAMPLES` speeds with a fixed seed, throws each, and takes the spread of the ranges.
+`{python} result["samples"]` speeds with a fixed seed, throws each, and takes the spread of the ranges.
+
+```{python}
+#| echo: false
+excerpt(experiment.monte_carlo_check)
+```
 
 ```{python}
 #| label: monte-carlo-check
-result, spread = analysis.monte_carlo(best)
-propagated = analysis.range_with_uncertainty(best)["sigma"]
-table(
-    [(propagated, spread, 100 * (spread / propagated - 1))],
-    columns=[
-        ("propagated uncertainty", "m", ".2f"),
-        ("Monte Carlo spread", "m", ".2f"),
-        ("difference", "%", ".0f"),
-    ],
-    caption="The first-order uncertainty of the range at the best angle and the spread of a seeded Monte Carlo run, to two decimals.",
-)
+#| echo: false
+result.table("monte-carlo-check")
 ```
 
 [The first-order propagation and the Monte Carlo spread differ by
-`{python} f"{abs(100 * (spread / propagated - 1)):.0f}"` per cent at the best angle.]{.claim type="numerically-verified"
+`{python} result["monte-carlo-difference"]` per cent at the best angle.]{.claim type="numerically-verified"
 scope="this throw and a speed uncertainty of under two per cent" evidence="monte-carlo-check"}
-A standard deviation from `{python} analysis.SAMPLES` draws is itself uncertain by about
-`{python} f"{100 / (2 * (analysis.SAMPLES - 1)) ** 0.5:.0f}"` per cent, so a difference of that size is the Monte
+A standard deviation from `{python} result["samples"]` draws is itself uncertain by about
+`{python} result["spread-uncertainty"]` per cent, so a difference of that size is the Monte
 Carlo run's own scatter, not a fault of the tangent. The seed is fixed, so another build gets the same draws.
 
 ### The report and its expectation
@@ -269,19 +239,17 @@ compares it with `reports/expected/projectile-range.txt`, which is committed.
 When the comparison fails the cell raises, and the page does not build.
 
 ```{python}
-#| label: projectile-report
-from pbc.data.pipeline import EXPECTED_DIR, check_report, differences
-
-report = analysis.build_report()
-check_report(report, EXPECTED_DIR / "projectile-range.txt")
-table(
-    report.rows(),
-    columns=[("quantity", "", "s"), ("as shown", "", "s")],
-    caption="The report of the simulated problem, as the build wrote it and as it is committed.",
-)
+#| echo: false
+excerpt(experiment.projectile_report)
 ```
 
-The two agree: `{python} len(differences(report, (EXPECTED_DIR / "projectile-range.txt").read_text()))`
+```{python}
+#| label: projectile-report
+#| echo: false
+result.table("projectile-report")
+```
+
+The two agree: `{python} result["report-differences"]`
 lines differ. This is what the committed expectation guards. A change to the
 drag constant, the stepper, the step, or the seed changes a line, and the build
 fails until a person reads the change and updates the expectation.
@@ -307,26 +275,21 @@ of the wave height) and the dominant period of each repetition, and then the
 mean of the five with its standard error.
 
 ```{python}
-#| label: flume-report
-from pbc.data import flume_analysis
+#| echo: false
+excerpt(experiment.flume_report)
+```
 
-experiment, models = flume_analysis.load()
-rms, period = flume_analysis.repetition_results(experiment, flume_analysis.WINDOW)
-mean_rms = flume_analysis.estimate(rms)
-mean_period = flume_analysis.estimate(period)
-resolution = flume_analysis.period_resolution(mean_period.mean, flume_analysis.WINDOW)
-table(
-    [(k + 1, 1e3 * r, p) for k, (r, p) in enumerate(zip(rms, period, strict=True))],
-    columns=[("repetition", "", "d"), ("RMS elevation", "mm", ".2f"), ("period", "s", ".2f")],
-    caption="RMS elevation and dominant period of each repetition in the window, to two decimals.",
-)
+```{python}
+#| label: flume-report
+#| echo: false
+result.table("flume-report")
 ```
 
 The five repetitions give a mean RMS elevation of
-`{python} f"{1e3 * mean_rms.mean:.2f}"` mm with a standard error of
-`{python} f"{1e3 * mean_rms.sigma:.2f}"` mm. The period is the same in all five to the two decimals shown. That
-is not a precise measurement of the period: a window of `{python} f"{flume_analysis.WINDOW[1] - flume_analysis.WINDOW[0]:.0f}"` s can tell
-two periods apart only if they differ by about `{python} f"{resolution:.2f}"` s, because that is
+`{python} result["mean-rms"]` mm with a standard error of
+`{python} result["mean-rms-sigma"]` mm. The period is the same in all five to the two decimals shown. That
+is not a precise measurement of the period: a window of `{python} result["window-length"]` s can tell
+two periods apart only if they differ by about `{python} result["resolution"]` s, because that is
 what the spectrum of such a window resolves. The period is reported to the
 resolution of the window, and the five agree because they are below it.
 
@@ -334,36 +297,24 @@ The standard error describes the repetitions. The window is a second choice:
 which seconds count as the steady wave train. The sweep moves the end of the window and keeps the start.
 
 ```{python}
+#| echo: false
+excerpt(experiment.window_sweep)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_window_sweep)
+```
+
+```{python}
 #| label: fig-window-sweep
+#| echo: false
 #| fig-cap: "RMS elevation of the mean of five repetitions against the end of the analysis window. The bar is the standard error of the repetitions; the result moves with the window by far more than the bar."
 #| fig-status: processed
 #| fig-dataset: aalborg-submerged-bar
 #| fig-artifact: processed-measured
 #| fig-alt: "Plot of RMS elevation in millimetres against the end of the window in seconds, with four points joined by a line. The points fall from left to right, steeply at first. Each point has a vertical bar that is too small to see against the fall."
-import matplotlib.pyplot as plt
-
-from pbc.authoring import FIGURE_COLOURS
-
-window_scan = flume_analysis.window_sweep(experiment)
-ends = window_scan.values
-window_fig, window_ax = plt.subplots(figsize=(6.4, 3.6))
-sigmas = [
-    1e3 * flume_analysis.estimate(flume_analysis.repetition_results(experiment, (flume_analysis.WINDOW[0], end))[0]).sigma
-    for end in ends
-]
-window_ax.errorbar(
-    ends,
-    1e3 * window_scan.results["rms"],
-    yerr=sigmas,
-    color=FIGURE_COLOURS[0],
-    marker="o",
-    capsize=3,
-    label="mean of five repetitions [processed]",
-)
-window_ax.set_xlabel("end of the window (s)")
-window_ax.set_ylabel("RMS elevation (mm)")
-window_ax.legend()
-plt.show()
+result.show("fig-window-sweep")
 ```
 
 The window was cut from the aligned records, and selecting a window is a step
@@ -371,17 +322,18 @@ that makes the data processed, as the status says. The figure and the table
 show the sweep of the window against the spread of the repetitions:
 
 ```{python}
+#| echo: false
+excerpt(experiment.window_table)
+```
+
+```{python}
 #| label: window-sweep
-spread = float(window_scan.results["rms"].max() - window_scan.results["rms"].min())
-table(
-    [(end, 1e3 * rms_value, s) for end, rms_value, s in zip(ends, window_scan.results["rms"], sigmas, strict=True)],
-    columns=[("end of the window", "s", ".0f"), ("RMS elevation", "mm", ".2f"), ("standard error", "mm", ".2f")],
-    caption="The window end, the mean RMS elevation of the repetitions, and its standard error, to two decimals.",
-)
+#| echo: false
+result.table("window-sweep")
 ```
 
 [The change of the RMS elevation with the end of the window is
-`{python} f"{1e3 * spread / (1e3 * mean_rms.sigma):.0f}"` times the standard error of the five repetitions.]{.claim
+`{python} result["window-spread-in-errors"]` times the standard error of the five repetitions.]{.claim
 type="experimentally-supported" scope="gauge five of the first wave condition, windows from five seconds to the ends shown"
 evidence="window-sweep aalborg-submerged-bar"} The uncertainty of this result is the window,
 and a report that gave only the standard error would be too confident by that
@@ -393,34 +345,18 @@ The three numerical runs go through the same function, and the report puts each
 beside the measurement without merging them.
 
 ```{python}
+#| echo: false
+excerpt(experiment.model_comparison)
+```
+
+```{python}
 #| label: model-comparison
-runs = flume_analysis.model_results(models)
-rows = [
-    (
-        name,
-        1e3 * run_rms,
-        1e3 * (run_rms - mean_rms.mean),
-        flume_analysis.agreement(mean_rms, run_rms),
-        run_period,
-    )
-    for name, (run_rms, run_period) in runs.items()
-]
-rel_diff = [100 * abs(run_rms / mean_rms.mean - 1) for run_rms, _ in runs.values()]
-table(
-    rows,
-    columns=[
-        ("run", "", "s"),
-        ("RMS elevation", "mm", ".2f"),
-        ("minus measurement", "mm", ".2f"),
-        ("in standard errors", "", ".1f"),
-        ("period", "s", ".2f"),
-    ],
-    caption="The three numerical runs in the same window, their RMS elevation relative to the measurement, and their period, to two decimals.",
-)
+#| echo: false
+result.table("model-comparison")
 ```
 
 [All three runs have a smaller RMS elevation than the measurement, by
-`{python} f"{min(rel_diff):.1f}"` to `{python} f"{max(rel_diff):.1f}"` per cent, and their periods agree with
+`{python} result["rel-diff-min"]` to `{python} result["rel-diff-max"]` per cent, and their periods agree with
 it within the resolution of the window.]{.claim type="experimentally-supported" scope="gauge five of the first wave condition, window as stated"
 evidence="model-comparison aalborg-submerged-bar"}
 The difference in standard errors is large, and it should not be read as a
@@ -432,10 +368,14 @@ The report of this problem is the same function of the same data, and it is
 compared with its own expectation:
 
 ```{python}
+#| echo: false
+excerpt(experiment.flume_expectation)
+```
+
+```{python}
 #| label: flume-expectation
-flume_report = flume_analysis.build_report()
-check_report(flume_report, EXPECTED_DIR / "flume-waves.txt")
-print(f"lines that differ from the committed expectation: {len(differences(flume_report, (EXPECTED_DIR / 'flume-waves.txt').read_text()))}")
+#| echo: false
+print(result.output("flume-expectation"), end="")
 ```
 
 ## Limits {#limits}
@@ -488,14 +428,13 @@ of the fine sweep, and compare it with the one in the report. Is it half?
 
 ::: {.solution}
 ```{python}
-from pbc.data.uncertainty import propagate
+#| echo: false
+excerpt(experiment.halved_speed_uncertainty)
+```
 
-def at_best(sigma):
-    value, error = propagate(lambda v: analysis.throw_range(float(v), best), [SPEED], [sigma])
-    return float(error)
-
-full, halved = at_best(SPEED_SIGMA), at_best(SPEED_SIGMA / 2)
-print(f"uncertainty of the range: {full:.2f} m with the old speed uncertainty, {halved:.2f} m with half of it, ratio {halved / full:.2f}")
+```{python}
+#| echo: false
+print(result.output("halved-speed-uncertainty"), end="")
 ```
 
 The ratio is one half. To first order the uncertainty of the range is the
@@ -514,11 +453,13 @@ setting. Does the committed report notice the difference?
 
 ::: {.solution}
 ```{python}
-from pbc.mechanics.projectile import projectile_range
+#| echo: false
+excerpt(experiment.euler_against_the_reference)
+```
 
-euler = projectile_range(SPEED, best, analysis.MASS, analysis.DRAG, analysis.DT)
-reference = analysis.throw_range(SPEED, best)
-print(f"explicit Euler: {euler:.2f} m; fourth-order stepper: {reference:.2f} m; difference {euler - reference:+.2f} m")
+```{python}
+#| echo: false
+print(result.output("euler-against-the-reference"), end="")
 ```
 
 Explicit Euler has an error proportional to the step, and here it changes the
@@ -529,7 +470,7 @@ silent, and the diff of the expectation shows its size.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -539,9 +480,14 @@ reproduce_this(
         "src/pbc/data/flume_analysis.py",
         "src/pbc/data/reports.py",
         "src/pbc/mechanics/analysis.py",
+        "src/pbc/mechanics/experiments/automated_analysis_pipelines.py",
+        "src/pbc/experiment.py",
         "reports/expected/projectile-range.txt",
         "reports/expected/flume-waves.txt",
     ],
-    tests=["tests/unit/test_pipeline.py"],
+    tests=[
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_automated_analysis_pipelines_experiment.py",
+    ],
 )
 ```

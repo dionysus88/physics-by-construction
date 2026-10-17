@@ -20,6 +20,7 @@ lesson:
   related: []
   format: 2
   preview: fig-resonance-curve
+  experiment: pbc.mechanics.experiments.resonance
   prerequisites:
     lessons: [harmonic-oscillator, projectile-with-drag, numerical-integrators]
     outside:
@@ -30,8 +31,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import resonance
+from pbc.mechanics.experiments import resonance as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -199,9 +203,6 @@ linear drag; the rest is the reference solution.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import resonance
-
 excerpt(resonance.driving_force)
 ```
 
@@ -292,74 +293,43 @@ seconds]{.given} at [two hundred steps per second]{.given}, and compares with th
 exact motion, transient included.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.closed_form_check)
+```
+
+```{python}
 #| label: closed-form-check
-import numpy as np
-
-from pbc.authoring import table
-from pbc.mechanics.drag import linear_drag
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.integrators import rk4_step
-from pbc.mechanics.oscillator import spring
-from pbc.mechanics.resonance import (
-    damping_rate,
-    driven_motion,
-    driving_force,
-    fit_amplitude,
-    half_power_width,
-    measured_resonance_curve,
-    natural_frequency,
-    peak_frequency,
-    quality_factor,
-    steady_state_amplitude,
-    steady_state_phase,
-)
-
-mass, k, b, force = 1.0, 4.0, 0.4, 2.0
-w0 = natural_frequency(mass, k)
-q = quality_factor(mass, k, b)
-gamma = damping_rate(mass, b)
-
-omega = 1.7  # rad/s
-start = State(t=0.0, x=[0.0], v=[0.0])
-oscillator = newton(mass, spring(k), linear_drag(b), driving_force(force, omega))
-run = simulate(start, oscillator, 0.005, 8000, step=rk4_step)
-exact = driven_motion(start, mass, k, b, force, omega, run.t)
-largest = np.max(np.abs(run.x - exact.x))
-steady = float(steady_state_amplitude(mass, k, b, force, omega))
-
-table(
-    [(np.max(np.abs(run.x)), steady, largest)],
-    columns=[("largest displacement of the run", "m", ".4f"), ("steady-state amplitude", "m", ".4f"), ("largest difference from the exact motion", "m", ".1e")],
-    caption="The simulated motion of the driven oscillator from rest for forty seconds against its exact solution, with the transient.",
-)
+#| echo: false
+result.table("closed-form-check")
 ```
 
 [The simulated motion of the driven oscillator agrees with the exact solution at
 every instant, the transient included]{.claim type="numerically-verified"
 scope="one driving frequency, forty seconds, classical Runge-Kutta method at the
 stated step" evidence="closed-form-check"}: the largest difference is
-`{python} f"{largest:.0e}"` m against displacements of about
-`{python} f"{steady:.2f}"` m. The largest displacement of the run is
-`{python} f"{np.max(np.abs(run.x)):.2f}"` m against the steady-state amplitude
-`{python} f"{steady:.2f}"` m: the free motion, which starts so as to cancel the
+`{python} result["largest"]` m against displacements of about
+`{python} result["steady"]` m. The largest displacement of the run is
+`{python} result["largest-displacement"]` m against the steady-state amplitude
+`{python} result["steady"]` m: the free motion, which starts so as to cancel the
 steady state at the first instant, adds to it for a while as it decays.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_transient)
+```
+
+```{python}
 #| label: fig-transient
+#| echo: false
 #| fig-cap: "The displacement of the driven oscillator from rest, simulated and exact. The motion starts at zero, swells while the free motion and the steady state add up, and settles into a steady oscillation at the driving frequency with the amplitude of the closed form."
 #| fig-alt: "Plot of displacement against time over forty seconds. A solid curve, the simulation, and a dashed curve, the exact motion, lie on top of each other. The oscillation starts at zero, grows to a larger swing within the first ten seconds with an irregular envelope, and then settles into a steady sinusoid of constant amplitude."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-from pbc.authoring import FIGURE_COLOURS
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(run.t, run.x[:, 0], color=FIGURE_COLOURS[0], linestyle="-", label="simulation")
-ax.plot(run.t, exact.x[:, 0], color=FIGURE_COLOURS[1], linestyle="--", label="exact")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("displacement (m)")
-ax.legend(loc="upper right")
-plt.show()
+result.show("fig-transient")
 ```
 
 The simulation and the exact curve are indistinguishable at this scale, as the
@@ -375,50 +345,38 @@ denser around the natural frequency, each time starting from rest, running for
 driving periods]{.given}. A third of the frequencies are printed.
 
 ```{python}
-#| label: resonance-curve
-omegas = np.concatenate([np.arange(0.4, 1.2, 0.2), np.arange(1.2, 2.85, 0.05), np.arange(3.0, 4.01, 0.2)])
-measured, phase = measured_resonance_curve(mass, k, b, force, omegas, decay_times=8.0)
-analytic = steady_state_amplitude(mass, k, b, force, omegas)
-analytic_phase = steady_state_phase(mass, k, b, omegas)
+#| echo: false
+excerpt(experiment.resonance_curve)
+```
 
-pick = np.arange(0, len(omegas), 3)
-table(
-    [(omegas[i], analytic[i], measured[i], analytic_phase[i], phase[i]) for i in pick],
-    columns=[
-        ("driving frequency", "rad/s", ".2f"),
-        ("amplitude, closed form", "m", ".4f"),
-        ("amplitude, simulation", "m", ".4f"),
-        ("phase lag, closed form", "rad", ".3f"),
-        ("phase lag, simulation", "rad", ".3f"),
-    ],
-    caption="Amplitude and phase lag of the driven oscillator at a third of the frequencies of the curve: the closed form and the simulation, to four and three decimals.",
-)
+```{python}
+#| label: resonance-curve
+#| echo: false
+result.table("resonance-curve")
 ```
 
 [The simulated resonance curve agrees with the analytic amplitude at every
 frequency]{.claim type="numerically-verified" scope="forty-three frequencies,
 classical Runge-Kutta method, amplitude read after eight decay times"
 evidence="resonance-curve"}: the largest relative difference of the amplitude is
-`{python} f"{np.max(np.abs(measured / analytic - 1.0)):.0e}"` over all of them, and the
+`{python} result["amplitude-difference"]` over all of them, and the
 largest difference of the phase is
-`{python} f"{np.max(np.abs(phase - analytic_phase)):.0e}"` rad. The delay passes through
-a quarter of a turn, `{python} f"{np.pi / 2:.3f}"` rad, at the natural frequency, as
+`{python} result["phase-difference"]` rad. The delay passes through
+a quarter of a turn, `{python} result["quarter-turn"]` rad, at the natural frequency, as
 derived.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_resonance_curve)
+```
+
+```{python}
 #| label: fig-resonance-curve
+#| echo: false
 #| fig-cap: "The resonance curve of the driven oscillator: the amplitude of the steady state against the driving frequency. The markers are the simulation, the line is the closed form; they agree. The curve rises from the static displacement, peaks a little below the natural frequency, and falls away."
 #| fig-alt: "Plot of amplitude in metres against driving frequency in radians per second. A solid smooth line rises from a low value on the left to a sharp peak near the middle, then falls to small values on the right. Round markers from the simulation lie on the line at every frequency. A vertical dotted line marks the natural frequency, just to the right of the peak."
 #| fig-status: simulated
-dense = np.linspace(0.4, 4.0, 600)
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(dense, steady_state_amplitude(mass, k, b, force, dense), color=FIGURE_COLOURS[0], linestyle="-", label="closed form")
-ax.plot(omegas, measured, color=FIGURE_COLOURS[1], marker="o", linestyle="", markersize=4, label="simulation")
-ax.axvline(w0, color="#57606a", linestyle=":", label="natural frequency")
-ax.set_xlabel("driving frequency (rad/s)")
-ax.set_ylabel("amplitude (m)")
-ax.legend(loc="upper right")
-plt.show()
+result.show("fig-resonance-curve")
 ```
 
 The figure is the table in full: the markers are the simulation at all
@@ -434,32 +392,25 @@ the maximum are those of the sample with the largest amplitude, so they are
 accurate to the spacing of the samples.
 
 ```{python}
-#| label: peak-and-width
-width = half_power_width(omegas, measured)
-w_peak = peak_frequency(mass, k, b)
-exact_peak = float(steady_state_amplitude(mass, k, b, force, w_peak))
-rows = [
-    ("peak frequency", "rad/s", w_peak, omegas[np.argmax(measured)]),
-    ("peak height", "m", exact_peak, np.max(measured)),
-    ("full width at half power", "rad/s", b / mass, width),
-    ("quality factor", "", q, w0 / width),
-]
-table(
-    rows,
-    columns=[("quantity", "", ""), ("unit", "", ""), ("closed form", "", ".3f"), ("from the simulated curve", "", ".3f")],
-    caption="The peak frequency, height, width at half power, and quality factor of the resonance: the closed forms and the values read from the simulated curve, to three decimals.",
-)
+#| echo: false
+excerpt(experiment.peak_and_width)
 ```
 
-The peak lies at `{python} f"{w_peak:.3f}"` rad/s, below the natural frequency
-`{python} f"{w0:.3f}"` rad/s, and the samples have the maximum at
-`{python} f"{omegas[np.argmax(measured)]:.2f}"` rad/s. The weak-damping height
-$Q F_0/k$, `{python} f"{q * force / k:.3f}"` m, is within
-`{python} f"{abs(q * force / k / exact_peak - 1.0):.1%}"` of the exact peak. The width at half
-power is `{python} f"{width:.3f}"` rad/s against $b/m =$
-`{python} f"{b / mass:.3f}"` rad/s, and the quality factor read from it,
-`{python} f"{w0 / width:.2f}"`, against `{python} f"{q:.2f}"` from the parameters, a difference of
-`{python} f"{abs(w0 / width / q - 1.0):.0%}"`.
+```{python}
+#| label: peak-and-width
+#| echo: false
+result.table("peak-and-width")
+```
+
+The peak lies at `{python} result["w-peak"]` rad/s, below the natural frequency
+`{python} result["w0"]` rad/s, and the samples have the maximum at
+`{python} result["sampled-peak"]` rad/s. The weak-damping height
+$Q F_0/k$, `{python} result["weak-damping-height"]` m, is within
+`{python} result["weak-damping-error"]` of the exact peak. The width at half
+power is `{python} result["width"]` rad/s against $b/m =$
+`{python} result["b-over-m"]` rad/s, and the quality factor read from it,
+`{python} result["q-from-width"]`, against `{python} result["q"]` from the parameters, a difference of
+`{python} result["q-difference"]`.
 [The quality factor read from the width of the simulated curve is the one that
 the parameters give, to the accuracy of the sampling of the curve]{.claim
 type="numerically-verified" scope="one oscillator, the samples of the curve above"
@@ -474,29 +425,20 @@ the steady state, and finds the time after which what is left stays below
 for one with [a quarter of the damping]{.given}.
 
 ```{python}
-#| label: settling
-rows = []
-for factor in (1.0, 0.25):
-    b_case = b * factor
-    amplitude = float(steady_state_amplitude(mass, k, b_case, force, w0))
-    delta = float(steady_state_phase(mass, k, b_case, w0))
-    t = np.linspace(0.0, 400.0, 400001)
-    motion = driven_motion(start, mass, k, b_case, force, w0, t)
-    leftover = np.abs(motion.x[:, 0] - amplitude * np.cos(w0 * t - delta))
-    settled = t[np.where(leftover > 0.01 * amplitude)[0][-1]]
-    rows.append((quality_factor(mass, k, b_case), settled, 1.0 / damping_rate(mass, b_case)))
-
-table(
-    rows,
-    columns=[("quality factor", "", ".1f"), ("time to settle to one per cent", "s", ".1f"), ("decay time 1/gamma", "s", ".1f")],
-    caption="The time after which the transient stays below one per cent of the steady-state amplitude, for two quality factors, with the decay time of the free motion.",
-)
+#| echo: false
+excerpt(experiment.settling)
 ```
 
-The settling time is a few decay times, `{python} f"{rows[0][1] / rows[0][2]:.1f}"` and
-`{python} f"{rows[1][1] / rows[1][2]:.1f}"` of them, and it grows with $Q$: the
-oscillator with `{python} f"{rows[1][0] / rows[0][0]:.0f}"` times the quality factor takes
-`{python} f"{rows[1][1] / rows[0][1]:.1f}"` times as long. The sharpness of the resonance and
+```{python}
+#| label: settling
+#| echo: false
+result.table("settling")
+```
+
+The settling time is a few decay times, `{python} result["settling-decays-1"]` and
+`{python} result["settling-decays-2"]` of them, and it grows with $Q$: the
+oscillator with `{python} result["q-ratio"]` times the quality factor takes
+`{python} result["settling-ratio"]` times as long. The sharpness of the resonance and
 the time it takes to reach it are bought together.
 
 ## Limits {#limits}
@@ -558,23 +500,18 @@ logarithm of their heights against their times.
 
 ::: {.solution}
 ```{python}
-free = simulate(State(0.0, [1.0], [0.0]), newton(mass, spring(k), linear_drag(b)), 0.005, 8000, step=rk4_step)
-x = free.x[:, 0]
-peaks = np.where((x[1:-1] > x[:-2]) & (x[1:-1] >= x[2:]) & (x[1:-1] > 0))[0] + 1
-slope, _ = np.polyfit(free.t[peaks], np.log(x[peaks]), 1)
-rate = -slope
-q_free = w0 / (2.0 * rate)
+#| echo: false
+excerpt(experiment.free_decay)
+```
 
-table(
-    [(rate, gamma, q_free, q)],
-    columns=[("decay rate from the peaks", "1/s", ".4f"), ("b / 2m", "1/s", ".4f"), ("Q from the decay", "", ".3f"), ("Q from the parameters", "", ".3f")],
-    caption="The decay rate and the quality factor read from the peaks of the free motion and from the parameters, to the precision shown.",
-)
+```{python}
+#| echo: false
+result.table("free-decay")
 ```
 
 The decay rate from the peaks is the damping rate $b/2m$, and the quality
 factor follows from it; they agree to a relative
-`{python} f"{abs(rate / gamma - 1.0):.0e}"`, the difference being that the peaks are
+`{python} result["rate-difference"]`, the difference being that the peaks are
 read at the sampled instants, a step apart, and not at the true maxima.
 :::
 :::
@@ -590,29 +527,25 @@ For weak damping the peak height is the force amplitude divided by the product o
 
 ::: {.solution}
 ```{python}
-heights = []
-for factor in (1.0, 2.0):
-    b_case = b * factor
-    top = steady_state_amplitude(mass, k, b_case, force, peak_frequency(mass, k, b_case))
-    heights.append(float(top))
+#| echo: false
+excerpt(experiment.doubled_damping)
+```
 
-table(
-    [(1.0, heights[0], 1.0), (2.0, heights[1], heights[1] / heights[0])],
-    columns=[("damping, in units of b", "", ".1f"), ("peak height", "m", ".4f"), ("relative to the first", "", ".3f")],
-    caption="The peak height of the resonance curve for the damping constant and for twice it, to four decimals, with the ratio.",
-)
+```{python}
+#| echo: false
+result.table("doubled-damping")
 ```
 
 The peak height is inversely proportional to the damping for weak damping, so the
 damping must double to halve the peak; the table gives
-`{python} f"{heights[1] / heights[0]:.3f}"` for the exact peak, slightly above one half
+`{python} result["height-ratio"]` for the exact peak, slightly above one half
 because the peak frequency also moves. Doubling the damping also doubles the
 width of the resonance and halves the time to settle: the same
 quality factor controls all three.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -623,12 +556,15 @@ reproduce_this(
         "src/pbc/mechanics/oscillator.py",
         "src/pbc/mechanics/drag.py",
         "src/pbc/mechanics/resonance.py",
+        "src/pbc/mechanics/experiments/resonance.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_integrators.py",
         "tests/unit/test_oscillator.py",
         "tests/unit/test_drag.py",
         "tests/unit/test_resonance.py",
+        "tests/unit/test_resonance_experiment.py",
     ],
 )
 ```

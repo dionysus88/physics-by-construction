@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-countdown
+  experiment: pbc.mechanics.experiments.chirp_law_proved
   prerequisites:
     lessons: [gravitational-wave-strain, proving-what-the-simulation-showed]
     outside:
@@ -29,8 +30,10 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header
+from pbc.mechanics.experiments import chirp_law_proved as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -201,32 +204,18 @@ lab's example, to show that the program computes the quantities the theorems
 describe.
 
 ```{python}
-import numpy as np
+#| echo: false
+excerpt(experiment, region="example")
+```
 
-from pbc.authoring import table
-from pbc.mechanics import chirp
+```{python}
+#| echo: false
+excerpt(experiment.identities)
+```
 
-m1, m2, f0 = 36.0, 29.0, 35.0  # solar masses, Hz: the example of the lab
-mc = chirp.chirp_mass(m1, m2)
-omega = np.pi * f0
-omega_dot = np.pi * float(chirp.chirp_rate(f0, mc))
-gmc = mc * chirp.GM_SUN_OVER_C3  # G Mc / c^3, in seconds
-
-cube_lhs = omega_dot**3
-cube_rhs = (96 / 5) ** 3 * gmc**5 * omega**11
-mc_back = float(chirp.chirp_mass_from_rate(f0, omega_dot / np.pi))
-tau_countdown = 3 * omega / (8 * omega_dot)
-tau_lab = chirp.time_to_coalescence(f0, mc)
-
-table(
-    [
-        ("(omega')^3 against (96/5)^3 (G Mc/c^3)^5 omega^11", cube_lhs / cube_rhs - 1),
-        ("chirp mass from the rate against the chirp mass", mc_back / mc - 1),
-        ("3 omega / (8 omega') against the time to coalescence", tau_countdown / tau_lab - 1),
-    ],
-    [("identity of the theorems", "", ""), ("relative difference", "", ".1e")],
-    "The identities of the theorems, evaluated with the functions of the lab.",
-)
+```{python}
+#| echo: false
+result.table("identities")
 ```
 
 All three differences are at round-off. That is a check that the program and
@@ -240,22 +229,13 @@ The cell does the same with numbers: it differences the energy of the orbit
 along the shrink rate of the program and compares with the power.
 
 ```{python}
-a = float(chirp.separation_from_frequency(f0, m1 + m2))
-m1_kg, m2_kg = m1 * chirp.M_SUN, m2 * chirp.M_SUN
+#| echo: false
+excerpt(experiment.energy_balance)
+```
 
-
-def orbit_energy(separation):
-    return -chirp.G * m1_kg * m2_kg / (2 * separation)
-
-
-power = (
-    32 / 5 * chirp.G**4 * m1_kg**2 * m2_kg**2 * (m1_kg + m2_kg) / (chirp.C**5 * a**5)
-)
-da_dt = float(chirp.shrink_rate(a, m1, m2))
-h = 1e-3 * a
-d_energy = (orbit_energy(a + h) - orbit_energy(a - h)) / (2 * h) * da_dt
-ratio = -d_energy / power
-print(f"d(energy)/dt over minus the power, from the shrink rate of the program: {ratio:.6f}")
+```{python}
+#| echo: false
+print(result.output("energy-balance"), end="")
 ```
 
 The ratio is one to the accuracy of the difference quotient: the program's
@@ -269,28 +249,25 @@ computes $3\omega/(8\omega')$ at each time from the frequency and the rate. The
 theorem says the result falls with the slope $-1$.
 
 ```{python}
+#| echo: false
+excerpt(experiment.countdown)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_countdown)
+```
+
+```{python}
 #| label: fig-countdown
+#| echo: false
 #| fig-cap: "The quantity 3 omega / (8 omega') along an integrated inspiral, with the time left to coalescence. It follows the line of slope minus one."
 #| fig-alt: "Plot of seconds against time in seconds. A straight line of slope minus one, the time left, and a dashed curve from the integrated inspiral lie on top of each other."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-tau0 = chirp.time_to_coalescence(f0, mc)
-times = np.linspace(0.0, 0.9 * tau0, 300)
-_, f_num = chirp.inspiral_frequency(times, m1, m2, f0)
-countdown = 3 * f_num / (8 * chirp.chirp_rate(f_num, mc))
-slope = np.polyfit(times, countdown, 1)[0]
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(times, tau0 - times, color="#93003a", label="time left")
-ax.plot(times, countdown, color="#00429d", linestyle="--", label="3 omega / (8 omega')")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("seconds")
-ax.legend()
-plt.show()
+result.show("fig-countdown")
 ```
 
-The fitted slope is `{python} f"{slope:.4f}"`, as the theorem says. The
+The fitted slope is `{python} result["slope"]`, as the theorem says. The
 theorem holds wherever the law holds. Near the end of a real inspiral the law
 stops describing the system, and the lab says where.
 
@@ -343,7 +320,13 @@ $P \propto a^{-4}$ the rate would be proportional to $a^{-2}$ and not $a^{-3}$,
 and the powers of $\omega$ in the chirp law would change with it.
 
 ```{python}
-print("the exponent of a in the rate is that of the power, plus two")
+#| echo: false
+excerpt(experiment.exponent_of_the_rate)
+```
+
+```{python}
+#| echo: false
+print(result.output("exponent-of-the-rate"), end="")
 ```
 :::
 :::
@@ -358,12 +341,18 @@ $\omega'' = \tfrac{11}{3}\,k\,\omega^{8/3}\omega' = \tfrac{11}{3}\,\omega'^2/\om
 $\mathrm{d}\tau/\mathrm{d}t = \tfrac38\,(1 - \tfrac{11}{3}) = -1$.
 
 ```{python}
-print(f"3/8 * (1 - 11/3) = {3 / 8 * (1 - 11 / 3):.1f}")
+#| echo: false
+excerpt(experiment.exponent_of_the_countdown)
+```
+
+```{python}
+#| echo: false
+print(result.output("exponent-of-the-countdown"), end="")
 ```
 :::
 :::
 
-## Reproduce this
+## Check this proof {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -371,7 +360,12 @@ reproduce_this(
     code=[
         "lean/PhysicsByConstruction/Mechanics/Chirp.lean",
         "src/pbc/mechanics/chirp.py",
+        "src/pbc/mechanics/experiments/chirp_law_proved.py",
+        "src/pbc/experiment.py",
     ],
-    tests=["tests/unit/test_chirp.py"],
+    tests=[
+        "tests/unit/test_chirp.py",
+        "tests/unit/test_chirp_law_proved_experiment.py",
+    ],
 )
 ```

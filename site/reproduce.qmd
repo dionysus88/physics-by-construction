@@ -1,31 +1,34 @@
 ---
 title: "Set up and run"
 description: >-
-  What to install to read and reproduce this site, what to add to run an
-  agent or edit a proof yourself, and what to do when a step fails.
+  What to install to run a lesson's experiment, to replay an agent lesson, or
+  to check a proof, and what to do when a step fails.
 ---
 
-Every listing, figure, and proof on this site comes from code in the
-repository. One command rebuilds all of it, so you can check any claim a
-lesson makes. This page separates three things:
+Every figure and every number of a lesson comes from code in the
+repository. Each lesson has an **experiment**: a program that computes what
+the page shows and writes its figures and numbers into a folder of your
+choice, so that you can change the code and run it again. The last section
+of every lesson gives its commands. This page says what to install for each
+of three things you may want to do:
 
-1. **Reproduce**: rebuild the site and every lesson output. This needs the
-   required setup and nothing else.
-2. **Extend**: change a lesson's code, test it, and preview the page. This
-   needs the same setup.
-3. **Optional workflows**: run an agent live, drive a coding agent, or edit a
-   Lean proof. Each adds its own tools and, for the first two, an account.
+1. **Run an experiment** of a simulation or a measured-data lesson. This
+   needs Git and uv, and nothing else.
+2. **Replay an agent lesson.** The same setup: the replay runs every tool
+   call of a recorded run again, without a model and without a key. A live
+   run with a model is a separate, optional step with your own account.
+3. **Check a proof** of a Lean lesson, or work on its exercises. This adds the
+   Lean toolchain.
 
-Commands that the site's own checks run are shown plainly. Every other
-command is marked "Not verified" and names the account or key it needs.
+None of these builds the website. Commands that the site's own checks run are
+shown plainly. Every other command is marked "Not verified" and names the
+account or key it needs.
 
-## Required setup
+## Run an experiment
 
-A computer running macOS or Linux, about 11 GB of free disk space for the Lean
-toolchain and the Mathlib build cache, and an internet connection for the
-first run. Windows is not supported.
-
-Install these tools once; this is the only step that may need administrator
+A computer running macOS or Linux, about 1 GB of free disk space, and an
+internet connection for the first run. Windows is not supported. Install
+these two tools once; this is the only step that may need administrator
 rights.
 
 ::: {.table-scroll tabindex="0" role="region" aria-label="Tools to install"}
@@ -33,119 +36,119 @@ rights.
 | Tool | Purpose | macOS | Linux |
 |---|---|---|---|
 | Git | Source control | Xcode command line tools, or `brew install git` | System package manager |
-| [uv](https://docs.astral.sh/uv/getting-started/installation/) | The pinned Python, the Python packages, and Quarto | `brew install uv` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| [elan](https://lean-lang.org/install/manual/) | The pinned Lean toolchain | `brew install elan-init` | `curl -sSf https://elan.lean-lang.org/elan-init.sh \| sh` |
-| jq 1.6 or later | Used by the workflow self-tests | `brew install jq` | `sudo apt-get install jq` |
+| [uv](https://docs.astral.sh/uv/getting-started/installation/) | The pinned Python and the Python packages | `brew install uv` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 
 :::
 
-Put `~/.elan/bin` on your `PATH`; the elan installer offers to do it. Then
-fetch the repository and its locked environment. On macOS:
+Then fetch the repository and its locked Python packages:
 
-```{.bash .required-setup .macos}
+```{.bash .required-setup .python-only}
 git clone https://github.com/taspinar/physics-by-construction.git
 cd physics-by-construction
-uv sync --locked
-uv run --locked playwright install --only-shell chromium
-./scripts/verify.sh
+uv sync --locked --no-dev
 ```
 
-On Linux the browser also needs system libraries. The `--with-deps` option
-installs them on the distributions Playwright supports and asks for
-administrator rights:
+`--no-dev` installs the packages the lessons need, NumPy, SciPy, Matplotlib,
+and PyYAML at the versions of `uv.lock`, and nothing else: no site generator,
+no notebook kernel, no browser, and no test tools, which only the maintainers
+of the site use.
 
-```{.bash .required-setup .linux}
-git clone https://github.com/taspinar/physics-by-construction.git
-cd physics-by-construction
-uv sync --locked
-uv run --locked playwright install --with-deps --only-shell chromium
-./scripts/verify.sh
+Each lesson's experiment is a Python module of the repository. Its command,
+from the folder of the clone, runs it and writes the figures of the page as
+`<label>.png` and every number and table of the page, as the page shows
+them, into `results/results.json`. For the first lesson:
+
+```{.bash .experiment .simulation}
+uv run --locked --no-dev python -m pbc.mechanics.experiments.kinematics results
 ```
 
-These are the commands that CI runs on a clean Linux runner. CI's last command
-is `./scripts/verify.sh --all`, which also runs the self-tests of the
-maintainers' workflow scripts; a test compares the two.
+A lesson that analyses measured data runs the same way; its data is a sample
+committed to the repository:
 
-Before the last command, `./scripts/preflight.sh` lists every missing
-prerequisite with a hint to fix it. `./scripts/verify.sh` runs it first, then
-the tests, every Lean proof, the site build, and the checks of the built
-pages. The first run downloads the Lean toolchain and the Mathlib build cache
-(about 0.5 GB, unpacking to roughly 11 GB) and takes the longest. Open
-`site/_site/index.html` in a browser to read the result.
+```{.bash .experiment .measured-data}
+uv run --locked --no-dev python -m pbc.mechanics.experiments.automated_analysis_pipelines results
+```
 
-`./scripts/doctor.sh` is for the people who maintain the site. It checks their
-workflow tools as well, such as a GitHub account that can push, and reports
-them as failures when absent. Rebuilding the site does not need them.
-
-## Reproduce one lesson
-
-The "Reproduce this" section at the end of each lesson lists the exact
-commands for that page, from the clone to the render, and the commit the
-published page was built from. What it lists depends on the type of lesson:
-
-::: {.table-scroll tabindex="0" role="region" aria-label="What Reproduce this lists"}
-
-| Lesson type | Strands | What "Reproduce this" lists |
-|---|---|---|
-| Simulation | `mechanics`, `agents-abm` | `uv sync --locked`, the tests of the code the page uses, then `quarto render` of the page |
-| Agent | `agents-llm` | The same. The page's recorded agent run is checked by recomputing every tool result, so it needs no model and no key |
-| Proof | `lean` | The same, with `./scripts/check-lean.sh` before the render: it compiles the proofs and checks them for `sorry` and axioms |
-
-:::
-
-The pattern, with the lesson's own paths in place of the names in angle
-brackets:
+The pattern, with the lesson's own module in place of the name in angle
+brackets; the last section of every lesson names it:
 
 ::: {.not-verified}
 ```bash
-git clone https://github.com/taspinar/physics-by-construction.git
-cd physics-by-construction
-uv sync --locked
-uv run --locked pytest <tests of the lesson>
-uv run --locked quarto render <lesson page>
+uv run --locked --no-dev python -m pbc.<course>.experiments.<lesson> results
 ```
 :::
 
-The commands of each real lesson are run by the site checks within a time
-limit; the pattern above is not, because its placeholders are not paths.
+The experiment of a lesson is in `src/pbc/<course>/experiments/`, and it calls
+the lesson's code in `src/pbc/`. Change either and run the command again to
+see what changes. The numbers match the page to the digits it shows; digits
+beyond those can differ between machines, because floating-point libraries
+differ.
 
-## Extend a lesson
+## Replay an agent lesson
 
-A lesson's code is in `src/pbc/`, its tests in `tests/unit/`, and its page in
-`site/lessons/<strand>/<lesson>/index.qmd`. Edit the code, run the tests of the
-code, then preview the page. The unit tests are a check of `./scripts/verify.sh`:
+The agent lessons need no more than the setup above. Their experiment replays
+the recorded run of the agent: it sends every tool call of the recording to
+the allowlist and the simulation again, compares the results, and writes the
+figures and numbers of the page. It calls no model and needs no key:
 
-```{.bash .verified-by-ci}
-uv run --locked pytest tests/unit
+```{.bash .experiment .agent-replay}
+uv run --locked --no-dev python -m pbc.mechanics.experiments.agent_experiment results
 ```
+
+### Optional: a live run
+
+This runs an agent lesson against a language model, with your own account.
+It needs an OpenAI account and an API key, and the optional dependency
+`openai`; it costs a few cents. The key stays in an environment variable of
+your shell, never in a file or in code. The site never does this, so the
+commands are not verified. The last section of each agent lesson names its
+own module.
 
 ::: {.not-verified}
 ```bash
-# the tests of one module, while you edit it
-uv run --locked pytest tests/unit/<test file>
-
-# preview with live reload; stop it with Ctrl-C
-uv run --locked quarto preview site
-```
-:::
-
-For a proof, edit the module under `lean/PhysicsByConstruction/` and run
-`./scripts/check-lean.sh`, a check of `./scripts/verify.sh` as well.
-`docs/authoring.md` in the repository describes how to write a lesson.
-
-## Optional: run an agent live
-
-This runs the agent lesson against a language model, with your own account.
-It needs an OpenAI account and an API key; it costs a few cents. The key stays
-in an environment variable of your shell, never in a file or in code. The
-build never does this, so the commands are not verified.
-
-::: {.not-verified}
-```bash
-# needs: an OpenAI account and its API key
-uv sync --extra openai
+# needs: an OpenAI account and its API key, and the optional dependency openai
+uv sync --locked --no-dev --extra openai
 export OPENAI_API_KEY="..."   # this shell only
-uv run --extra openai python -m pbc.agents.projectile_lab
+uv run --locked --no-dev --extra openai python -m pbc.agents.projectile_lab
+```
+:::
+
+## Optional: check a proof
+
+The Lean lessons state theorems that a computer has checked. To check them
+yourself, or to work on the exercises of
+[Lean exercises on your machine](lessons/lean/04-lean-exercises-on-your-machine/index.qmd),
+add the Lean toolchain. It needs no account, but about 11 GB of free disk
+space for the Mathlib build cache.
+
+::: {.table-scroll tabindex="0" role="region" aria-label="The Lean toolchain"}
+
+| Tool | Purpose | macOS | Linux |
+|---|---|---|---|
+| [elan](https://lean-lang.org/install/manual/) | The pinned Lean toolchain | `brew install elan-init` | `curl -sSf https://elan.lean-lang.org/elan-init.sh \| sh` |
+
+:::
+
+Put `~/.elan/bin` on your `PATH`; the elan installer offers to do it. Then,
+in the clone:
+
+```{.bash .lean}
+cd lean
+lake exe cache get
+lake build
+```
+
+`lake exe cache get` fetches the Mathlib build cache (about 0.5 GB, unpacking
+to roughly 11 GB); never compile Mathlib yourself. `lake build` checks every
+proof of the site; the last section of a Lean lesson names the modules of
+that lesson. To work on an exercise, open the `lean/` folder in an editor
+with Lean support, such as Visual Studio Code with the Lean 4 extension,
+replace a `sorry`, and check the file:
+
+::: {.not-verified}
+```bash
+# in lean/, after editing the exercise
+lake env lean Exercises/ConstantAcceleration.lean
 ```
 :::
 
@@ -157,8 +160,8 @@ and credential; the site names none as a requirement and never runs one. The
 rules of the sandbox profile (ADR 010) apply:
 
 - Work in a scratch checkout, never in a checkout you care about.
-- Let the agent run only the listed commands: the tests, the formatter, and the
-  lesson's own scripts.
+- Let the agent run only the listed commands: the experiments, the tests, the
+  formatter, and the lesson's own scripts.
 - Give it no network access beyond its own provider. Its credential stays in
   your environment, in the variable that agent documents.
 - Set a budget in steps, time, and cost before you start.
@@ -170,42 +173,26 @@ rules of the sandbox profile (ADR 010) apply:
 # your environment (see the agent's own documentation)
 git clone https://github.com/taspinar/physics-by-construction.git scratch
 cd scratch
-uv sync --locked
+uv sync --locked --no-dev
 # start your coding agent here, with the allowlist and budget set above
-```
-:::
-
-## Optional: edit Lean locally
-
-Editing a proof in an editor needs no account. It needs the pinned toolchain
-that elan installs and an editor with Lean support, such as Visual Studio Code
-with the Lean 4 extension. Open the `lean/` folder.
-
-::: {.not-verified}
-```bash
-cd lean
-lake exe cache get   # fetches the Mathlib build cache; never compile Mathlib yourself
-lake build
 ```
 :::
 
 ## Troubleshooting
 
-`./scripts/preflight.sh` reports these as `FAILED` with the fix; the others
-are what a first run on a clean machine met.
-
-::: {.table-scroll tabindex="0" role="region" aria-label="What the preflight reports and how to fix it"}
+::: {.table-scroll tabindex="0" role="region" aria-label="What can go wrong and how to fix it"}
 
 | What you see | Cause | What to do |
 |---|---|---|
-| `git is not installed`, `uv is not installed`, `jq is not installed` or too old | A tool of the required setup is missing | Install it from the table above |
-| `elan ... is not installed`, or `lake ... is not on your PATH` | elan is missing, or `~/.elan/bin` is not on `PATH` | Install elan, then add `~/.elan/bin` to `PATH` and open a new shell |
-| `the pinned browser build is not installed` | The browser step was skipped, or Playwright was updated | `uv run --locked playwright install --only-shell chromium` |
-| `the pinned browser build is installed but cannot start` | On Linux, its system libraries are missing | `uv run --locked playwright install-deps chromium` (asks for administrator rights); on other distributions install the libraries by hand |
-| `lean-build` fails while fetching the toolchain, with a host that does not answer | The Lean release host (`release.lean-lang.org`) is unreachable from your network | Retry later or from another network; the check cannot continue without the toolchain |
-| `lean-build` stops at a prompt for GitHub credentials while cloning Mathlib | GitHub refused an anonymous clone | Retry; if it persists, set a GitHub credential helper or run `gh auth login`, then run `./scripts/check-lean.sh` again |
-| `Mathlib is not complete after fetching its build cache` | The cache download failed or was cut short | Check the connection and run `lake exe cache get` in `lean/`. Verification never compiles Mathlib from source |
+| `git: command not found` or `uv: command not found` | A tool of the setup is missing | Install it from the first table |
 | `uv sync --locked` says the lock file needs an update | `uv.lock` and `pyproject.toml` differ in your checkout | Check out a clean commit; do not run `uv lock` to get past it |
+| `No module named 'pbc'` or `No module named 'pbc.mechanics.experiments'` | The command ran outside the folder of the clone, or before `uv sync` | Change to the folder of the clone and run `uv sync --locked --no-dev` first |
+| An experiment stops with `ReplayMismatch` | The code of an agent lesson changed, so a recorded result no longer comes out | Expected after you change the code: the replay says which call differs. A live run records a new run |
+| `No module named 'openai'` in a live run | The optional dependency is missing | `uv sync --locked --no-dev --extra openai`, and run with `--extra openai` |
 | The live agent says the key variable is not set | `OPENAI_API_KEY` is not exported in this shell | Export it in the shell that runs the command |
+| `lake: command not found` | elan is missing, or `~/.elan/bin` is not on `PATH` | Install elan, then add `~/.elan/bin` to `PATH` and open a new shell |
+| `lake exe cache get` cannot reach its host | The Lean release host or the cache host is unreachable from your network | Retry later or from another network |
+| `lake` stops at a prompt for GitHub credentials while cloning Mathlib | GitHub refused an anonymous clone | Retry; if it persists, set a GitHub credential helper or run `gh auth login` |
+| `lake build` starts to compile Mathlib | The build cache was not fetched or is incomplete | Stop it and run `lake exe cache get` again |
 
 :::

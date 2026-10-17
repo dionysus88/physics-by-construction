@@ -13,6 +13,7 @@ lesson:
   course: mechanics
   slot: D9
   preview: fig-design
+  experiment: pbc.mechanics.experiments.experimental_design_agent
   methods: [simulation, llm-agents]
   outcomes:
     - Say what makes a measurement useful for telling two models apart, and score a design before any reading exists
@@ -29,7 +30,9 @@ lesson:
 ```{python}
 #| echo: false
 from pbc.authoring import lesson_header
+from pbc.mechanics.experiments import experimental_design_agent as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -107,23 +110,11 @@ parameter inside a model, not of the physics.
 
 ```{python}
 #| echo: false
-from pbc.agents.design_lab import (
-    BUDGET,
-    MAX_STEPS,
-    NOISE,
-    RIGS,
-    THRESHOLD,
-    TOOL,
-    replay_rig,
-    tools,
-)
-from pbc.agents.display import AllowlistDisplay
-
-AllowlistDisplay(tools())
+result.display("allowlist")
 ```
 
-The agent **may** call `{python} TOOL` with the arguments above, take at most
-`{python} BUDGET` readings, make at most `{python} MAX_STEPS` model messages,
+The agent **may** call `{python} result["tool"]` with the arguments above, take at most
+`{python} result["budget"]` readings, make at most `{python} result["max-steps"]` model messages,
 and write text. It **may not** do anything the harness of the first agent
 lesson forbids. Two rigs are put to it. The **full** rig starts the block at up
 to 20 m/s. The **slow** rig has a launcher that cannot go beyond 2 m/s, so its
@@ -166,18 +157,18 @@ Before any agent runs, the score tells which designs could work. Three sets of
 four pairs, each scored with no readings at all:
 
 ```{python}
-from pbc.agents.design import design_score
+#| echo: false
+excerpt(experiment, region="design")
+```
 
-design = RIGS["full"].design
-designs = {
-    "one low speed, several times": [(1, 0.5), (1, 1), (1, 2), (1, 3)],
-    "several times near the calibration run": [(10, 1.5), (10, 2), (10, 2.5), (10, 3)],
-    "several start speeds at one time": [(20, 3), (10, 3), (5, 3), (2, 3)],
-}
-for label, pairs in designs.items():
-    points = [{"initial_speed": v, "time": t} for v, t in pairs]
-    print(f"{label}: score {design_score(design, points):.3g}")
-print(f"threshold: {THRESHOLD:g}")
+```{python}
+#| echo: false
+excerpt(experiment.three_designs)
+```
+
+```{python}
+#| echo: false
+print(result.output("three-designs"), end="")
 ```
 
 The first two designs measure where the models agree, one at a speed too low to
@@ -188,16 +179,20 @@ disagree about the fraction of speed left.
 ### A rig that can separate the models
 
 ```{python}
-from pbc.agents.display import AssessmentDisplay, RunDisplay
+#| echo: false
+excerpt(experiment.run, region="replay")
+```
 
-recording, run, assessment = replay_rig("full")
-RunDisplay(recording, run, authored=True)
+```{python}
+#| echo: false
+result.display("full-run")
 ```
 
 The assessment does not come from the last message:
 
 ```{python}
-AssessmentDisplay(assessment)
+#| echo: false
+result.display("full-assessment")
 ```
 
 The score of the design is far above the threshold, so the outcome did not
@@ -209,12 +204,13 @@ one.
 ### A rig that cannot
 
 ```{python}
-slow_recording, slow_run, slow_assessment = replay_rig("slow")
-RunDisplay(slow_recording, slow_run, authored=True)
+#| echo: false
+result.display("slow-run")
 ```
 
 ```{python}
-AssessmentDisplay(slow_assessment)
+#| echo: false
+result.display("slow-assessment")
 ```
 
 The agent's last message says the same thing in its own words, but the verdict
@@ -226,39 +222,31 @@ of the design says that no eight readings of this rig reach it.
 ### The assessment ignores what the agent says
 
 ```{python}
-from dataclasses import replace
+#| echo: false
+excerpt(experiment.with_last_text)
+```
 
-from pbc.agents import ModelMessage, Step
+```{python}
+#| echo: false
+excerpt(experiment.what_the_agent_says)
+```
 
-def with_last_text(transcript, text):
-    *earlier, last = transcript.steps
-    message = ModelMessage(text, last.message.tool_calls)
-    return replace(transcript, steps=(*earlier, Step(message, last.results)))
-
-boasting = with_last_text(
-    slow_run, "Quadratic drag is confirmed: chi-square 900 against 12."
-)
-silent = with_last_text(run, "")
-rig = RIGS["slow"]
-print("boasting agent, slow rig:", judge(rig.design, boasting, tools(rig.maximum_speed)).outcome)
-print("silent agent, full rig:", judge(RIGS["full"].design, silent, tools()).outcome)
+```{python}
+#| echo: false
+print(result.output("what-the-agent-says"), end="")
 ```
 
 The stored results of a transcript are not read either. The build recomputes
 each reading from its arguments:
 
 ```{python}
-forged = replace(
-    run,
-    steps=tuple(
-        Step(
-            step.message,
-            tuple(replace(r, content={"speed": 3.0}) if r.ok else r for r in step.results),
-        )
-        for step in run.steps
-    ),
-)
-print("forged results:", judge(RIGS["full"].design, forged, tools()).outcome)
+#| echo: false
+excerpt(experiment.forged_results)
+```
+
+```{python}
+#| echo: false
+print(result.output("forged-results"), end="")
 ```
 
 ### What the design bought
@@ -268,28 +256,17 @@ as a fraction of the start speed, against the start speed. Linear drag gives a
 horizontal line. The dots are the readings of the worked run at 3 s.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_design)
+```
+
+```{python}
 #| label: fig-design
+#| echo: false
 #| fig-status: simulated
 #| fig-cap: "Fraction of the start speed left after 3 s against the start speed, for linear drag fitted to the readings of the worked run and quadratic drag fitted to the same readings; dots are the four readings of the run at 3 s."
 #| fig-alt: "A chart of the fraction left after 3 seconds against the start speed from 0 to 20 metres per second. The quadratic curve falls from near one at low speed to about a quarter at 20 metres per second. The linear curve is a horizontal line. The four dots lie on the quadratic curve and far from the line at the higher speeds."
-import matplotlib.pyplot as plt
-import numpy as np
-
-from pbc.agents.design_lab import linear, quadratic
-
-fits = {f.model.name: f.fit for f in assessment.fits}
-speeds = np.linspace(0.5, 20, 100)
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(speeds, quadratic(speeds, 3.0, fits["quadratic drag"].value("k")) / speeds, label="quadratic drag, fitted")
-ax.plot(speeds, linear(speeds, 3.0, fits["linear drag"].value("g")) / speeds, label="linear drag, fitted")
-for m in assessment.measurements:
-    if m.arguments["time"] == 3.0:
-        ax.plot(m.arguments["initial_speed"], m.value / m.arguments["initial_speed"], "ko", markersize=4)
-ax.set_xlabel("start speed (m/s)")
-ax.set_ylabel("fraction of the start speed left after 3 s")
-ax.set_ylim(0, 1.05)
-ax.legend()
-plt.show()
+result.show("fig-design")
 ```
 
 ### Run the agent yourself
@@ -345,10 +322,13 @@ the score change much, and why?
 
 ::: {.solution}
 ```{python}
-base = [(20, 3), (10, 3), (5, 3), (2, 3)]
-for label, pairs in (("four", base), ("five", [*base, (15, 3)])):
-    points = [{"initial_speed": v, "time": t} for v, t in pairs]
-    print(label, f"{design_score(design, points):.4g}")
+#| echo: false
+excerpt(experiment.a_fifth_reading)
+```
+
+```{python}
+#| echo: false
+print(result.output("a-fifth-reading"), end="")
 ```
 
 The score is already well above the threshold with four, and the fifth
@@ -366,7 +346,13 @@ wrong to choose that threshold now?
 
 ::: {.solution}
 ```{python}
-print(f"{slow_assessment.difference:.3g}")
+#| echo: false
+excerpt(experiment.slow_difference)
+```
+
+```{python}
+#| echo: false
+print(result.output("slow-difference"), end="")
 ```
 
 Any threshold up to this number would call the slow run a discrimination. A
@@ -377,7 +363,7 @@ slow rig simply does not reach it.
 :::
 :::
 
-## Reproduce this
+## Replay this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -386,10 +372,13 @@ reproduce_this(
         "src/pbc/agents/design.py",
         "src/pbc/agents/design_lab.py",
         "src/pbc/data/fit.py",
+        "src/pbc/mechanics/experiments/experimental_design_agent.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_agents_design.py",
         "tests/integration/test_agent_replay.py",
+        "tests/unit/test_experimental_design_agent_experiment.py",
     ],
 )
 ```

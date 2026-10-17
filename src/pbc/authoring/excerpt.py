@@ -295,8 +295,10 @@ def excerpt(
     """Return the source of ``obj`` for display in a lesson.
 
     ``obj`` is a function or class defined at the top level of a module of
-    the ``pbc`` package. The text is read from the source file when the cell
-    runs, so the page shows the code the tests exercise.
+    the ``pbc`` package, or such a module itself with ``region`` or
+    ``lines``, for the values a lesson's experiment starts from. The text is
+    read from the source file when the cell runs, so the page shows the code
+    the tests exercise.
 
     ``lines=(first, last)`` shows only those lines of the object, counted
     from 1 at its first line; ``region="name"`` shows the lines between
@@ -313,20 +315,33 @@ def excerpt(
     from its signature, with the units its docstring gives as ``name`` (unit).
     """
     module = inspect.getmodule(obj)
-    name = getattr(obj, "__qualname__", None)
+    if inspect.ismodule(obj):
+        # A part of a module: the name has no object after the colon.
+        name = ""
+        if region is None and lines is None:
+            raise TypeError(
+                f"an excerpt of the module {obj.__name__} shows a region or lines"
+                " of it; show a function or class for more"
+            )
+        if interface:
+            raise ValueError("a module has no interface to show")
+    else:
+        name = getattr(obj, "__qualname__", None)
     if module is None or name is None:
-        raise TypeError(f"expected a function or class, got {obj!r}")
+        raise TypeError(f"expected a function, class, or module, got {obj!r}")
     if module.__name__.split(".")[0] != "pbc":
         raise ValueError(
             f"{module.__name__}.{name} is not part of pbc; an excerpt shows"
             " code from src/pbc only"
         )
-    if getattr(module, name, None) is not obj:
+    if name and getattr(module, name, None) is not obj:
         raise ValueError(
             f"{module.__name__}.{name} is not defined at the top level of its"
             " module; show the function or class that contains it"
         )
     object_lines, first_line = inspect.getsourcelines(obj)
+    # A module's lines start at 1; inspect reports 0 for it.
+    first_line = max(first_line, 1)
     file = Path(inspect.getsourcefile(obj) or "").resolve()
     try:
         path = file.relative_to(REPOSITORY_ROOT).as_posix()

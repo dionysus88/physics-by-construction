@@ -170,6 +170,7 @@ def all_checks(repository: Path) -> list[Violation]:
         *lesson_checks.check_path(repository),
         *lesson_checks.check_displayed_code(repository),
         *lesson_checks.check_lean_modules(repository),
+        *lesson_checks.check_experiments(repository),
         *lesson_checks.check_figures(repository),
         *lesson_checks.check_committed_files(repository),
     ]
@@ -232,6 +233,7 @@ def test_missing_metadata_field_is_reported(
         ("  methods: [simulation]\n", "  methods: simulation\n"),
         ("  course: mechanics\n", "  course: [mechanics]\n"),
         ("  related: []\n", "  related: [Not An Id]\n"),
+        ("  difficulty: 1\n", "  difficulty: 1\n  experiment: [a, b]\n"),
     ],
     ids=[
         "id",
@@ -249,6 +251,7 @@ def test_missing_metadata_field_is_reported(
         "methods-not-a-list",
         "course-not-text",
         "related-not-an-id",
+        "experiment-not-text",
     ],
 )
 def test_invalid_metadata_is_reported(make_repository: Repository, old: str, new: str):
@@ -314,6 +317,143 @@ def test_lean_module_without_a_file_is_reported(make_repository: Repository):
 
     assert rules(violations) == {"lean-module"}
     assert "does not exist" in details(violations)
+
+
+# --- Experiments --------------------------------------------------------------
+
+_MODULE = "pbc.mechanics.experiments.sample"
+_DECLARED = {
+    "  difficulty: 1\n": f"  difficulty: 1\n  experiment: {_MODULE}\n",
+    "## Reproduce this\n": "## Run this experiment {#reproduce-this}\n",
+    "```{python}\n#| echo: false\nlesson_header()\n": "```{python}\n#| echo: false\n"
+    "from pbc.mechanics.experiments import sample as experiment\n\n"
+    "lesson_header()\n",
+}
+_EXPERIMENT_FILES = {
+    "src/pbc/mechanics/experiments/sample.py": "def run(): ...\n",
+    "tests/unit/test_sample_experiment.py": "def test_run(): ...\n",
+}
+
+
+def test_a_declared_experiment_that_follows_the_contract_passes(
+    make_repository: Repository,
+):
+    repository = make_repository(_DECLARED, files=_EXPERIMENT_FILES)
+
+    assert all_checks(repository) == []
+
+
+@pytest.mark.parametrize(
+    "heading",
+    [
+        "## Reproduce this {#reproduce-this}\n",
+        "## Check this proof {#reproduce-this}\n",
+    ],
+    ids=["superseded", "another-kind"],
+)
+def test_the_last_section_is_headed_by_the_activity_of_the_lesson(
+    make_repository: Repository, heading: str
+):
+    declared = {**_DECLARED, "## Reproduce this\n": heading}
+    repository = make_repository(declared, files=_EXPERIMENT_FILES)
+
+    violations = lesson_checks.check_experiments(repository)
+
+    assert rules(violations) == {"experiment"}
+    assert "a lesson of this kind is headed 'Run this experiment'" in details(
+        violations
+    )
+
+
+def test_a_lesson_without_an_experiment_fails_only_once_it_is_required(
+    make_repository: Repository,
+):
+    repository = make_repository()
+
+    assert lesson_checks.check_experiments(repository) == []
+    violations = lesson_checks.check_experiments(repository, required=True)
+    assert rules(violations) == {"experiment"}
+    assert "declares no 'lesson.experiment'" in details(violations)
+
+
+@pytest.mark.parametrize(
+    "change, files, message",
+    [
+        (
+            {f"experiment: {_MODULE}": "experiment: pbc.mechanics.sample"},
+            _EXPERIMENT_FILES,
+            "this lesson's module is pbc.mechanics.experiments.sample",
+        ),
+        (
+            {},
+            {"tests/unit/test_sample_experiment.py": "def test_run(): ...\n"},
+            "has no file src/pbc/mechanics/experiments/sample.py",
+        ),
+        (
+            {},
+            {"src/pbc/mechanics/experiments/sample.py": "def run(): ...\n"},
+            "has no unit test tests/unit/test_sample_experiment.py",
+        ),
+        (
+            {"from pbc.mechanics.experiments import sample as experiment\n": ""},
+            _EXPERIMENT_FILES,
+            "no executed cell of the page imports its experiment",
+        ),
+        (
+            {f"experiment: {_MODULE}": "experiment: ./scripts/check-lean.sh"},
+            _EXPERIMENT_FILES,
+            "only a lesson whose methods are [lean] may declare",
+        ),
+    ],
+    ids=["other-module", "no-module", "no-test", "not-imported", "lean-elsewhere"],
+)
+def test_an_experiment_outside_the_contract_is_reported(
+    make_repository: Repository, change: dict, files: dict, message: str
+):
+    declared = {**_DECLARED}
+    for old, new in change.items():
+        for key, value in declared.items():
+            declared[key] = value.replace(old, new)
+    repository = make_repository(declared, files=files)
+
+    violations = lesson_checks.check_experiments(repository)
+
+    assert rules(violations) == {"experiment"}
+    assert message in details(violations)
+
+
+_LEAN_ONLY = {
+    "  methods: [simulation]\n": "  methods: [lean]\n"
+    "  experiment: ./scripts/check-lean.sh\n",
+    "## Reproduce this\n": "## Check this proof {#reproduce-this}\n",
+}
+_FIGURE_CELL = """```{python}
+#| label: fig-line
+#| fig-cap: "A line."
+#| fig-alt: "A straight line that rises from the origin."
+import matplotlib.pyplot as plt
+
+plt.plot([0.0, 1.0], [0.0, position])
+plt.show()
+```
+"""
+
+
+def test_a_lean_only_lesson_without_a_figure_may_declare_the_proof_check(
+    make_repository: Repository,
+):
+    repository = make_repository({**_LEAN_ONLY, _FIGURE_CELL: ""})
+
+    assert lesson_checks.check_experiments(repository, required=True) == []
+
+
+def test_a_lean_only_lesson_that_draws_a_figure_declares_its_module(
+    make_repository: Repository,
+):
+    violations = lesson_checks.check_experiments(make_repository(_LEAN_ONLY))
+
+    assert rules(violations) == {"experiment"}
+    assert "declares its experiment module" in details(violations)
 
 
 # --- Sections -----------------------------------------------------------------
@@ -892,7 +1032,10 @@ def test_file_that_is_not_part_of_a_lesson_is_reported(
 def test_verification_passes_a_lesson_that_follows_the_format(
     make_repository: Repository,
 ):
-    repository = make_repository(files={f"{LESSON}/replay.json": '{"messages": []}'})
+    repository = make_repository(
+        _DECLARED,
+        files={**_EXPERIMENT_FILES, f"{LESSON}/replay.json": '{"messages": []}'},
+    )
 
     result = run_check("lesson-checks", "--repository", repository)
 
@@ -1310,6 +1453,91 @@ def test_naming_the_dataset_of_such_a_figure_brings_the_card_rule(
     )
 
     assert "cannot be 'simulated'" in details(format_2_checks(named))
+
+
+_EXPERIMENT_OF_DATA = """\
+from functools import partial
+
+from pbc.data import SAMPLES_DIR
+from pbc.data.gwosc import read_strain
+from pbc.experiment import Experiment
+
+
+def draw_line(values):
+    return values
+
+
+def draw_model(level):
+    return level
+
+
+def model(experiment: Experiment):
+    return 1.0
+
+
+def run():
+    experiment = Experiment()
+    strain = read_strain(SAMPLES_DIR / "gw150914-strain" / "H1.hdf5")
+    # The record receives data; what a function given the record returns is
+    # not data because of it.
+    experiment.number("first", strain.strain[0])
+    level = model(experiment)
+    experiment.figure("fig-line", partial(draw_line, strain.strain))
+    experiment.figure("fig-model", partial(draw_model, level))
+    return experiment
+"""
+
+
+def _shows(label: str) -> dict[str, str]:
+    """A lesson whose figure cell shows ``label`` of its experiment, which
+    reads a sample for one figure and draws the other from nothing."""
+    return {
+        **_DECLARED,
+        "from pbc.mechanics.experiments import sample as experiment\n\n": (
+            "from pbc.mechanics.experiments import sample as experiment\n\n"
+            "result = experiment.run()\n"
+        ),
+        "import matplotlib.pyplot as plt\n\n"
+        "plt.plot([0.0, 1.0], [0.0, position])\nplt.show()\n": (
+            f'result.show("{label}")\n'
+        ),
+    }
+
+
+def _experiment_files() -> dict[str, str]:
+    return {
+        **_EXPERIMENT_FILES,
+        "src/pbc/mechanics/experiments/sample.py": _EXPERIMENT_OF_DATA,
+    }
+
+
+def test_a_figure_its_experiment_draws_from_a_dataset_must_name_it(
+    make_format_2: Repository,
+):
+    repository = make_format_2(_shows("fig-line"), files=_experiment_files())
+
+    violations = format_2_checks(repository)
+
+    assert "'fig-line' is made from a dataset" in details(violations)
+
+
+def test_a_figure_its_experiment_draws_without_data_needs_no_dataset(
+    make_format_2: Repository,
+):
+    # The experiment reads a sample for another figure; this one is simulated.
+    repository = make_format_2(_shows("fig-model"), files=_experiment_files())
+
+    assert "figure-dataset" not in rules(format_2_checks(repository))
+
+
+def test_a_figure_its_experiment_does_not_record_is_reported(
+    make_format_2: Repository,
+):
+    repository = make_format_2(_shows("fig-missing"), files=_experiment_files())
+
+    assert "which its experiment does not record" in details(
+        format_2_checks(repository)
+    )
 
 
 def _figure_of_the_flume(status: str, artifact: str | None) -> dict[str, str]:

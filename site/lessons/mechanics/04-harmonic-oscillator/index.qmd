@@ -19,6 +19,7 @@ lesson:
   related: [proving-what-the-simulation-showed]
   format: 2
   preview: fig-oscillator-phase-space
+  experiment: pbc.mechanics.experiments.harmonic_oscillator
   prerequisites:
     lessons: [newtons-laws]
     outside:
@@ -28,10 +29,11 @@ lesson:
 
 ```{python}
 #| echo: false
-import numpy as np
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import oscillator
+from pbc.mechanics.experiments import harmonic_oscillator as experiment
 
-from pbc.authoring import lesson_header
-
+result = experiment.run()
 lesson_header()
 ```
 
@@ -147,31 +149,17 @@ asks nothing of the method but one number per step. A simulation that
 leaves the ellipse has changed the energy, which the physics does not do.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_oscillator_energy_ellipse)
+```
+
+```{python}
 #| label: fig-oscillator-energy-ellipse
+#| echo: false
 #| fig-cap: "The exact motion in phase space is one ellipse of constant energy, traversed clockwise."
 #| fig-status: conceptual
 #| fig-alt: "Sketch of an ellipse in the plane of position, horizontal, and velocity, vertical. Arrows on the ellipse point clockwise: to the right above the horizontal axis and to the left below it. Dots mark the two ends of the ellipse on the position axis, labelled turning point with all the energy in the spring, and the top of the ellipse, labelled passing the centre with all the energy in motion."
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
-
-from pbc.authoring import FIGURE_COLOURS
-from pbc.authoring.design import PAGE
-from pbc.authoring.diagrams import INK, arrow, canvas, circle, text
-
-fig, ax = canvas(6.4, 4.4, (-5.8, 7.4), (-3.4, 3.9))
-arrow(ax, (-5.2, 0.0), (6.9, 0.0), colour=PAGE["muted"])
-arrow(ax, (-5.2, 0.0), (-5.2, 3.6), colour=PAGE["muted"])
-text(ax, (6.9, -0.18), "position $x$", colour=PAGE["muted"], ha="right")
-text(ax, (-5.1, 3.6), "velocity $v$", colour=PAGE["muted"], ha="left")
-ax.add_patch(Ellipse((0, 0), 6.4, 4.4, fill=False, edgecolor=FIGURE_COLOURS[0], linewidth=1.6))
-arrow(ax, (-0.6, 2.2), (0.6, 2.2), colour=FIGURE_COLOURS[0])
-arrow(ax, (0.6, -2.2), (-0.6, -2.2), colour=FIGURE_COLOURS[0])
-for point in ((3.2, 0.0), (0.0, 2.2), (-3.2, 0.0), (0.0, -2.2)):
-    circle(ax, point, 0.12, colour=INK, filled=True)
-text(ax, (3.6, 0.7), "turning point:\nall energy in the spring", ha="left", colour=1)
-text(ax, (0.0, 2.75), "passing the centre: all energy in motion", colour=1)
-text(ax, (-1.2, -1.2), "one orbit,\none energy", colour=0)
-plt.show()
+result.show("fig-oscillator-energy-ellipse")
 ```
 
 The ellipse is the curve $\tfrac{1}{2} m v^2 + \tfrac{1}{2} k x^2 = E$,
@@ -255,9 +243,6 @@ The force model is one line, and it serves on a line and in a plane:
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import oscillator
-
 excerpt(oscillator.spring)
 ```
 
@@ -300,86 +285,42 @@ period, which makes $\omega\,\Delta t$ the quantity to watch; the cell starts
 with [64 steps per period]{.given}.
 
 ```{python}
-import numpy as np
-
-from pbc.authoring import table
-from pbc.mechanics.dynamics import State, newton, simulate
-from pbc.mechanics.oscillator import (
-    angular_frequency,
-    energy,
-    euler_energy_growth,
-    harmonic_motion,
-    spring,
-)
-
-mass = 0.5  # kg
-k = 2.0  # spring constant, N/m
-omega = angular_frequency(mass, k)
-period = 2 * np.pi / omega
-released = State(t=0.0, x=1.0, v=0.0)  # pulled out 1 m and let go
-oscillator = newton(mass, spring(k))
-
-steps_per_period = 64
-dt = period / steps_per_period
-n_periods = 3
-euler = simulate(released, oscillator, dt, n_periods * steps_per_period)
-exact = harmonic_motion(released, mass, k, euler.t)
-
-table(
-    [
-        (
-            euler.t[i],
-            euler.x[i, 0],
-            exact.x[i, 0],
-            euler.v[i, 0],
-            exact.v[i, 0],
-        )
-        for i in range(steps_per_period // 8, len(euler.t), steps_per_period // 2)
-    ],
-    columns=[
-        ("t", "s", ".2f"),
-        ("x Euler", "m", ".3f"),
-        ("x exact", "m", ".3f"),
-        ("v Euler", "m/s", ".3f"),
-        ("v exact", "m/s", ".3f"),
-    ],
-    caption="Position and velocity of the mass on the spring, simulated and "
-    "exact, every half period; to three decimals.",
-)
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-The angular frequency is $\omega$ = `{python} f"{omega:.1f}"` rad/s, the period
-`{python} f"{period:.4f}"` s, the time step `{python} f"{dt:.4f}"` s, and
-$\omega\,\Delta t$ = `{python} f"{omega * dt:.4f}"`. The rows are half a period apart, starting an eighth of a period in, so
+```{python}
+#| echo: false
+excerpt(experiment.three_periods)
+```
+
+```{python}
+#| echo: false
+result.table("three-periods")
+```
+
+The angular frequency is $\omega$ = `{python} result["omega"]` rad/s, the period
+`{python} result["period"]` s, the time step `{python} result["dt"]` s, and
+$\omega\,\Delta t$ = `{python} result["omega-dt"]`. The rows are half a period apart, starting an eighth of a period in, so
 that neither column is at a zero crossing. The exact motion returns to the
 same two numbers every period. The simulated position swings further out at
 every turn, and the simulated velocity grows with it: in the third period
 the amplitude is
-`{python} f"{np.max(np.abs(euler.x[-steps_per_period:, 0])):.2f}"` m instead
+`{python} result["last-excursion"]` m instead
 of the one metre it started with.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_oscillator_position)
+```
+
+```{python}
 #| label: fig-oscillator-position
+#| echo: false
 #| fig-cap: "The simulated oscillation grows at every swing while the exact one keeps its amplitude: explicit Euler adds energy at each step, and its peaks also fall a little late."
 #| fig-status: simulated
 #| fig-alt: "Line plot of position in metres against time in seconds over three periods. The exact motion is a cosine of constant amplitude. The explicit Euler curve starts on it and swings further out at every oscillation, and its peaks fall slightly later than the exact ones."
-import matplotlib.pyplot as plt
-
-fine = np.linspace(0.0, euler.t[-1], 1001)
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(fine, harmonic_motion(released, mass, k, fine).x[:, 0], color="#00429d", label="exact")
-ax.plot(
-    euler.t,
-    euler.x[:, 0],
-    color="#93003a",
-    linestyle="--",
-    label=f"explicit Euler, {steps_per_period} steps per period",
-)
-ax.set_xlabel("time (s)")
-ax.set_ylabel("position (m)")
-ax.legend(loc="upper left")
-plt.show()
+result.show("fig-oscillator-position")
 ```
 
 ### The orbit in phase space
@@ -389,19 +330,17 @@ velocity. The exact motion is the ellipse of constant energy; the simulation
 starts on it and spirals outward.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_oscillator_phase_space)
+```
+
+```{python}
 #| label: fig-oscillator-phase-space
+#| echo: false
 #| fig-cap: "In phase space the exact orbit closes on the ellipse of constant energy, while explicit Euler never closes: it crosses to a larger ellipse at every turn."
 #| fig-status: simulated
 #| fig-alt: "Plot of velocity in metres per second against position in metres. The exact motion is a closed ellipse through the starting point, at maximum position and zero velocity. The explicit Euler curve starts at the same point and spirals outward, each turn wider than the last."
-fig, ax = plt.subplots(figsize=(6.4, 4.8))
-ax.plot(exact.x[:, 0], exact.v[:, 0], color="#00429d", label="exact")
-ax.plot(euler.x[:, 0], euler.v[:, 0], color="#93003a", linestyle="--", label="explicit Euler")
-ax.plot(released.x[0], released.v[0], color="#555555", marker="o", linestyle="none", label="start")
-ax.set_xlabel("position (m)")
-ax.set_ylabel("velocity (m/s)")
-ax.set_aspect(1 / omega)
-ax.legend(loc="upper left")
-plt.show()
+result.show("fig-oscillator-phase-space")
 ```
 
 The axes are scaled so that the exact orbit is a circle: along the vertical
@@ -417,25 +356,22 @@ above, to be checked next.
 The derivation says that the energy after any step is the energy before it
 times $1 + \omega^2 \Delta t^2$. The cell computes the energy of every
 simulated state, divides each by the previous one, and compares all
-`{python} f"{n_periods * steps_per_period}"` ratios with the derived factor.
+`{python} result["ratio-count"]` ratios with the derived factor.
 
 ```{python}
 #| label: euler-energy-ratios
-energies = energy(euler, mass, k)
-ratios = energies[1:] / energies[:-1]
-factor = euler_energy_growth(mass, k, dt)
-
-deviation = np.max(np.abs(ratios - factor))
+#| echo: false
+excerpt(experiment.energy_ratios)
 ```
 
-The energy at the start is `{python} f"{energies[0]:.4f}"` J. The first six
+The energy at the start is `{python} result["initial-energy"]` J. The first six
 ratios of the energy after a step to the energy before it are
-`{python} ", ".join(f"{ratio:.6f}" for ratio in ratios[:6])`, and the derived
-factor $1 + \omega^2\Delta t^2$ is `{python} f"{factor:.6f}"`. The largest
-deviation of any ratio from it is `{python} f"{deviation:.1e}"`. After
-`{python} f"{n_periods}"` periods the energy is
-`{python} f"{energies[-1] / energies[0]:.3f}"` times the initial energy, and
-the prediction is `{python} f"{factor ** len(ratios):.3f}"`.
+`{python} result["first-ratios"]`, and the derived
+factor $1 + \omega^2\Delta t^2$ is `{python} result["factor"]`. The largest
+deviation of any ratio from it is `{python} result["deviation"]`. After
+`{python} result["n-periods"]` periods the energy is
+`{python} result["final-energy"]` times the initial energy, and
+the prediction is `{python} result["predicted-energy"]`.
 
 [Every ratio of successive energies equals the derived factor to
 round-off.]{.claim type="numerically-verified"
@@ -447,19 +383,17 @@ down for any step without running it. On a logarithmic axis the energy is a
 straight line whose slope is proportional to the step:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_oscillator_energy_growth)
+```
+
+```{python}
 #| label: fig-oscillator-energy-growth
+#| echo: false
 #| fig-cap: "The energy grows as a straight line on a logarithmic axis, and the slope halves each time the step halves: the growth is a fixed factor per step."
 #| fig-status: simulated
 #| fig-alt: "Plot of the energy divided by the initial energy against time in seconds, with a logarithmic vertical axis. Three straight lines rise from the same point at time zero. The line for the coarsest time step rises steepest, the next half as steeply, and the finest half as steeply again."
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for n, style in ((32, "-"), (64, "--"), (128, ":")):
-    run = simulate(released, oscillator, period / n, n_periods * n)
-    growth = energy(run, mass, k) / energies[0]
-    ax.semilogy(run.t, growth, color="#93003a", linestyle=style, label=f"{n} steps per period")
-ax.set_xlabel("time (s)")
-ax.set_ylabel("energy / initial energy")
-ax.legend(loc="upper left")
-plt.show()
+result.show("fig-oscillator-energy-growth")
 ```
 
 ### Halving the time step
@@ -470,37 +404,20 @@ $\Delta t$ for small steps. The cell doubles the number of steps per period
 and watches the logarithm of the energy growth after three periods halve.
 
 ```{python}
-step_counts = [32 * 2**i for i in range(8)]
-growths = []
-for n in step_counts:
-    run = simulate(released, oscillator, period / n, n_periods * n)
-    end = energy(run, mass, k)
-    growths.append(end[-1] / end[0])
-log_growths = np.log(growths)
-orders = np.log2(log_growths[:-1] / log_growths[1:])
+#| echo: false
+excerpt(experiment.energy_growth)
+```
 
-table(
-    [
-        (n, 2 * np.pi / n, growths[i], log_growths[i], orders[i - 1] if i else None)
-        for i, n in enumerate(step_counts)
-    ],
-    columns=[
-        ("steps per period", "", "d"),
-        ("omega dt", "", ".5f"),
-        ("energy growth", "", ".4f"),
-        ("ln(growth)", "", ".5f"),
-        ("observed order", "", ".3f"),
-    ],
-    caption="Energy growth over three periods for each time step, its "
-    "logarithm, and the observed order of that logarithm against the step.",
-)
+```{python}
+#| echo: false
+result.table("energy-growth")
 ```
 
 The observed order tends to one, from below: the logarithm of the factor is
 $\omega^2 \Delta t^2$ minus smaller terms, so coarse steps grow the energy
 a little less than the linear rule says. At
-`{python} f"{step_counts[-1]}"` steps per period the energy still grows by
-`{python} f"{100 * (growths[-1] - 1):.1f}"` per cent over three periods. The
+`{python} result["finest-steps"]` steps per period the energy still grows by
+`{python} result["finest-growth"]` per cent over three periods. The
 first exercise asks what one per cent costs.
 
 ## Limits {#limits}
@@ -578,16 +495,13 @@ $\omega\,\Delta t \le \ln(1.01) / (20\pi)$, and the number of steps per
 period is $2\pi / (\omega\,\Delta t)$.
 
 ```{python}
-largest_omega_dt = np.log(1.01) / (20 * np.pi)
-needed = int(np.ceil(2 * np.pi / largest_omega_dt))
-run = simulate(released, oscillator, period / needed, 10 * needed)
-end = energy(run, mass, k)
-growth_percent = 100 * (end[-1] / end[0] - 1)
+#| echo: false
+excerpt(experiment.one_per_cent)
 ```
 
-The simulation needs `{python} needed` steps per period, and the energy after
-ten periods with them is `{python} f"{growth_percent:.3f}"` per cent above the
-start. That is `{python} f"{10 * needed}"` steps in all to hold one per cent
+The simulation needs `{python} result["needed"]` steps per period, and the energy after
+ten periods with them is `{python} result["growth-percent"]` per cent above the
+start. That is `{python} result["needed-in-all"]` steps in all to hold one per cent
 for ten periods. The next lesson holds the
 energy for a thousand periods with a few dozen steps per period, with a
 method that costs the same per step.
@@ -631,61 +545,42 @@ the undamped period, the same measure as the simulated columns, taken on a
 fine grid.
 
 ```{python}
-from pbc.mechanics.drag import linear_drag
-
-b = k * dt  # drag constant, kg/s
-damped = newton(mass, spring(k), linear_drag(b))
-gamma = b / (2 * mass)
-omega_damped = np.sqrt(omega**2 - gamma**2)
-decay = np.exp(-gamma * period)
-
-
-def damped_motion(t):
-    """The exact position of the damped oscillator released from 1 m."""
-    damping = np.exp(-gamma * t)
-    return damping * (np.cos(omega_damped * t) + gamma / omega_damped * np.sin(omega_damped * t))
-
-
-def largest_excursions(x, per_period):
-    """The largest |x| in each of five periods, with that many samples per period."""
-    return [np.max(np.abs(x[i * per_period : (i + 1) * per_period + 1])) for i in range(5)]
-
-
-def amplitudes(steps):
-    """The largest excursion in each of five periods, with that many steps per period."""
-    run = simulate(released, damped, period / steps, 5 * steps)
-    return largest_excursions(run.x[:, 0], steps)
-
-
-fine = np.linspace(0.0, 5 * period, 5 * 4096 + 1)
-real = largest_excursions(damped_motion(fine), 4096)
-
-simulated = [amplitudes(64), amplitudes(128), amplitudes(256)]
-
-table(
-    [
-        (i + 1, simulated[0][i], simulated[1][i], simulated[2][i], real[i])
-        for i in range(5)
-    ],
-    columns=[
-        ("period", "", "d"),
-        ("64 steps", "m", ".3f"),
-        ("128 steps", "m", ".3f"),
-        ("256 steps", "m", ".3f"),
-        ("real motion", "m", ".3f"),
-    ],
-    caption="Largest excursion in each of five periods of the simulated "
-    "damped oscillator for three time steps, and of the exact motion.",
-)
+#| echo: false
+excerpt(experiment, region="damped")
 ```
 
-The drag constant is `{python} f"{b:.4f}"` kg/s, and the peaks of the real
-motion shrink by the factor `{python} f"{decay:.3f}"` per period.
+```{python}
+#| echo: false
+excerpt(experiment.damped_motion)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.largest_excursions)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.amplitudes)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.damped_excursions)
+```
+
+```{python}
+#| echo: false
+result.table("damped-excursions")
+```
+
+The drag constant is `{python} result["b"]` kg/s, and the peaks of the real
+motion shrink by the factor `{python} result["decay"]` per period.
 
 With the coarsest step the simulated amplitude stays within
-`{python} f"{100 * max(abs(a - 1) for a in simulated[0]):.1f}"` per cent of one
+`{python} result["largest-departure"]` per cent of one
 metre for five periods, while the real amplitude falls to
-`{python} f"{real[-1]:.2f}"` m. Nothing in the output gives it away. Halving the step
+`{python} result["last-real"]` m. Nothing in the output gives it away. Halving the step
 halves the artificial growth but not the drag, and the amplitude starts to
 decay; halving it again brings it closer to the real motion. A simulation
 of a damped oscillator whose amplitude does not change is reporting its
@@ -709,21 +604,15 @@ the derivation used only that $\mathbf{x}\cdot\mathbf{v}$ cancels between
 the two cross terms, which holds for vectors too.
 
 ```{python}
-in_plane = State(t=0.0, x=[1.0, 0.0], v=[0.0, 1.0])
-run = simulate(in_plane, oscillator, dt, 2 * steps_per_period)
-plane_exact = harmonic_motion(in_plane, mass, k, run.t)
-plane_energies = energy(run, mass, k)
-plane_ratios = plane_energies[1:] / plane_energies[:-1]
-
-plane_deviation = np.max(np.abs(plane_ratios - factor))
-plane_gap = np.max(np.linalg.norm(run.x - plane_exact.x, axis=1))
+#| echo: false
+excerpt(experiment.in_a_plane)
 ```
 
-The semi-axes of the exact orbit are `{python} f"{np.max(plane_exact.x[:, 0]):.3f}"` m
-and `{python} f"{np.max(plane_exact.x[:, 1]):.3f}"` m. The largest deviation of an energy
-ratio from the factor is `{python} f"{plane_deviation:.1e}"`, and the largest
+The semi-axes of the exact orbit are `{python} result["semi-axis-x"]` m
+and `{python} result["semi-axis-y"]` m. The largest deviation of an energy
+ratio from the factor is `{python} result["plane-deviation"]`, and the largest
 distance between the simulated and the exact position over two periods is
-`{python} f"{plane_gap:.3f}"` m.
+`{python} result["plane-gap"]` m.
 
 The factor holds to round-off in the plane as on the line. The energy growth
 of explicit Euler is a property of the method on this force, not of the
@@ -731,12 +620,21 @@ dimension of the motion.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/mechanics/dynamics.py", "src/pbc/mechanics/oscillator.py"],
-    tests=["tests/unit/test_dynamics.py", "tests/unit/test_oscillator.py"],
+    code=[
+        "src/pbc/mechanics/dynamics.py",
+        "src/pbc/mechanics/oscillator.py",
+        "src/pbc/mechanics/experiments/harmonic_oscillator.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_dynamics.py",
+        "tests/unit/test_oscillator.py",
+        "tests/unit/test_harmonic_oscillator_experiment.py",
+    ],
 )
 ```

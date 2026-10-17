@@ -486,7 +486,7 @@ the five pilot lessons (mechanics 01 to 05) and of one lesson of each other
 strand that has lessons (thermodynamics, waves, agents-abm, agents-llm,
 lean). "Closing prose" is the last prose of the "Worked examples" section
 before "Limits", where a conclusion would stand; every audited lesson then
-continues to Limits, the exercises, and "Reproduce this", with no section of
+continues to Limits, the exercises, and the last section, with no section of
 conclusion, as the format requires.
 
 | Lesson | Opening | Closing prose of the worked examples |

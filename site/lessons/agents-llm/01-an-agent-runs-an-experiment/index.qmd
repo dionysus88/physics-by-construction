@@ -20,6 +20,7 @@ lesson:
   related: []
   format: 2
   preview: fig-agent-evidence
+  experiment: pbc.mechanics.experiments.agent_experiment
   prerequisites:
     lessons: [projectile-with-drag]
     outside:
@@ -29,8 +30,10 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics.experiments import agent_experiment as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -104,40 +107,17 @@ The parts are easier to hold in mind as a flow of messages, with the line
 drawn between what is trusted and what is not:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_tool_flow)
+```
+
+```{python}
 #| label: fig-tool-flow
+#| echo: false
 #| fig-cap: "One turn of the loop. The model only produces text and tool calls; the harness checks each call against the allowlist, and only a call that passes reaches the simulation. The result goes back to the model as text. The model is untrusted, and the allowlist is the boundary."
 #| fig-status: conceptual
 #| fig-alt: "A diagram of four boxes in a row: model, harness, allowlist, simulation. A solid arrow runs from the model to the harness, labelled tool call. An arrow runs from the harness to the allowlist, labelled check name and bounds, and on to the simulation, labelled only if it passes. A dashed arrow runs back from the simulation along the bottom to the model, labelled result as text. A second dashed arrow from the allowlist back to the harness is labelled rejected with a reason. A dashed vertical line between the model and the harness marks the edge of what is trusted."
-import matplotlib.pyplot as plt
-
-from pbc.authoring import diagrams
-
-fig, ax = diagrams.canvas(6.4, 3.0, (-0.2, 12.6), (-1.6, 3.4))
-names = (("model", 0), ("harness", 1), ("allowlist", 2), ("simulation", 3))
-centres = {name: (1.1 + 3.4 * i, 2.0) for name, i in names}
-for name, _ in names:
-    diagrams.state_box(
-        ax, centres[name], name, width=2.2, height=0.9, colour=0 if name == "model" else 1
-    )
-for left, right, label in (
-    ("model", "harness", "tool call"),
-    ("harness", "allowlist", "name, bounds"),
-    ("allowlist", "simulation", "only if it passes"),
-):
-    (x0, y), (x1, _) = centres[left], centres[right]
-    diagrams.arrow(ax, (x0 + 1.15, y), (x1 - 1.15, y), colour=1)
-    diagrams.text(ax, ((x0 + x1) / 2 + (0.0 if left != "model" else 0.9), y + 0.65), label)
-diagrams.line(ax, [(2.8, 3.1), (2.8, -0.9)], colour="#57606a", linestyle=":")
-diagrams.text(ax, (2.6, 3.2), "untrusted", ha="right", colour="#57606a")
-diagrams.text(ax, (3.0, 3.2), "trusted", ha="left", colour="#57606a")
-back = -0.4
-diagrams.line(ax, [(centres["simulation"][0], 1.5), (centres["simulation"][0], back), (centres["model"][0] + 0.6, back)], colour=0, linestyle="--")
-diagrams.arrow(ax, (centres["model"][0] + 0.6, back), (centres["model"][0] + 0.6, 1.5), colour=0, linestyle="--")
-diagrams.text(ax, (6.3, back - 0.4), "result, as text", colour=0)
-diagrams.arrow(ax, (centres["allowlist"][0] - 0.4, 1.5), (centres["harness"][0] + 0.4, 1.5), colour=0, linestyle="--")
-diagrams.text(ax, (centres["harness"][0] + 1.7, 0.95), "rejected, with a reason", colour=0)
-fig.tight_layout()
-plt.show()
+result.show("fig-tool-flow")
 ```
 
 The diagram is a sketch, not a measurement. It answers the question the
@@ -151,23 +131,13 @@ This is the complete list for this lesson.
 
 ```{python}
 #| echo: false
-from pbc.agents.display import AllowlistDisplay
-from pbc.agents.projectile_lab import (
-    DRAG,
-    MASS,
-    MAX_STEPS,
-    TOLERANCE,
-    replay_fixture,
-    tools,
-)
-
-AllowlistDisplay(tools())
+result.display("allowlist")
 ```
 
 The agent **may**:
 
 - call `range_with_drag` and `range_without_drag`, with the arguments above;
-- make at most `{python} MAX_STEPS` model messages, and at most four tool
+- make at most `{python} result["max-steps"]` model messages, and at most four tool
   calls in one message;
 - write plain text as its answer.
 
@@ -178,8 +148,8 @@ The agent **may not**, and the harness has no code that could let it:
 - read or write a file;
 - open a network connection. The one network request of a live run is the
   client's own call to the provider;
-- change the ball: its mass is `{python} f"{MASS * 1000:g}"` g and its drag
-  constant `{python} f"{DRAG:.3g}"` kg/m, fixed in the lesson code;
+- change the ball: its mass is `{python} result["mass-g"]` g and its drag
+  constant `{python} result["drag"]` kg/m, fixed in the lesson code;
 - call a function that is not in the list, or call one with an argument
   outside its bounds. Such a call is rejected without being executed, and the
   model is told why.
@@ -281,7 +251,6 @@ from pbc.agents.messages import ModelClient
 from pbc.agents.replay import replay
 from pbc.agents.loop import run
 from pbc.agents.tools import Allowlist, Tool
-from pbc.authoring import excerpt, reproduce_this
 
 excerpt(ModelClient)
 ```
@@ -346,40 +315,13 @@ These calls are what a misbehaving or manipulated model might send. None of
 them reaches a simulation.
 
 ```{python}
-from pbc.agents import ToolCall
-from pbc.authoring import table
+#| echo: false
+excerpt(experiment.misbehaving_calls)
+```
 
-allowlist = tools()
-attempts = [
-    ToolCall("1", "range_with_drag", {"speed": 25, "angle": 40, "dt": 0.01}),
-    ToolCall("2", "os.system", {"command": "echo hello"}),
-    ToolCall("3", "range_with_drag", {"speed": 25, "angle": 40, "dt": 0.0}),
-    ToolCall("4", "range_with_drag", {"speed": 25, "angle": 40}),
-    ToolCall("5", "range_with_drag", {"speed": "25", "angle": 40, "dt": 0.01}),
-    ToolCall("6", "range_without_drag", {"speed": 25, "angle": 40, "code": "1+1"}),
-]
-rows = []
-for attempt in attempts:
-    result = allowlist.dispatch(attempt)
-    shown = ", ".join(f"{key}={value!r}" for key, value in attempt.arguments.items())
-    rows.append(
-        (
-            attempt.name,
-            shown,
-            result.content["range_m"] if result.ok else None,
-            "ran" if result.ok else result.content["error"],
-        )
-    )
-table(
-    rows,
-    [
-        ("tool the model named", "", ""),
-        ("arguments", "", ""),
-        ("range", "m", ".3f"),
-        ("outcome", "", ""),
-    ],
-    "Six calls that a misbehaving model might send, and what the allowlist did with each; the range is empty where nothing ran.",
-)
+```{python}
+#| echo: false
+result.table("misbehaving-calls")
 ```
 
 Only the first call ran. The others were turned away with a reason, which is
@@ -392,14 +334,17 @@ The cell below replays the committed recording. The model's messages are the
 recorded ones. Each tool result is computed by this build, now.
 
 ```{python}
-from pbc.agents.display import RunDisplay
-
-recording, transcript = replay_fixture()
-RunDisplay(recording, transcript)
+#| echo: false
+excerpt(experiment.run, region="replay")
 ```
 
-The messages come from `{python} recording.model`, recorded on
-`{python} recording.recorded`. A different model or a later date would write
+```{python}
+#| echo: false
+result.display("run")
+```
+
+The messages come from `{python} result["model"]`, recorded on
+`{python} result["recorded"]`. A different model or a later date would write
 different messages.
 
 ### The check that makes the page honest
@@ -407,33 +352,17 @@ different messages.
 Two things enter the replay and one comes out of it:
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_replay_check)
+```
+
+```{python}
 #| label: fig-replay-check
+#| echo: false
 #| fig-cap: "What the replay keeps and what it recomputes. The recorded messages are reused as they are; every recorded tool result is thrown away and computed again by the simulation. The two results are compared, and a difference beyond the tolerance fails the build. The model's words are never compared."
 #| fig-status: conceptual
 #| fig-alt: "A diagram with a recording on the left holding two items: the model's messages and the recorded tool results. The messages feed a replay client that sends the same tool calls through the allowlist to the simulation, which produces new results. A comparison box in the middle receives the recorded results and the new results. An arrow from the comparison leads to the page if they agree within the tolerance and to a failed build if they do not. The messages are not sent to the comparison."
-import matplotlib.pyplot as plt
-
-from pbc.authoring import diagrams
-
-fig, ax = diagrams.canvas(6.4, 3.4, (-0.2, 12.6), (-1.0, 4.4))
-diagrams.state_box(ax, (1.4, 3.4), "recorded messages", width=2.8, height=0.8, colour=0)
-diagrams.state_box(ax, (1.4, 0.6), "recorded results", width=2.8, height=0.8, colour=0)
-diagrams.state_box(ax, (5.4, 3.4), "allowlist + simulation", width=3.2, height=0.8, colour=1)
-diagrams.state_box(ax, (7.4, 0.6), "compare", width=2.0, height=0.8, colour=2)
-diagrams.state_box(ax, (11.2, 2.2), "page", width=1.8, height=0.8, colour=1)
-diagrams.state_box(ax, (11.2, 0.0), "build fails", width=1.8, height=0.8, colour=3)
-diagrams.arrow(ax, (2.8, 3.4), (3.8, 3.4), colour=0)
-diagrams.text(ax, (3.3, 3.9), "same calls", colour=0)
-diagrams.arrow(ax, (5.4, 3.0), (7.0, 1.0), colour=1)
-diagrams.text(ax, (6.9, 2.3), "new results", ha="left", colour=1)
-diagrams.arrow(ax, (2.8, 0.6), (6.4, 0.6), colour=0)
-diagrams.arrow(ax, (8.4, 0.9), (10.3, 2.0), colour=1)
-diagrams.text(ax, (8.9, 1.9), "agree", ha="left", colour=1)
-diagrams.arrow(ax, (8.4, 0.4), (10.3, 0.1), colour=3)
-diagrams.text(ax, (9.3, -0.35), "differ", colour=3)
-diagrams.text(ax, (1.4, 2.0), "the words are shown,\nnever compared", colour="#57606a")
-fig.tight_layout()
-plt.show()
+result.show("fig-replay-check")
 ```
 
 The diagram is a sketch and computes nothing. It answers the question the
@@ -442,51 +371,19 @@ That is why the check can catch a changed simulation and cannot tell whether
 the model reasoned well.
 
 The replay compares every recomputed result with the recorded one and allows a
-relative difference of `{python} f"{TOLERANCE:g}"`. To see it work, change the
+relative difference of `{python} result["tolerance"]`. To see it work, change the
 simulation a little: here the drag constant is one per cent larger, as if the
 ball had been given a rougher surface, and the recording is replayed against
 that.
 
 ```{python}
-from pbc.agents import Allowlist, ReplayMismatch, Tool
-from pbc.agents.projectile_lab import (
-    ANGLE,
-    MAX_STEPS,
-    SPEED,
-    SYSTEM,
-    TASK,
-    TIME_STEP,
-    replay_recording,
-)
-from pbc.mechanics.projectile import projectile_range
+#| echo: false
+excerpt(experiment.rough_ball)
+```
 
-original = tools()
-rough = Allowlist(
-    (
-        Tool(
-            "range_with_drag",
-            "rough ball",
-            (SPEED, ANGLE, TIME_STEP),
-            lambda speed, angle, dt: {
-                "range_m": projectile_range(speed, angle, MASS, 1.01 * DRAG, dt)
-            },
-        ),
-        original.tools[1],
-    )
-)
-
-try:
-    replay(
-        recording,
-        rough,
-        system=SYSTEM,
-        task=TASK,
-        tolerance=TOLERANCE,
-        max_steps=MAX_STEPS,
-        rerecord="uv run --extra openai python -m pbc.agents.projectile_lab --record",
-    )
-except ReplayMismatch as mismatch:
-    print(mismatch)
+```{python}
+#| echo: false
+print(result.output("rough-ball"), end="")
 ```
 
 The build fails with that message. The maintainer then runs the agent live,
@@ -500,32 +397,17 @@ smallest time step the agent used, against the angle, and the curve a scan of
 the same simulation gives.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_agent_evidence)
+```
+
+```{python}
 #| label: fig-agent-evidence
+#| echo: false
 #| fig-cap: "The ranges the agent asked for lie on the curve that an independent scan of the simulation gives: the best angle is a little below forty-five degrees, and the curve is flat near its maximum, so nearby angles give almost the same range."
 #| fig-alt: "A line chart of range in metres against launch angle in degrees. The curve rises, reaches a flat maximum a little below forty-five degrees, and falls slowly beyond it. Three dots mark the angles the agent tried at its smallest steps, and they lie on the curve."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-import numpy as np
-
-fine = 0.002
-angles = np.arange(30.0, 50.5, 1.0)
-scan = [projectile_range(25.0, a, MASS, DRAG, fine) for a in angles]
-
-asked = {}
-for step in transcript.steps:
-    for call, result in zip(step.message.tool_calls, step.results, strict=True):
-        if result.ok and call.name == "range_with_drag" and call.arguments["dt"] <= fine:
-            asked[call.arguments["angle"]] = result.content["range_m"]
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(angles, scan, color="#00429d", label="scan, dt = 0.002 s")
-ax.plot(
-    list(asked), list(asked.values()), "o", color="#93003a", label="asked by the agent"
-)
-ax.set_xlabel("launch angle (degrees)")
-ax.set_ylabel("range (m)")
-ax.legend()
-plt.show()
+result.show("fig-agent-evidence")
 ```
 
 The data are simulated ranges of a tennis ball with quadratic drag. The curve is
@@ -541,46 +423,14 @@ and a scan in steps of a quarter of a degree, at the smallest step the
 allowlist allows, finds the best angle independently.
 
 ```{python}
+#| echo: false
+excerpt(experiment.agent_conclusion)
+```
+
+```{python}
 #| label: agent-conclusion
-smallest = min(
-    call.arguments["dt"]
-    for step in transcript.steps
-    for call in step.message.tool_calls
-    if call.name == "range_with_drag"
-)
-at_smallest = {}
-for step in transcript.steps:
-    for call, result in zip(step.message.tool_calls, step.results, strict=True):
-        if result.ok and call.name == "range_with_drag" and call.arguments["dt"] == smallest:
-            at_smallest[call.arguments["angle"]] = result.content["range_m"]
-
-best_two = sorted(sorted(at_smallest, key=at_smallest.get)[-2:])
-bracket_low, bracket_high = best_two
-grid = np.arange(bracket_low - 2.0, bracket_high + 2.0 + 1e-9, 0.25)
-grid_ranges = [projectile_range(25.0, a, MASS, DRAG, smallest) for a in grid]
-best_angle = grid[int(np.argmax(grid_ranges))]
-best_range = max(grid_ranges)
-range_at_45 = projectile_range(25.0, 45.0, MASS, DRAG, smallest)
-
-table(
-    [
-        (angle, range_m)
-        for angle, range_m in sorted(at_smallest.items())
-    ],
-    [("angle asked by the agent", "degrees", ".0f"), ("range recomputed", "m", ".4f")],
-    "The ranges the agent asked for at its smallest time step, as recomputed by the build.",
-)
-table(
-    [
-        ("best angle of the scan", best_angle, "degrees"),
-        ("range at the best angle", best_range, "m"),
-        ("range at 45 degrees", range_at_45, "m"),
-        ("gain over 45 degrees", best_range - range_at_45, "m"),
-        ("gain over 45 degrees", 100 * (best_range - range_at_45) / range_at_45, "per cent"),
-    ],
-    [("quantity", "", ""), ("value", "", ".4g"), ("unit", "", "")],
-    "An independent scan of the same simulation at the agent's smallest step, in steps of a quarter of a degree.",
-)
+#| echo: false
+result.table("agent-conclusion")
 ```
 
 [At the smallest time step the agent used, the two angles it tried with the
@@ -589,8 +439,8 @@ and the best angle lands the ball further than forty-five degrees by the amount
 in the table.]{.claim type="numerically-verified" scope="the simulated tennis
 ball with quadratic drag at 25 m/s, explicit Euler at the smallest allowed step,
 no measurement" evidence="agent-conclusion"} The bracket is
-`{python} f"{bracket_low:.0f}"` to `{python} f"{bracket_high:.0f}"` degrees, and
-the scan's best angle is `{python} f"{best_angle:.2f}"` degrees, inside it.
+`{python} result["bracket-low"]` to `{python} result["bracket-high"]` degrees, and
+the scan's best angle is `{python} result["best-angle"]` degrees, inside it.
 This is the part of the agent's conclusion that the build recomputes. That the
 agent reasoned well to reach it, and that its remarks about convergence are
 right, is not something the build checks; the reader can compare them with the
@@ -665,21 +515,13 @@ at all?
 
 ::: {.solution}
 ```{python}
-fine = allowlist.dispatch(
-    ToolCall("a", "range_with_drag", {"speed": 25, "angle": 40, "dt": 0.001})
-)
-coarse = allowlist.dispatch(
-    ToolCall("b", "range_with_drag", {"speed": 25, "angle": 40, "dt": 0.05})
-)
-table(
-    [
-        ("smallest allowed step", 0.001, fine.content["range_m"]),
-        ("largest allowed step", 0.05, coarse.content["range_m"]),
-        ("difference", None, coarse.content["range_m"] - fine.content["range_m"]),
-    ],
-    [("step", "", ""), ("time step", "s", ".3f"), ("range", "m", ".3f")],
-    "The range of the throw at forty degrees with the smallest and the largest time step the allowlist accepts.",
-)
+#| echo: false
+excerpt(experiment.step_bounds)
+```
+
+```{python}
+#| echo: false
+result.table("step-bounds")
 ```
 
 Explicit Euler has an error proportional to the step, so the largest step is
@@ -698,40 +540,13 @@ and one with 60 degrees is not. The flight time is $2 v \sin\theta / g$.
 
 ::: {.solution}
 ```{python}
-from scipy.constants import g
+#| echo: false
+excerpt(experiment.new_tool)
+```
 
-flight_time = Tool(
-    "flight_time_without_drag",
-    "Flight time in seconds of the same throw in vacuum.",
-    (SPEED, ANGLE),
-    lambda speed, angle: {
-        "time_s": float(2 * speed * np.sin(np.radians(angle)) / g)
-    },
-)
-extended = Allowlist((*tools().tools, flight_time))
-rows = []
-for angle in (90, 60):
-    result = extended.dispatch(
-        ToolCall("c", "flight_time_without_drag", {"speed": 25, "angle": angle})
-    )
-    rows.append(
-        (
-            angle,
-            "ran" if result.ok else "rejected",
-            result.content["time_s"] if result.ok else None,
-            "" if result.ok else result.content["error"],
-        )
-    )
-table(
-    rows,
-    [
-        ("angle", "degrees", "d"),
-        ("outcome", "", ""),
-        ("flight time", "s", ".3f"),
-        ("reason", "", ""),
-    ],
-    "The new tool called with an angle outside its bounds and with one inside them.",
-)
+```{python}
+#| echo: false
+result.table("new-tool")
 ```
 
 The new tool inherits the bounds of the parameters it reuses, so the call at
@@ -740,7 +555,7 @@ or the replay changes; a lesson that uses the tool would record a new run.
 :::
 :::
 
-## Reproduce this
+## Replay this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
@@ -750,10 +565,13 @@ reproduce_this(
         "src/pbc/agents/loop.py",
         "src/pbc/agents/replay.py",
         "src/pbc/agents/projectile_lab.py",
+        "src/pbc/mechanics/experiments/agent_experiment.py",
+        "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_agents_tools.py",
         "tests/unit/test_agents_replay.py",
+        "tests/unit/test_agent_experiment_experiment.py",
     ],
 )
 ```

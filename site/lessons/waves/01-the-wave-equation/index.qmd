@@ -19,6 +19,7 @@ lesson:
   related: []
   format: 2
   preview: fig-pulse-reflections
+  experiment: pbc.waves.experiments.wave_equation
   prerequisites:
     lessons: [harmonic-oscillator, numerical-integrators]
     outside:
@@ -28,10 +29,11 @@ lesson:
 
 ```{python}
 #| echo: false
-import numpy as np
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.waves import wave
+from pbc.waves.experiments import wave_equation as experiment
 
-from pbc.authoring import lesson_header
-
+result = experiment.run()
 lesson_header()
 ```
 
@@ -205,9 +207,6 @@ once with array operations and records the field every few steps.
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.waves import wave
-
 excerpt(wave.solve)
 ```
 
@@ -226,11 +225,6 @@ excerpt(wave.growth_factor)
 
 ## Worked examples
 
-```{python}
-#| echo: false
-from pbc.authoring import table
-```
-
 ### A pulse and its reflection
 
 The string is [1 m]{.given} long, the wave speed is
@@ -239,60 +233,38 @@ The string is [1 m]{.given} long, the wave speed is
 The grid has four hundred cells and the Courant number is one half.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="setup")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.bump)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment, region="pulse")
+```
+
+```{python}
 #| label: pulse-run
-from pbc.waves.wave import (
-    courant_number,
-    error_norm,
-    grid,
-    observed_order,
-    reflected_pulse,
-    solve,
-)
+#| echo: false
+excerpt(experiment.pulse_run)
+```
 
-LENGTH = 1.0  # string length, m
-SPEED = 100.0  # wave speed, m/s
-
-
-def bump(s):
-    return np.exp(-(((s - 0.3) / 0.05) ** 2))
-
-
-cells = 400
-dx = LENGTH / cells
-dt = 0.5 * dx / SPEED
-x = grid(LENGTH, cells)
-snapshot_times = [0.0, 0.004, 0.008, 0.012, 0.016]
-steps = round(snapshot_times[-1] / dt)
-run = solve(
-    bump(x), np.zeros_like(x), c=SPEED, dx=dx, dt=dt, n_steps=steps, every=1
-)
-pick = [int(np.argmin(np.abs(run.t - t))) for t in snapshot_times]
-exact = [
-    reflected_pulse(bump, x, run.t[j], length=LENGTH, c=SPEED, ends="fixed")
-    for j in pick
-]
-worst = max(error_norm(run.u[j], e) for j, e in zip(pick, exact))
-assert worst < 0.01, "the computed pulse leaves the exact one"
+```{python}
+#| echo: false
+excerpt(experiment.draw_pulse_reflections)
 ```
 
 ```{python}
 #| label: fig-pulse-reflections
+#| echo: false
 #| fig-cap: "The bump splits into two halves that run apart, and the one that reaches the fixed end at the right comes back turned upside down. Solid lines are the computed field at five times, dashed lines the exact solution, which they cover."
 #| fig-alt: "Five stacked curves of displacement against position along a string from zero to one metre. The top curve is a single bump near the left. Below it the bump has split in two halves that move apart, then the right half reaches the right end and a half of opposite sign, pointing down, appears to come back from it."
 #| fig-status: simulated
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots(figsize=(6.4, 4.2))
-for row, (j, e) in enumerate(zip(pick, exact)):
-    offset = -1.2 * row
-    ax.plot(x, run.u[j] + offset, color="#00429d")
-    ax.plot(x, e + offset, color="#93003a", linestyle="--", linewidth=1)
-    ax.text(1.02, offset, f"{run.t[j] * 1000:.0f} ms", va="center")
-ax.set_xlabel("position (m)")
-ax.set_ylabel("displacement, shifted for each time (arbitrary units)")
-ax.set_yticks([])
-ax.set_xlim(0, 1.12)
-plt.show()
+result.show("fig-pulse-reflections")
 ```
 
 [The computed field follows the exact solution of d'Alembert with a mirror
@@ -300,7 +272,7 @@ image behind the fixed end.]{.claim type="numerically-verified"
 scope="a Gaussian pulse, fixed ends, Courant number one half, four hundred cells"
 evidence="pulse-run"}
 The largest difference between the computed and the exact displacement, over
-the five times shown, is `{python} f"{worst:.4f}"` in units of the pulse height.
+the five times shown, is `{python} result["worst"]` in units of the pulse height.
 The pulse that arrives at the right end is turned upside down, which the
 figure shows and the sign of the continuation explains. The data are simulated;
 the check is the exact solution.
@@ -315,94 +287,61 @@ standing mode, the smooth shape $\sin(3\pi x/L)$, whose exact solution is a
 cosine in time.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="convergence")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.final_error)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.pulse_reference)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.mode_shape)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.mode_reference)
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.convergence)
+```
+
+```{python}
 #| label: convergence
-from pbc.waves.wave import standing_mode
+#| echo: false
+result.table("convergence")
+```
 
-cell_counts = np.array([50, 100, 200, 400, 800])
-pulse_time = 0.012
-mode_time = 0.0123
-
-
-def final_error(n_cells, shape, reference, time):
-    h = LENGTH / n_cells
-    xs = grid(LENGTH, n_cells)
-    n_steps = round(time / (0.5 * h / SPEED))
-    result = solve(
-        shape(xs),
-        np.zeros_like(xs),
-        c=SPEED,
-        dx=h,
-        dt=0.5 * h / SPEED,
-        n_steps=n_steps,
-        every=n_steps,
-    )
-    return error_norm(result.u[-1], reference(xs, result.t[-1]))
-
-
-def pulse_reference(xs, t):
-    return reflected_pulse(bump, xs, t, length=LENGTH, c=SPEED, ends="fixed")
-
-
-def mode_shape(xs):
-    return np.sin(3 * np.pi * xs / LENGTH)
-
-
-def mode_reference(xs, t):
-    return standing_mode(xs, t, length=LENGTH, n=3, c=SPEED)
-
-
-spacing = LENGTH / cell_counts
-pulse_errors = np.array(
-    [final_error(n, bump, pulse_reference, pulse_time) for n in cell_counts]
-)
-mode_errors = np.array(
-    [final_error(n, mode_shape, mode_reference, mode_time) for n in cell_counts]
-)
-# The coarsest grid of the pulse resolves its width badly, so the order is
-# fitted on the three finest grids.
-pulse_order = observed_order(spacing[-3:], pulse_errors[-3:])
-mode_order = observed_order(spacing, mode_errors)
-assert abs(pulse_order - 2.0) < 0.1 and abs(mode_order - 2.0) < 0.1
-
-table(
-    [
-        (n, h, ep, em)
-        for n, h, ep, em in zip(cell_counts, spacing, pulse_errors, mode_errors)
-    ],
-    [
-        ("cells", "", "d"),
-        ("spacing", "m", ".5f"),
-        ("error of the pulse", "", ".5f"),
-        ("error of the mode", "", ".5f"),
-    ],
-    "The largest error of the displacement at a fixed time, for the pulse and for the standing mode, as the spacing is halved with the Courant number at one half.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.draw_convergence)
 ```
 
 ```{python}
 #| label: fig-convergence
+#| echo: false
 #| fig-cap: "The error of the pulse and of the mode against the spacing, on logarithmic axes. Both fall along a line of slope two; the dotted line shows a slope of one for comparison."
 #| fig-alt: "Log-log plot of error against grid spacing. Two descending lines of markers, one for the pulse and one for the mode, run parallel to a solid reference line of slope two and fall much faster than a dotted reference line of slope one."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.loglog(spacing, pulse_errors, "o-", color="#00429d", label="pulse")
-ax.loglog(spacing, mode_errors, "s-", color="#93003a", label="standing mode")
-ax.loglog(spacing, mode_errors[-1] * (spacing / spacing[-1]) ** 2, color="gray",
-          label="slope two")
-ax.loglog(spacing, mode_errors[-1] * (spacing / spacing[-1]), color="gray",
-          linestyle=":", label="slope one")
-ax.set_xlabel("grid spacing (m)")
-ax.set_ylabel("largest error of the displacement")
-ax.legend()
-plt.show()
+result.show("fig-convergence")
 ```
 
 [The error of the scheme falls as the second power of the grid spacing at a
 fixed Courant number.]{.claim type="numerically-verified"
 scope="a pulse and a standing mode, fixed ends, Courant number one half, grids of fifty to eight hundred cells"
 evidence="convergence"}
-The fitted order is `{python} f"{pulse_order:.2f}"` for the pulse, on the
-three finest grids, and `{python} f"{mode_order:.2f}"` for the mode. The pulse
+The fitted order is `{python} result["pulse-order"]` for the pulse, on the
+three finest grids, and `{python} result["mode-order"]` for the mode. The pulse
 at the coarsest grid is still outside the regime where the Taylor expansion
 holds, because a cell is not small compared with the width of the pulse; the
 table shows the error of the pulse falling by less than a factor of four
@@ -420,49 +359,33 @@ by which its largest value grows per step over the last ten steps is compared
 with the factor of the formula.
 
 ```{python}
+#| echo: false
+excerpt(experiment, region="courants")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.cfl_run)
+```
+
+```{python}
 #| label: cfl-run
-from pbc.waves.wave import amplitude_growth, growth_factor, zigzag_run
+#| echo: false
+result.table("cfl-run")
+```
 
-courants = [0.5, 0.9, 1.0, 1.02, 1.1, 1.5]
-runs = {c: zigzag_run(c) for c in courants}
-rows = []
-for c in courants:
-    result = runs[c]
-    peak = np.max(np.abs(result.u))
-    if c <= 1.0:
-        rows.append((c, peak / 1e-10, None, 1.0))
-    else:
-        rows.append((c, peak / 1e-10, amplitude_growth(result), growth_factor(c)))
-for c, peak_ratio, measured, predicted in rows:
-    if measured is not None:
-        assert abs(measured / predicted - 1.0) < 0.01
-assert all(row[1] < 1.5 for row in rows if row[0] <= 1.0)
-
-table(
-    rows,
-    [
-        ("Courant number", "", ".2f"),
-        ("largest value over forty steps, in units of the start", "", ".3g"),
-        ("measured growth per step", "", ".3f"),
-        ("predicted growth per step", "", ".3f"),
-    ],
-    "The largest value of the field in forty steps from a zigzag of the size of round-off, and, above the limit, its measured and predicted growth per step.",
-)
+```{python}
+#| echo: false
+excerpt(experiment.draw_cfl)
 ```
 
 ```{python}
 #| label: fig-cfl
+#| echo: false
 #| fig-cap: "The largest value of the field at each step, in units of its starting size, for four Courant numbers. Up to one it stays at the level of the start; above one it grows by a fixed factor per step, a straight line on this logarithmic scale."
 #| fig-alt: "Semi-logarithmic plot of the largest value of the field against the step number, from zero to forty. Lines for the Courant numbers one half and one are flat. Lines for one point zero two, one point one and one point five rise as straight lines, steeper for the larger number, and reach many orders of magnitude above the start."
 #| fig-status: simulated
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-for c, colour in zip((0.9, 1.0, 1.02, 1.1, 1.5), ("#4a7ab5", "#00429d", "#c9a227", "#d9622b", "#93003a")):
-    size = np.max(np.abs(runs[c].u), axis=1) / 1e-10
-    ax.semilogy(size, color=colour, label=f"C = {c}")
-ax.set_xlabel("step")
-ax.set_ylabel("largest value (units of the start)")
-ax.legend()
-plt.show()
+result.show("fig-cfl")
 ```
 
 [Up to a Courant number of one the field stays at the size of its start; above
@@ -470,13 +393,13 @@ it the zigzag grows by the factor that the stability calculation predicts.]{.cla
 type="numerically-verified" scope="a zigzag of size 1e-10, free ends, sixty cells, forty steps"
 evidence="cfl-run"}
 The measured growth per step at the Courant number
-`{python} f"{courants[3]}"` is `{python} f"{rows[3][2]:.3f}"` against
-`{python} f"{rows[3][3]:.3f}"` predicted, and at `{python} f"{courants[5]}"` it
-is `{python} f"{rows[5][2]:.2f}"` against `{python} f"{rows[5][3]:.2f}"`. A
+`{python} result["courant-3"]` is `{python} result["measured-3"]` against
+`{python} result["predicted-3"]` predicted, and at `{python} result["courant-5"]` it
+is `{python} result["measured-5"]` against `{python} result["predicted-5"]`. A
 Courant number only two per cent above the limit multiplies the zigzag by
-`{python} f"{rows[3][3]:.2f}"` at every step, so a start of the size of
+`{python} result["predicted-3-short"]` at every step, so a start of the size of
 round-off reaches the size of the pulse after
-`{python} f"{np.log(1e10) / np.log(rows[3][3]):.0f}"` steps. A run past the
+`{python} result["steps-to-one"]` steps. A run past the
 limit does not degrade gracefully, it ends. At exactly one the scheme
 has no error at all on the grid: a wave crosses one cell per step, which is
 what the grid values need to follow it exactly, and the second exercise
@@ -558,21 +481,14 @@ The solver takes `left` and `right`, and the exact solution takes `ends`.
 
 ::: {.solution}
 ```{python}
-free = solve(
-    bump(x), np.zeros_like(x), c=SPEED, dx=dx, dt=dt, n_steps=steps,
-    left="free", right="free", every=steps,
-)
-free_exact = reflected_pulse(
-    bump, x, free.t[-1], length=LENGTH, c=SPEED, ends="free"
-)
-free_error = error_norm(free.u[-1], free_exact)
-returned = free.u[-1][x > 0.75]
+#| echo: false
+excerpt(experiment.free_ends)
 ```
 
-The largest difference from the exact solution is `{python} f"{free_error:.4f}"`.
+The largest difference from the exact solution is `{python} result["free-error"]`.
 The part of the field in the right quarter of the string has its largest
-value `{python} f"{returned.max():.2f}"` and its smallest
-`{python} f"{returned.min():.2f}"`: it is positive, so it returned upright, as
+value `{python} result["returned-max"]` and its smallest
+`{python} result["returned-min"]`: it is positive, so it returned upright, as
 the continuation with the same sign says.
 :::
 :::
@@ -588,17 +504,11 @@ Compare the error with the round-off of double-precision numbers.
 
 ::: {.solution}
 ```{python}
-n_cells = 100
-h = LENGTH / n_cells
-xs = grid(LENGTH, n_cells)
-at_limit = solve(
-    mode_shape(xs), np.zeros_like(xs), c=SPEED, dx=h, dt=h / SPEED,
-    n_steps=round(mode_time / (h / SPEED)), every=round(mode_time / (h / SPEED)),
-)
-limit_error = error_norm(at_limit.u[-1], mode_reference(xs, at_limit.t[-1]))
+#| echo: false
+excerpt(experiment.at_the_limit)
 ```
 
-The error is below `{python} f"{max(1e-12, 10 ** np.ceil(np.log10(limit_error))):.0e}"`,
+The error is below `{python} result["limit-bound"]`,
 which is round-off, not method error. At $C = 1$ the two error terms of the
 scheme, in space and in time, cancel: the scheme moves each value exactly one
 cell per step, and a wave that is a function of $x - ct$ does the same.
@@ -617,23 +527,30 @@ number of steps from a logarithm.
 
 ::: {.solution}
 ```{python}
-factor = growth_factor(1.05)
-needed = np.log(1e10) / np.log(factor)
+#| echo: false
+excerpt(experiment.growth_to_one)
 ```
 
-The factor is `{python} f"{factor:.3f}"` per step, so
-`{python} f"{needed:.0f}"` steps bring $10^{-10}$ to one. That is a few
+The factor is `{python} result["factor"]` per step, so
+`{python} result["needed"]` steps bring $10^{-10}$ to one. That is a few
 dozen steps of a run that would otherwise need thousands; a program above the
 limit fails within the first fraction of its run.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/waves/wave.py"],
-    tests=["tests/unit/test_waves.py"],
+    code=[
+        "src/pbc/waves/wave.py",
+        "src/pbc/waves/experiments/wave_equation.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_waves.py",
+        "tests/unit/test_wave_equation_experiment.py",
+    ],
 )
 ```

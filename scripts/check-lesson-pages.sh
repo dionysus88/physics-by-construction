@@ -15,7 +15,7 @@ set -euo pipefail
 # them in a fresh clone, so this check has nothing to do there and says so.
 #
 # For the targeted run it renders each selected lesson page alone, as the
-# page's "Reproduce this" commands do: in a clone of the working tree (the
+# page's experiment commands do: in a clone of the working tree (the
 # files Git tracks or would add) with its own locked environment (`uv sync
 # --locked`, so the page's package is the clone's and reads the clone's
 # files: the record of its Lean build, its data), with the Lean build first
@@ -24,9 +24,13 @@ set -euo pipefail
 # lesson page. A failing cell, an equation that cannot become MathML, or a
 # slow page fails the check. When a file under lean/ differs from the base
 # branch, it also runs the Lean build of this checkout, so a changed proof
-# that no selected lesson displays is checked too. It never builds the site:
-# the experiment check of ADR 016 decision 4 joins here when the lessons
-# declare their entry points (F117).
+# that no selected lesson displays is checked too. Then it runs the
+# experiment of each selected lesson with a reader's commands (ADR 016
+# decision 4): in one learner environment of the clone (`uv sync --locked
+# --no-dev`, apart from the environment the pages rendered with), within the
+# 30-second budget, and compares what the experiment wrote with the page it
+# rendered: the figure files byte for byte, the numbers at the precision the
+# page shows. It never builds the site.
 #
 # UV_PROJECT, which the tests set to run this script on a copy of the
 # repository, applies to the script's own Python helper only; the commands in
@@ -61,6 +65,19 @@ print(data.get("tier") or "none" if data else "none")
 for lesson in (data or {}).get("execute", []):
     print(lesson)
 ' "$root"
+}
+
+# The experiment a lesson declares, read through the YAML of its front matter
+# as the lesson checks and the footer read it.
+read_experiment() {
+  uv run --locked --project "$project" python -c '
+import sys
+from pathlib import Path
+
+from pbc.authoring import reproduce
+
+print(reproduce.declaration(Path(sys.argv[1]))[0])
+' "$1"
 }
 
 tier=""
@@ -166,4 +183,50 @@ for lesson in "${lessons[@]}"; do
     fail "the page $page took $seconds s to render; the budget of a lesson page is $budget_seconds s."
   echo "Rendered $page in $seconds s"
 done
-echo "Rendered ${#lessons[@]} selected lesson page(s) alone; no site was built."
+
+# The experiment of each selected lesson, as its last section lists it: one
+# learner environment, apart from the environment of the renders, and each
+# experiment against it without a further sync.
+learner="$clone/.learner"
+echo "-- The learner environment of the clone"
+if ! (cd "$clone" && env -u UV_PROJECT -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$learner" \
+  uv sync --locked --no-dev) >"$log" 2>&1; then
+  cat "$log" >&2
+  fail "the learner environment could not be installed in the clone."
+fi
+for lesson in "${lessons[@]}"; do
+  module="$(read_experiment "$root/$lesson/index.qmd")" ||
+    fail "$lesson declares no experiment ('lesson.experiment')."
+  if [[ "$module" == "./scripts/check-lean.sh" ]]; then
+    echo "-- $lesson: its experiment is the proof check, which ran above"
+    continue
+  fi
+  results="$clone/results/${lesson//\//_}"
+  echo "-- Running the experiment of $lesson"
+  started="$(date +%s)"
+  if ! (cd "$clone" && env -u UV_PROJECT -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$learner" \
+    UV_NO_SYNC=1 uv run --locked --no-dev python -m "$module" "$results") >"$log" 2>&1; then
+    cat "$log" >&2
+    fail "the experiment of $lesson failed."
+  fi
+  seconds=$(($(date +%s) - started))
+  [[ "$seconds" -lt "$budget_seconds" ]] ||
+    fail "the experiment of $lesson took $seconds s; the budget of a lesson is $budget_seconds s."
+  built="$clone/site/_site/${lesson#site/}/index.html"
+  if ! (cd "$clone" && env -u UV_PROJECT uv run --locked python -c '
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "tests")
+from support.experiments import compare_with_page
+
+problems = compare_with_page(Path(sys.argv[1]), Path(sys.argv[2]))
+print("\n".join(problems))
+sys.exit(1 if problems else 0)
+' "$results" "$built") >"$log" 2>&1; then
+    cat "$log" >&2
+    fail "the experiment of $lesson does not write what its page shows."
+  fi
+  echo "Ran the experiment of $lesson in $seconds s; it writes what its page shows"
+done
+echo "Rendered ${#lessons[@]} selected lesson page(s) alone and ran their experiments; no site was built."

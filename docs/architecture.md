@@ -205,7 +205,7 @@ LICENSE, LICENSE-CONTENT MIT for code, CC BY 4.0 for lesson text and figures
 
 | Component | Responsibility | Must not |
 |---|---|---|
-| **Lesson pages** (`site/lessons/`) | Explanation, assumptions, worked examples, exercises with solutions, the "Reproduce this" section (since ADR 016 and F117 the "Run this experiment", "Replay this experiment", or "Check this proof" section, with the identifier `reproduce-this` kept, listing the lesson's tested experiment entry point and never a render command); in the next phase also the physical question, outcomes, interpretation, limits, self-check, and optional "Go deeper" references. Display code, outputs, figures, proofs, and data only through the verified display forms below. | Contain hand-copied code, pasted figures, hand-typed results, image files, or a curated external link that is not in the reference register (the structural links helpers generate are named in I22). |
+| **Lesson pages** (`site/lessons/`) | Explanation, assumptions, worked examples, exercises with solutions, the last section, "Run this experiment", "Replay this experiment", or "Check this proof" by the kind of the lesson (ADR 016, F117; the identifier `reproduce-this` is kept), listing the commands from a clone to the lesson's tested experiment and never a render command; in the next phase also the physical question, outcomes, interpretation, limits, self-check, and optional "Go deeper" references. Display code, outputs, figures, proofs, and data only through the verified display forms below. | Contain hand-copied code, pasted figures, hand-typed results, image files, or a curated external link that is not in the reference register (the structural links helpers generate are named in I22). |
 | **Lesson code package** (`src/pbc/`) | All reusable simulation and analysis code: models, integrators, analysis helpers, data readers; in the final curriculum one package per course, the shared finite-element and finite-volume solvers, and the discovery environments. Unit-tested. The code learners import when they reproduce a lesson and the functions agents are allowed to call. | Depend on the site generator, on network access, or on an LLM provider SDK outside `pbc.agents`. Fetch data from a portal. Depend on an optional comparator (FEniCSx, Gmsh, REBOUND, QuTiP, GeoClaw, PySR, ...) in a required code path. |
 | **Curriculum file** (site/curriculum.yaml, final curriculum, ADR 013) | The reference curriculum as data: the eight courses, the four method paths, and every slot with its label, working title, home, position, and kind. Lessons fill slots through their `slot` field; the path page and the home page derive the planned structure from it and every published fact from front matter. | Hold anything front matter holds (titles of published lessons, descriptions, outcomes, prerequisites, difficulty, methods), or name a lesson that does not exist. |
 | **Lean project** (`lean/`) | All formal proofs, built with `lake build` against pinned Lean 4 and Mathlib. | Contain `sorry`, `admit`, or project-declared `axiom`s. Claim anything about the Python code or about the physical accuracy of a measurement. |
@@ -279,8 +279,8 @@ features:
 
 Required sections of format 1, checked for presence: assumptions,
 explanation, code, worked examples, exercises (with on-page solutions) or an
-interactive visualization, and "Reproduce this" (the section `reproduce-this`,
-headed by the lesson's activity since F117).
+interactive visualization, and the last section (the section
+`reproduce-this`, headed by the lesson's activity, F117).
 
 **Format 2 (next phase, F28)** keeps every section of format 1 and adds, for
 each major concept, the progressive depth the requirements ask for:
@@ -433,7 +433,19 @@ pinning") with a fix hint.
 7. **Built-site checks**: no resource loaded from another origin; images have
    alt text and explicit dimensions; internal links resolve; pages are
    readable with JavaScript disabled; automated WCAG 2.1 A/AA scan; no cookies
-   set; page payload within the budget below. For widgets: their scripts
+   set; page payload within the budget below. For lessons: the last section
+   is headed by the activity of the lesson and lists the commands from a
+   clone to its experiment and no render; the experiment of every lesson
+   that the run executed, run with those commands in one learner
+   environment per run (`uv sync --locked --no-dev` in a fresh clone,
+   outside the budget; never the environment of the checkout), writes the
+   figure files of the built page byte for byte (the one encoder of
+   `pbc.experiment` produced both) and its numbers at their displayed
+   precision, within the 30-second budget of a lesson; and the internal
+   render of each page in a fresh clone regenerates the published page.
+   These two are the tests marked `same_machine` of the check
+   `site-checks-reproduction` in the group `build` (ADR 016 decision 4,
+   ADR 012 decision 4). For widgets: their scripts
    contain no request (but a `fetch` of their own on-demand data), other
    origin, or use of browser storage; on-demand data is within its budget,
    exists, and is requested only after a user action (F43); and
@@ -469,7 +481,7 @@ latest successful run on `main` published. Step 6 executes only the lessons
 whose digest changed and renders every page from the base's results
 otherwise; what a page shows of its context (the header
 with previous, next, prerequisites, related lessons, course, and slot; the
-commit named by "Reproduce this" and by the code and Lean excerpts) and
+commit named by the last section and by the code and Lean excerpts) and
 every page that is not a lesson are produced by this build from the
 current front matter, curriculum file, and commit, never taken from the
 base (ADR 014 decision 9); step 8 starts its second build from the same
@@ -513,8 +525,9 @@ and runs the checks of the groups the entry `targeted:` of
 format, the unit tests, the lesson source checks, the dataset checks, the
 documentation and workflow structure checks, the workflow self-tests when a
 workflow file changed, and the single-page render of each selected lesson in
-a clone of the working tree with the Lean build for changed proofs
-(`scripts/check-lesson-pages.sh`); it performs no site build, no
+a clone of the working tree with the Lean build for changed proofs, followed
+by the lesson's experiment in a learner environment of the clone, compared
+with the rendered page (`scripts/check-lesson-pages.sh`); it performs no site build, no
 determinism build, and no built-site check. It never guesses: without an
 acceptable base, when the selection names a full run, or when a selected
 lesson is new to the base, it reports what CI will run and which tier the
@@ -593,11 +606,9 @@ agent, or a data portal.
 
 ### Learner runs a lesson's experiment (four workstreams, ADR 016, F117)
 
-Until F117 is delivered the published instructions are the earlier flow:
-clone at the named commit, complete the supported-machine setup, run the
-listed commands, which end in `quarto render` of the page, and optionally
-run `./scripts/verify.sh`. The target flow, which removes every website
-build from the learner's path and relocates it nowhere:
+The published instructions follow this flow since F117; the earlier one
+(the supported-machine setup and a render of the page) was removed from
+every guide and relocated nowhere:
 
 1. Clone or download the repository at the commit the lesson's footer
    names, and install the project's pinned Python dependencies with
@@ -849,9 +860,10 @@ through `pbc.discovery`:
    the Lean web editor loading that file. The repository file and the CI
    result are authoritative; the web editor is a convenience that may run a
    different Mathlib version.
-4. The "Reproduce this" commands of such a page (the "Check this proof"
-   commands since F117) include `./scripts/check-lean.sh`, which recreates
-   the record.
+4. The "Check this proof" commands of such a page are `lake build` of the
+   modules the page shows, with the Lean toolchain alone (F117); the
+   record is recreated by `./scripts/check-lean.sh`, a check of the
+   verification, never a reader's step.
 5. A proof about the mathematical model of a measured-data lab (F56) is a
    `formal-theorem` claim about the model; the page says it proves nothing
    about the measurement or the Python code.

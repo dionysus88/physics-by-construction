@@ -18,6 +18,7 @@ lesson:
   related: [proving-what-the-simulation-showed]
   format: 2
   preview: fig-ball-thrown-up
+  experiment: pbc.mechanics.experiments.kinematics
   prerequisites:
     lessons: []
     outside:
@@ -28,8 +29,11 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.authoring import lesson_header
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics import kinematics
+from pbc.mechanics.experiments import kinematics as experiment
 
+result = experiment.run()
 lesson_header()
 ```
 
@@ -118,28 +122,17 @@ The right-hand sides use only values the program already has, which is what
 "explicit" means.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_state_and_update)
+```
+
+```{python}
+#| echo: false
 #| label: fig-state-and-update
 #| fig-cap: "The program holds one state and one rule. The rule turns the state at one step into the state at the next, using nothing but that state."
 #| fig-status: conceptual
 #| fig-alt: "Sketch of two boxes joined by an arrow that points from left to right. The left box holds the state at step n: time, position, and velocity. The right box holds the state at step n plus one. The arrow between them is labelled update rule, one time step."
-import matplotlib.pyplot as plt
-
-from pbc.authoring.diagrams import arrow, canvas, state_box, text
-
-fig, ax = canvas(6.4, 2.2, (0, 10), (0, 3.4))
-state_box(ax, (1.7, 1.7), "state $n$\n" r"$t_n,\ x_n,\ v_n$", width=3.0, height=1.5)
-state_box(
-    ax,
-    (8.3, 1.7),
-    "state $n+1$\n" r"$t_{n+1},\ x_{n+1},\ v_{n+1}$",
-    width=3.0,
-    height=1.5,
-    colour=1,
-)
-arrow(ax, (3.3, 1.7), (6.7, 1.7), colour=2)
-text(ax, (5.0, 2.35), "update rule", colour=2)
-text(ax, (5.0, 1.05), r"one time step $\Delta t$", colour=2)
-plt.show()
+result.show("fig-state-and-update")
 ```
 
 A simulation is this arrow applied again and again, and everything the arrow
@@ -213,9 +206,6 @@ The state is a small immutable record:
 
 ```{python}
 #| echo: false
-from pbc.authoring import excerpt, reproduce_this
-from pbc.mechanics import kinematics
-
 excerpt(kinematics.State)
 ```
 
@@ -253,78 +243,39 @@ shortly before it is back at that height. The cell sets the numbers, runs the
 simulation, and evaluates the exact motion at the same instants.
 
 ```{python}
-import numpy as np
-from scipy.constants import g  # standard gravity, m/s^2
-
-from pbc.authoring import table
-from pbc.mechanics.kinematics import State, constant_acceleration, simulate
-
-# Released above the ground (x in m) and moving upward (v in m/s).
-launch = State(t=0.0, x=1.5, v=12.0)
-dt = 0.1  # time step, s
-n_steps = 24
-
-
-def free_fall(t):
-    return -g
-
-
-euler = simulate(launch, free_fall, dt, n_steps)
-exact = constant_acceleration(launch, -g, euler.t)
-
-table(
-    [
-        (euler.t[i], euler.x[i], exact.x[i], euler.v[i], exact.v[i])
-        for i in range(0, n_steps + 1, 4)
-    ],
-    columns=[
-        ("t", "s", ".1f"),
-        ("x Euler", "m", ".3f"),
-        ("x exact", "m", ".3f"),
-        ("v Euler", "m/s", ".3f"),
-        ("v exact", "m/s", ".3f"),
-    ],
-    caption="Height and velocity of the thrown ball, simulated and exact, "
-    "every fourth step; positions and velocities to three decimals.",
-)
+#| echo: false
+excerpt(experiment, region="setup")
 ```
 
-The acceleration is standard gravity, $g$ = `{python} g` $\mathrm{m/s^{2}}$, pointing down.
-The two velocity columns agree in every row, as derived above. The position
-columns drift apart. After `{python} f"{euler.t[-1]:.1f}"` s the simulated
-ball is `{python} f"{euler.x[-1] - exact.x[-1]:.3f}"` m above the exact one.
-The predicted lag $-\tfrac{1}{2}\,a\,t\,\Delta t$ with $a = -g$ is
-`{python} f"{g * euler.t[-1] * dt / 2:.3f}"` m.
+```{python}
+#| echo: false
+excerpt(experiment.thrown_ball)
+```
 
 ```{python}
+#| echo: false
+result.table("thrown-ball")
+```
+
+The acceleration is standard gravity, $g$ = `{python} result["g"]` $\mathrm{m/s^{2}}$, pointing down.
+The two velocity columns agree in every row, as derived above. The position
+columns drift apart. After `{python} result["end-time"]` s the simulated
+ball is `{python} result["ball-gap"]` m above the exact one.
+The predicted lag $-\tfrac{1}{2}\,a\,t\,\Delta t$ with $a = -g$ is
+`{python} result["predicted-lag"]` m.
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_ball_thrown_up)
+```
+
+```{python}
+#| echo: false
 #| label: fig-ball-thrown-up
 #| fig-cap: "Height of the ball: explicit Euler with a coarse time step against the exact motion. The simulated ball stays above the exact one by a gap that grows with time, the lag of a method that moves the ball with the velocity from the start of each step."
 #| fig-status: simulated
 #| fig-alt: "Line plot of height in metres against time in seconds. The exact motion is a parabola: the ball rises, peaks halfway through the plotted time, and comes back down almost to its starting height. The explicit Euler points start on the parabola and then lie above it, by a distance that grows steadily with time."
-import matplotlib.pyplot as plt
-
-fine = np.linspace(0.0, euler.t[-1], 241)
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.plot(
-    fine,
-    constant_acceleration(launch, -g, fine).x,
-    color="#00429d",
-    label="exact",
-)
-ax.plot(
-    euler.t,
-    euler.x,
-    color="#93003a",
-    linestyle="--",
-    marker="o",
-    markersize=3,
-    label=f"explicit Euler, time step {dt} s",
-)
-ax.set_xlabel("time (s)")
-ax.set_ylabel("height (m)")
-ax.legend()
-plt.show()
+result.show("fig-ball-thrown-up")
 ```
 
 The Euler points start on the parabola and drift away from it, always on the
@@ -339,54 +290,30 @@ cell repeats the simulation over the same duration, doubling the number of
 steps each time, and compares the final position with the exact one.
 
 ```{python}
-duration = dt * n_steps
+#| echo: false
+excerpt(experiment.final_error)
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.halving)
+```
 
-def final_error(acceleration, exact_position, n):
-    """Error of the last simulated position, for n steps over the duration."""
-    end = simulate(launch, acceleration, duration / n, n)
-    return end.x[-1] - exact_position(end.t[-1])
-
-
-def ball(t):
-    return float(constant_acceleration(launch, -g, t).x)
-
-
-step_counts = [n_steps * 2**k for k in range(6)]
-ball_errors = np.array([final_error(free_fall, ball, n) for n in step_counts])
-spacing = np.spacing(np.max(np.abs(euler.x)))  # resolution of a stored height, m
-
-table(
-    [
-        (
-            n,
-            duration / n,
-            ball_errors[i],
-            ball_errors[i - 1] / ball_errors[i] if i else None,
-        )
-        for i, n in enumerate(step_counts)
-    ],
-    columns=[
-        ("steps", "", "d"),
-        ("time step", "s", ".6f"),
-        ("error", "m", ".6f"),
-        ("previous error / error", "", ".4f"),
-    ],
-    caption="Error of the final height of the thrown ball for each time step, "
-    "to six decimals, and the ratio to the error before the halving.",
-)
+```{python}
+#| echo: false
+result.table("halving")
 ```
 
 Every halving of the time step halves the error. For a constant acceleration
-the last ratio of the table is `{python} f"{ball_errors[-2] / ball_errors[-1]:.4f}"`,
+the last ratio of the table is `{python} result["last-ratio"]`,
 because the error is exactly $\tfrac{1}{2}\,g\,t\,\Delta t$.
 
 The fifth assumption said that round-off stays far below the error of the
 method. The cell below puts a number on it: the spacing between neighbouring
 double-precision numbers at the height of the ball is
-`{python} f"{spacing:.1e}"` m, and the smallest error of the table is
-`{python} f"{abs(ball_errors[-1]):.1e}"` m, which is
-`{python} f"{abs(ball_errors[-1]) / spacing:.1e}"` times larger. Round-off
+`{python} result["spacing"]` m, and the smallest error of the table is
+`{python} result["smallest-error"]` m, which is
+`{python} result["error-over-spacing"]` times larger. Round-off
 begins to matter only for time steps far smaller than these.
 
 ### An acceleration that changes in time
@@ -405,73 +332,40 @@ $$
 The same `simulate` runs it; only the acceleration function changes.
 
 ```{python}
-a0 = 3.0  # amplitude of the acceleration, m/s^2
-omega = 2.0  # angular frequency, rad/s
-rest = State(t=0.0, x=0.0, v=0.0)
+#| echo: false
+excerpt(experiment, region="cart")
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.shaking_cart)
+```
 
-def shaking(t):
-    return a0 * np.cos(omega * t)
-
-
-def cart(t):
-    return rest.x + a0 / omega**2 * (1.0 - np.cos(omega * t))
-
-
-def cart_error(n):
-    end = simulate(rest, shaking, duration / n, n)
-    return end.x[-1] - cart(end.t[-1])
-
-
-cart_errors = np.array([cart_error(n) for n in step_counts])
-orders = np.log2(cart_errors[:-1] / cart_errors[1:])
-
-table(
-    [
-        (n, duration / n, cart_errors[i], orders[i - 1] if i else None)
-        for i, n in enumerate(step_counts)
-    ],
-    columns=[
-        ("steps", "", "d"),
-        ("time step", "s", ".6f"),
-        ("error", "m", ".6f"),
-        ("observed order", "", ".3f"),
-    ],
-    caption="Error of the final position of the cart for each time step, to "
-    "six decimals, and the observed order of the method to three decimals.",
-)
+```{python}
+#| echo: false
+result.table("shaking-cart")
 ```
 
 The observed order is the binary logarithm of the ratio of successive errors:
 one means the error halves with the time step. It is no longer exactly one,
 because the dropped terms now contain more than one power of $\Delta t$, but
 it approaches one as the step shrinks. With the smallest step the observed
-order is `{python} f"{orders[-1]:.3f}"`.
+order is `{python} result["last-order"]`.
 
 On logarithmic axes a first-order error is a straight line of slope one.
 
 ```{python}
+#| echo: false
+excerpt(experiment.draw_error_against_time_step)
+```
+
+```{python}
+#| echo: false
 #| label: fig-error-against-time-step
 #| fig-cap: "Error of the final position against the time step, for both examples. Both fall along lines parallel to the reference line: the error is proportional to the time step."
 #| fig-status: simulated
 #| fig-alt: "Log-log plot of the size of the final position error in metres against the time step in seconds. The points for the thrown ball and the points for the cart on the shaking table each lie on a straight line. Both lines are parallel to a dotted reference line of slope 1: the error falls in proportion to the time step."
-steps = duration / np.array(step_counts)
-
-fig, ax = plt.subplots(figsize=(6.4, 3.6))
-ax.loglog(steps, np.abs(ball_errors), color="#00429d", marker="o", label="thrown ball")
-ax.loglog(
-    steps,
-    np.abs(cart_errors),
-    color="#93003a",
-    marker="s",
-    linestyle="--",
-    label="cart on a shaking table",
-)
-ax.loglog(steps, steps, color="#555555", linestyle=":", label="slope 1")
-ax.set_xlabel("time step (s)")
-ax.set_ylabel("size of the error (m)")
-ax.legend()
-plt.show()
+result.show("fig-error-against-time-step")
 ```
 
 [On logarithmic axes both errors follow the reference line of slope one, so
@@ -554,7 +448,7 @@ negligible only for time steps that are not too small.
 
 ::: {.exercise}
 **Choose the time step.** For the thrown ball of the first example, how small
-must the time step be for the position after `{python} f"{duration:.1f}"` s
+must the time step be for the position after `{python} result["duration"]` s
 to be within 1 mm of the exact one? Predict the answer from the error formula,
 then confirm it with a simulation.
 
@@ -574,19 +468,20 @@ $\varepsilon$. A simulation needs a whole number of steps, so we round the
 number of steps up.
 
 ```{python}
-tolerance = 1e-3  # m
-largest_step = 2 * tolerance / (g * duration)
-n_needed = int(np.ceil(duration / largest_step))
-error_needed = final_error(free_fall, ball, n_needed)
-
-print(f"largest time step: {largest_step * 1e6:.1f} microseconds")
-print(f"steps needed:      {n_needed}")
-print(f"error with them:   {error_needed * 1e3:.5f} mm")
+#| echo: false
+excerpt(experiment.steps_for_tolerance)
 ```
 
-The simulation with `{python} n_needed` steps ends
-`{python} f"{error_needed * 1e3:.5f}"` mm from the exact position, just inside
-the tolerance. The first example used `{python} n_steps` steps. The error
+```{python}
+#| echo: false
+print(f"largest time step: {result['largest-step-us']} microseconds")
+print(f"steps needed:      {result['steps-needed']}")
+print(f"error with them:   {result['error-needed-mm']} mm")
+```
+
+The simulation with `{python} result["steps-needed"]` steps ends
+`{python} result["error-needed-mm"]` mm from the exact position, just inside
+the tolerance. The first example used `{python} result["n-steps"]` steps. The error
 shrinks only in proportion to the work: that is the price of a first-order
 method.
 :::
@@ -615,40 +510,23 @@ of the step, which is now smaller than the acceleration during the step, so
 the computed velocity falls behind.
 
 ```{python}
-jerk = 2.0  # m/s^3
-end_time = 3.0  # s
+#| echo: false
+excerpt(experiment, region="jerk")
+```
 
+```{python}
+#| echo: false
+excerpt(experiment.jerk_errors)
+```
 
-def growing(t):
-    return jerk * t
+```{python}
+#| echo: false
+excerpt(experiment.constant_jerk)
+```
 
-
-def jerk_errors(n):
-    end = simulate(rest, growing, end_time / n, n)
-    return (
-        end.v[-1] - jerk * end.t[-1] ** 2 / 2,
-        end.x[-1] - jerk * end.t[-1] ** 3 / 6,
-    )
-
-
-counts = [30 * 2**k for k in range(5)]
-errors = np.array([jerk_errors(n) for n in counts])
-jerk_orders = np.log2(errors[:-1, 1] / errors[1:, 1])
-
-table(
-    [
-        (n, errors[i, 0], errors[i, 1], jerk_orders[i - 1] if i else None)
-        for i, n in enumerate(counts)
-    ],
-    columns=[
-        ("steps", "", "d"),
-        ("velocity error", "m/s", ".6f"),
-        ("position error", "m", ".6f"),
-        ("observed order", "", ".3f"),
-    ],
-    caption="Velocity and position error of the cart with growing "
-    "acceleration at t = 3 s, to six decimals, and the observed order.",
-)
+```{python}
+#| echo: false
+result.table("constant-jerk")
 ```
 
 Both errors are negative: the computed particle is slower and has not come as
@@ -661,7 +539,7 @@ error tends to one.
 **Keep one more term.** The update rule dropped the term
 $\tfrac{1}{2}\,a(t)\,\Delta t^{2}$ from the position. Write a step that keeps
 it, and run the thrown ball of the first example again with its coarse time
-step of `{python} dt` s. What happens to the error, and why?
+step of `{python} result["dt"]` s. What happens to the error, and why?
 
 ::: {.hint}
 The thrown ball has a constant acceleration. Which terms of the exact
@@ -670,24 +548,24 @@ position does the new step now contain?
 
 ::: {.solution}
 ```{python}
-def second_order_step(state, acceleration, dt):
-    a = acceleration(state.t)
-    return State(
-        t=state.t + dt,
-        x=state.x + state.v * dt + 0.5 * a * dt**2,
-        v=state.v + a * dt,
-    )
-
-
-state = launch
-for _ in range(n_steps):
-    state = second_order_step(state, free_fall, dt)
-
-improved_error = state.x - ball(state.t)
-print(f"size of the error after {state.t:.1f} s: {abs(improved_error):.9f} m")
+#| echo: false
+excerpt(experiment.second_order_step)
 ```
 
-The error drops from `{python} f"{ball_errors[0]:.3f}"` m to zero in every
+```{python}
+#| echo: false
+excerpt(experiment.improved_ball)
+```
+
+```{python}
+#| echo: false
+print(
+    f"size of the error after {result['improved-time']} s:"
+    f" {result['improved-error']} m"
+)
+```
+
+The error drops from `{python} result["first-error"]` m to zero in every
 digit shown; what is left is round-off. For a constant acceleration the Taylor expansion of the position ends after the
 $\Delta t^{2}$ term, so a step that keeps this term drops nothing. This holds
 for a constant acceleration only. For an acceleration that changes in time
@@ -697,12 +575,19 @@ remains.
 :::
 :::
 
-## Reproduce this
+## Run this experiment {#reproduce-this}
 
 ```{python}
 #| echo: false
 reproduce_this(
-    code=["src/pbc/mechanics/kinematics.py"],
-    tests=["tests/unit/test_kinematics.py"],
+    code=[
+        "src/pbc/mechanics/kinematics.py",
+        "src/pbc/mechanics/experiments/kinematics.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_kinematics.py",
+        "tests/unit/test_kinematics_experiment.py",
+    ],
 )
 ```

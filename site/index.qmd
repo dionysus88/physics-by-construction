@@ -102,7 +102,8 @@ print(home.planned())
 
 ## Source and licence
 
-To rebuild everything on your own machine, see [Reproduce](reproduce.qmd); to
+To run the experiment of a lesson on your own machine, see
+[Set up and run](reproduce.qmd); to
 report an error or propose a change, see [Contribute](contribute.qmd). The
 complete source of this site, including the code behind every figure, is in
 the [repository on GitHub](https://github.com/taspinar/physics-by-construction).

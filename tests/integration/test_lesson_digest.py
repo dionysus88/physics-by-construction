@@ -129,6 +129,20 @@ def test_each_kind_of_input_changes_the_digest(repository, name):
     assert digest(repository) != before
 
 
+def test_the_experiment_of_a_lesson_is_an_input_of_its_digest(repository):
+    # The cells import the lesson's experiment (ADR 016 decision 2), so a
+    # changed entry point selects its lesson, and the check runs for it.
+    _write(repository, "src/pbc/mech/experiments/__init__.py", "")
+    _write(repository, "src/pbc/mech/experiments/one.py", "def run(): ...\n")
+    cell = CELL + "from pbc.mech.experiments import one as experiment\n"
+    _write(repository, f"{LESSON}/index.qmd", _lesson(cell, LEAN))
+    before = digest(repository)
+
+    _write(repository, "src/pbc/mech/experiments/one.py", "def run(): return 1\n")
+
+    assert digest(repository) != before
+
+
 @pytest.mark.parametrize(
     ("name", "text"),
     [
