@@ -16,6 +16,7 @@ import numpy as np
 from matplotlib.figure import Figure
 
 from pbc.abm import gas
+from pbc.abm.acceptance import FALSE_FAILURE, agreement, t_factor
 from pbc.abm.gas import (
     DT,
     EVERY,
@@ -25,7 +26,6 @@ from pbc.abm.gas import (
     SIDE,
     SPEED,
     initial_gas,
-    mean_and_error,
     measure,
     rayleigh_pdf,
     speed_ratio,
@@ -36,13 +36,45 @@ from pbc.abm.gas import run as run_gas
 from pbc.experiment import Experiment, main
 
 # region: setup
-SEEDS = range(6)
+SEEDS = range(12)  # twelve independent runs, fixed before they are made
 THRESHOLD = 1.9  # the ratio that counts as settled; the Maxwell value is 2
+# The systematic difference allowed between the model and 1 + 2 phi, on top
+# of the statistical tolerance: the time step places collisions late and
+# lowers the pressure, the series stops at its first correction, and the
+# walls of a small box thin the gas in the middle a little.
+PRESSURE_ALLOWANCE = 0.015
 # endregion: setup
+
+# The parts of the allowance, measured once with many more seeds and smaller
+# steps than the page runs (Issue #206). Over 240 seeds at the lesson's step,
+# P / P_ideal is 1.0542 with a spread of 0.0089 between runs, 0.0091 below
+# 1 + 2 phi = 1.0633; at dt = 1 ms it is 1.0612 (100 seeds) and at 0.5 ms
+# 1.0596 (60 seeds). The parts add up to about 0.012, and the allowance
+# rounds that up. More runs do not reduce any of them.
+TIME_STEP_SHIFT = 0.007  # pressure lost because collisions are placed late
+# Hard discs crowd along a wall, so the middle of the box holds about
+# (8/3) n (2r)^3 / L = 0.16 % fewer discs per area than N / A.
+WALL_SHIFT = 0.002
+
+
+def next_virial_term(packing_fraction: float) -> float:
+    """The term after 1 + 2 phi in the virial series of hard discs,
+    4 (4/3 - sqrt(3)/pi) phi^2, from the third virial coefficient
+    B_3 = (4/3 - sqrt(3)/pi) B_2^2; the prediction of the page leaves it
+    out."""
+    return 4.0 * (4.0 / 3.0 - np.sqrt(3.0) / np.pi) * packing_fraction**2
+
+
+def ratio_allowance(n: int) -> float:
+    """The systematic difference allowed between the moment ratio and the
+    Maxwell value two: a gas of ``n`` discs whose energy is fixed has the
+    ratio 2 n / (n + 1), not two, because one disc cannot take more than
+    the energy of all of them; the difference is 2 / (n + 1)."""
+    return 2.0 / (n + 1)
 
 
 def relaxation_history(experiment: Experiment):
-    """Six runs from equal speeds, and the ratio of the moments of the speed
+    """Twelve runs from equal speeds, and the ratio of the moments of the speed
     over time; record the table of three moments."""
     histories = []
     for seed in SEEDS:
@@ -69,7 +101,7 @@ def relaxation_history(experiment: Experiment):
         ],
         [("moment", "", ""), ("time", "s", ".2f"), ("ratio of the moments", "", ".2f")],
         "The ratio of the fourth moment of the speed to the square of the second, "
-        "averaged over six runs, at three moments of the relaxation.",
+        "averaged over twelve runs, at three moments of the relaxation.",
     )
     return times, ratio_history, settled
 
@@ -88,63 +120,59 @@ def draw_relaxation(times, ratio_history) -> Figure:
 
 
 def kinetic_theory_check(experiment: Experiment):
-    """Six measured runs and the means of their moment ratio and pressure
-    against kinetic theory; record the table."""
+    """Twelve measured runs, and the rule of the lesson for their moment
+    ratio and pressure against kinetic theory; record the table."""
     measurements = [measure(seed) for seed in SEEDS]
 
-    ratio_mean, ratio_error = mean_and_error(
-        np.array([speed_ratio(m.speeds) for m in measurements])
+    ratio = agreement(
+        [speed_ratio(m.speeds) for m in measurements],
+        2.0,
+        ratio_allowance(N_DISCS),
     )
-    pressure_mean, pressure_error = mean_and_error(
-        np.array([m.pressure / m.ideal_pressure for m in measurements])
+    pressures = [m.pressure / m.ideal_pressure for m in measurements]
+    pressure = agreement(
+        pressures,
+        virial_correction(measurements[0].packing_fraction),
+        PRESSURE_ALLOWANCE,
     )
-    predicted = virial_correction(measurements[0].packing_fraction)
+    ideal = agreement(pressures, 1.0, PRESSURE_ALLOWANCE)
 
     experiment.table(
         "kinetic-theory-check",
         [
             (
-                "moment ratio",
-                ratio_mean,
-                ratio_error,
-                2.0,
-                abs(ratio_mean - 2.0) / ratio_error,
-            ),
-            (
-                "P / P_ideal",
-                pressure_mean,
-                pressure_error,
-                predicted,
-                abs(pressure_mean - predicted) / pressure_error,
-            ),
-            (
-                "P / P_ideal against the ideal gas law alone",
-                pressure_mean,
-                pressure_error,
-                1.0,
-                (pressure_mean - 1.0) / pressure_error,
-            ),
+                name,
+                a.mean,
+                a.error,
+                a.theory,
+                a.difference,
+                a.tolerance,
+                "yes" if a.agrees else "no",
+            )
+            for name, a in (
+                ("moment ratio", ratio),
+                ("P / P_ideal", pressure),
+                ("P / P_ideal against the ideal gas law alone", ideal),
+            )
         ],
         [
             ("quantity", "", ""),
-            ("mean over six runs", "", ".3f"),
+            ("mean over twelve runs", "", ".3f"),
             ("standard error", "", ".3f"),
             ("theory", "", ".3f"),
-            ("difference", "standard errors", ".1f"),
+            ("difference", "", "+.3f"),
+            ("tolerance", "", ".3f"),
+            ("within the tolerance", "", ""),
         ],
-        "Each quantity averaged over six runs, with its standard error, the theory, "
-        "and the difference between them in standard errors.",
+        "Each quantity averaged over twelve runs, with its standard error, the "
+        "theory, the difference, and the tolerance of the rule: the allowance "
+        "plus the t factor times the standard error.",
     )
-    return (
-        measurements,
-        (ratio_mean, ratio_error),
-        (pressure_mean, pressure_error),
-        predicted,
-    )
+    return measurements, ratio, pressure, ideal
 
 
 def draw_speeds(measurements) -> Figure:
-    """The pooled speeds of the six runs against the Maxwell distribution."""
+    """The pooled speeds of the twelve runs against the Maxwell distribution."""
     pooled = np.concatenate([m.speeds.ravel() for m in measurements])
     kt = temperature(pooled, 1.0)
     v = np.linspace(0.0, pooled.max(), 200)
@@ -238,21 +266,26 @@ def run() -> Experiment:
     experiment.number("relax", RELAX, ".1f")
     experiment.number("duration", gas.DURATION, ".1f")
 
-    (
-        measurements,
-        (ratio_mean, ratio_error),
-        (pressure_mean, pressure_error),
-        predicted,
-    ) = kinetic_theory_check(experiment)
-    experiment.number("ratio-mean", ratio_mean, ".2f")
-    experiment.number("ratio-error", ratio_error, ".2f")
-    experiment.number("ratio-distance", abs(ratio_mean - 2.0) / ratio_error, ".1f")
-    experiment.number("pressure-mean", pressure_mean, ".3f")
-    experiment.number("predicted", predicted, ".3f")
+    measurements, ratio, pressure, ideal = kinetic_theory_check(experiment)
+    experiment.number("n-runs", len(SEEDS))
+    experiment.number("false-failure", round(1 / FALSE_FAILURE))
+    experiment.number("t-factor", t_factor(len(SEEDS)), ".2f")
+    experiment.number("ratio-allowance", ratio_allowance(N_DISCS), ".3f")
+    experiment.number("pressure-allowance", PRESSURE_ALLOWANCE, ".3f")
+    experiment.number("time-step-shift", TIME_STEP_SHIFT, ".3f")
     experiment.number(
-        "pressure-distance", abs(pressure_mean - predicted) / pressure_error, ".1f"
+        "virial-term", next_virial_term(measurements[0].packing_fraction), ".3f"
     )
-    experiment.number("ideal-distance", (pressure_mean - 1.0) / pressure_error, ".0f")
+    experiment.number("wall-shift", WALL_SHIFT, ".3f")
+    experiment.number("ratio-mean", ratio.mean, ".3f")
+    experiment.number("ratio-error", ratio.error, ".3f")
+    experiment.number("ratio-tolerance", ratio.tolerance, ".3f")
+    experiment.number("pressure-mean", pressure.mean, ".3f")
+    experiment.number("predicted", pressure.theory, ".3f")
+    experiment.number("pressure-difference", abs(pressure.difference), ".3f")
+    experiment.number("pressure-tolerance", pressure.tolerance, ".3f")
+    experiment.number("ideal-difference", ideal.difference, ".3f")
+    experiment.number("ideal-tolerance", ideal.tolerance, ".3f")
     experiment.figure("fig-speeds", partial(draw_speeds, measurements))
 
     denser_gas(experiment)
