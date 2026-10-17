@@ -1,0 +1,492 @@
+---
+title: "Charged particles in electric and magnetic fields"
+description: >-
+  The Lorentz force integrated with the Boris pusher: a proton circles in a
+  magnetic field at the cyclotron frequency and the Larmor radius, keeps its
+  energy where explicit Euler does not, and drifts across crossed fields at
+  E over B, each checked against its formula.
+lesson:
+  id: charged-particles-in-fields
+  strand: electromagnetism
+  order: 2
+  difficulty: 2
+  course: electromagnetism
+  slot: EM2
+  methods: [simulation]
+  outcomes:
+    - Integrate the motion of a charged particle under the Lorentz force with the Boris pusher
+    - Measure the cyclotron frequency and the Larmor radius of a simulated orbit and check them against qB/m and mv/(qB)
+    - Predict the error of the Boris pusher from its own closed form and measure its order
+    - Explain why explicit Euler gains energy in a magnetic field, and compute the drift of a particle in crossed fields
+  related: []
+  format: 2
+  preview: fig-gyration
+  experiment: pbc.electromagnetism.experiments.charged_particles_in_fields
+  prerequisites:
+    lessons: [electric-fields-and-potential, numerical-integrators]
+    outside:
+      - "Vectors: the cross product in three dimensions"
+      - "Trigonometry: the tangent of a half angle"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.electromagnetism import motion
+from pbc.electromagnetism.experiments import charged_particles_in_fields as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+A beam of protons in an accelerator is steered around a ring by magnets. The
+aurora shines where electrons from the Sun spiral down the field lines of the
+Earth into the air. A mass spectrometer sorts ions by the size of the circle
+a magnetic field bends them into. All three rest on one force: a charge that
+moves through a magnetic field is pushed sideways, at right angles to its
+velocity and to the field, and an electric field pushes it along.
+
+The previous lesson computed the electric field of charges at rest. This one
+takes the fields as given and asks how a charge moves in them. How fast does
+a proton circle in a uniform magnetic field, and how large is its circle?
+What does an electric field across the magnetic one add? And how is such a
+motion computed, so that a simulation of millions of turns does not slowly
+invent energy that the force cannot give? The motion is integrated with the
+Boris pusher, the method of most plasma codes, and the frequency, the radius,
+and the drift are measured from the simulated orbit and compared with their
+formulas. The formulas are not used to compute the orbit.
+
+## Assumptions
+
+1. **Given fields.** The electric and magnetic fields are set from outside
+   and do not change with the particle. The particle's own field, and its
+   effect on the charges that make the fields, are ignored. In a plasma, with
+   many particles, the fields come from the particles too, and this is no
+   longer true.
+2. **Slow compared with light.** The momentum is $m\mathbf{v}$, with a
+   constant mass. At a speed $v$ the relativistic correction is of order
+   $(v/c)^2$; for the speeds of the lesson it is below a part in ten million.
+   An electron in a television tube or a proton in an accelerator needs the
+   relativistic form.
+3. **No radiation.** A charge on a circle accelerates, and an accelerated
+   charge radiates and loses energy. For a proton in a field of a tesla the
+   loss is far too slow to matter over the times computed; for electrons in
+   a storage ring it is the main effect.
+4. **Uniform fields.** The examples use fields that are the same everywhere.
+   A field that changes over the size of the orbit makes the centre of the
+   circle drift as well; that is the physics of magnetic mirrors and of the
+   radiation belts, and is not in this lesson.
+5. **A fixed time step.** The pusher takes steps of one size. Its error is
+   set by the angle the velocity turns in one step, so the step is chosen as
+   a fraction of the period of the circle.
+
+## The Lorentz force and the Boris pusher {#explanation}
+
+### The force
+
+A charge $q$ of mass $m$ in an electric field $\mathbf{E}$ and a magnetic
+field $\mathbf{B}$ feels the Lorentz force,
+
+$$
+m\,\frac{\mathrm{d}\mathbf{v}}{\mathrm{d}t} = q\left(\mathbf{E} + \mathbf{v}\times\mathbf{B}\right).
+$$
+
+The magnetic part is at right angles to the velocity, so it does no work:
+$\mathbf{v}\cdot(\mathbf{v}\times\mathbf{B}) = 0$, and the speed stays the
+same. In a uniform field $\mathbf{B} = B\,\hat{\mathbf{z}}$ with no electric
+field, the velocity across the field turns at a constant rate, and the
+particle runs on a circle. The rate is the **cyclotron frequency**, and the
+radius the **Larmor radius**,
+
+$$
+\omega_c = \frac{|q|\,B}{m},
+\qquad
+r_L = \frac{m\,v_\perp}{|q|\,B} = \frac{v_\perp}{\omega_c},
+$$
+
+with $v_\perp$ the speed across the field. The frequency does not depend on
+the speed: a fast particle runs on a larger circle in the same time, which is
+why a cyclotron can accelerate with a voltage of a fixed frequency. The
+motion along the field is not affected, so in general the orbit is a helix.
+A positive charge turns clockwise seen from the tip of $\mathbf{B}$, a
+negative one counterclockwise.
+
+### Crossed fields
+
+Add a uniform electric field at right angles to $\mathbf{B}$. In a frame that
+moves with the velocity
+
+$$
+\mathbf{v}_d = \frac{\mathbf{E}\times\mathbf{B}}{B^2}
+$$
+
+the electric field vanishes (to the order of the assumptions), and the
+particle circles again. In the frame of the lab the centre of the circle
+drifts with $\mathbf{v}_d$: at right angles to both fields, at the speed
+$E/B$, and in the same direction for a positive and a negative charge, since
+both $q$ and the sense of the turn change sign together.
+
+### The Boris pusher
+
+The pusher keeps the position at whole steps and the velocity half a step
+later, as the leapfrog method of the mechanics course does. A step of length
+$\Delta t$ is
+
+1. half a kick by the electric field: $\mathbf{v}^- = \mathbf{v}_{n-1/2} + \tfrac{q}{m}\mathbf{E}\,\tfrac{\Delta t}{2}$;
+2. a rotation of $\mathbf{v}^-$ about $\mathbf{B}$ to $\mathbf{v}^+$, with
+   $\mathbf{t} = \tfrac{q}{m}\mathbf{B}\,\tfrac{\Delta t}{2}$ and
+   $\mathbf{s} = 2\mathbf{t}/(1 + t^2)$:
+   $\mathbf{v}' = \mathbf{v}^- + \mathbf{v}^-\times\mathbf{t}$ and
+   $\mathbf{v}^+ = \mathbf{v}^- + \mathbf{v}'\times\mathbf{s}$;
+3. the second half kick, $\mathbf{v}_{n+1/2} = \mathbf{v}^+ + \tfrac{q}{m}\mathbf{E}\,\tfrac{\Delta t}{2}$;
+4. the drift, $\mathbf{x}_{n+1} = \mathbf{x}_n + \Delta t\,\mathbf{v}_{n+1/2}$.
+
+The second step is an exact rotation: it keeps the length of the velocity to
+round-off, so in a magnetic field the pusher keeps the energy for any number
+of steps, as the force does. The angle of the rotation is not
+$\omega_c\Delta t$ but $\theta$ with
+
+$$
+\tan\frac{\theta}{2} = \frac{\omega_c\,\Delta t}{2},
+$$
+
+so that the pusher circles at its own frequency $\omega_B = \theta/\Delta t$,
+a little slower than $\omega_c$ by $\omega_c^3\Delta t^2/12$ to the lowest
+order. Its positions are the corners of a regular polygon with the side
+$v_\perp\Delta t$ and the angle $\theta$ between sides, which lie on a circle
+of radius
+
+$$
+r_B = \frac{v_\perp\,\Delta t}{2\sin(\theta/2)}
+    = r_L\,\sqrt{1 + \left(\frac{\omega_c\Delta t}{2}\right)^2}.
+$$
+
+Both converge to the true values as $\Delta t^2$: the Boris pusher is of
+second order, and its error is known in closed form, which lets the lesson
+check the simulation twice, against the physics and against the method.
+
+### Explicit Euler
+
+Explicit Euler advances the velocity with the force at the start of the
+step, $\mathbf{v}_{n+1} = \mathbf{v}_n + \tfrac{q}{m}\Delta t\,\mathbf{v}_n\times\mathbf{B}$.
+The change is at right angles to $\mathbf{v}_n$, so by Pythagoras
+$|\mathbf{v}_{n+1}|^2 = |\mathbf{v}_n|^2\,(1 + (\omega_c\Delta t)^2)$ for a
+velocity across the field: every step multiplies the kinetic energy by the
+same factor larger than one, and the particle spirals outwards.
+
+## Code
+
+The pusher is `boris`; the lines of the rotation are the heart of it. The
+frequency is read from the simulated velocity by `measured_angular_frequency`,
+the slope of its angle in time, and the radius by `fitted_radius`, a
+least-squares circle through the positions.
+
+```{python}
+#| echo: false
+excerpt(
+    motion.boris,
+    region="rotation",
+    notes={
+        "turn = half * magnetic(x[n], t[n])": "The vector t of the explanation: the field times half the step and the charge over the mass.",
+        "prime = minus + np.cross(minus, turn)": "The first half of the rotation; with the next line it turns the velocity without changing its length.",
+    },
+)
+```
+
+```{python}
+#| echo: false
+excerpt(motion.boris_frequency)
+```
+
+```{python}
+#| echo: false
+excerpt(motion.measured_angular_frequency)
+```
+
+## Worked examples
+
+### A proton in a uniform magnetic field
+
+A proton moves at [100 km/s]{.given} across a uniform field of
+[1 T]{.given}. It is followed for ten turns with steps of a twentieth of the
+period down to a three-hundred-and-twentieth, and the frequency and the
+radius of the simulated orbit are measured.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="proton")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.cyclotron_run)
+```
+
+```{python}
+#| label: cyclotron-run
+#| echo: false
+result.table("cyclotron-run")
+```
+
+[A proton in a uniform magnetic field circles at the cyclotron frequency
+$qB/m$ on the Larmor radius $mv/(qB)$; the frequency and the radius of the
+Boris orbit converge to both with order two in the step, and agree with the
+pusher's own closed forms to round-off.]{.claim type="numerically-verified"
+scope="a non-relativistic proton, a uniform field, ten turns, steps from a twentieth of a period down"
+evidence="cyclotron-run"}
+The cyclotron frequency of the proton is `{python} result["omega"]` rad/s, a turn
+every `{python} result["period-ns"]` ns, and the Larmor radius is
+`{python} result["radius-mm"]` mm. With a twentieth of the period per step the
+pusher runs `{python} result["first-gap-percent"]` per cent slow, and with
+the finest step the gap is `{python} result["last-gap"]`; the fitted
+order of the gap is `{python} result["frequency-order"]`. The measured frequency
+and radius match the closed forms of the pusher, $\omega_B$ and $r_B$, to within
+`{python} result["method-tolerance"]` at every step: the error of the simulation
+is not noise, it is the known error of the method.
+
+### Why the energy matters: Boris against explicit Euler
+
+The same proton is followed for five turns with eighty steps per turn, once with
+the Boris pusher and once with explicit Euler.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="energy")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.energy_run)
+```
+
+```{python}
+#| label: energy-run
+#| echo: false
+result.table("energy-run")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_gyration)
+```
+
+```{python}
+#| label: fig-gyration
+#| echo: false
+#| fig-cap: "Five turns of a proton in a uniform magnetic field with eighty steps per turn. The Boris orbit (blue, solid) stays on the circle of the Larmor radius (dotted); explicit Euler (red, dashed) spirals outwards, gaining energy at every step."
+#| fig-alt: "Plot of the orbit in the plane across the field, in units of the Larmor radius. A dotted circle marks the exact orbit. The solid blue Boris orbit lies on it, turn after turn. The dashed red Euler orbit starts on the circle and spirals outwards in widening loops."
+#| fig-status: simulated
+result.show("fig-gyration")
+```
+
+[In a magnetic field the Boris pusher keeps the kinetic energy to round-off,
+while explicit Euler multiplies it by $1 + (\omega_c\Delta t)^2$ at every
+step.]{.claim type="numerically-verified"
+scope="a uniform magnetic field, eighty steps per turn, five turns"
+evidence="energy-run"}
+After five turns explicit Euler has multiplied the energy by
+`{python} result["euler-final"]`, the factor that the growth per step predicts,
+and its orbit has left the circle, as the figure shows. The Boris energy has
+moved by less than `{python} result["energy-floor"]`. The two methods take the same
+steps and the same force; what differs is that the rotation of Boris is a
+rotation, and the step of Euler is not.
+
+### Crossed fields: the drift
+
+A field of [10 kV/m]{.given} along $y$ is added to the field of
+[1 T]{.given} along $z$. A proton and an electron start at rest and are
+followed for fifty turns of fifty steps each. The electron is put in fields a
+thousand times weaker, both of them, so that $E/B$ is the same and its circle
+is not too small to draw. The velocity of the centre of each orbit is fitted
+and compared with $\mathbf{E}\times\mathbf{B}/B^2$.
+
+```{python}
+#| echo: false
+excerpt(experiment, region="crossed")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.drift_run)
+```
+
+```{python}
+#| label: drift-run
+#| echo: false
+result.table("drift-run")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_drift)
+```
+
+```{python}
+#| label: fig-drift
+#| echo: false
+#| fig-cap: "A proton (blue, solid) and an electron (red, dashed) that start at rest in crossed fields, over the same time. Both drift along x by the same distance, at right angles to both fields, while turning in opposite senses on opposite sides of the line where they started, which their arcs touch, as a point on a rolling wheel does."
+#| fig-alt: "Plot of position across the drift against position along it, in micrometres. The blue proton path is a row of tall arches above the starting line; the red electron path is a row of smaller, more numerous arches below it. Both paths end at the same distance to the right."
+#| fig-status: simulated
+result.show("fig-drift")
+```
+
+[In crossed uniform fields the centre of the orbit drifts with
+$\mathbf{E}\times\mathbf{B}/B^2$, at right angles to both fields and in the
+same direction for a positive and a negative charge.]{.claim type="numerically-verified"
+scope="uniform crossed fields, a drift far slower than light, fifty turns"
+evidence="drift-run"}
+The fitted drift of both particles agrees with $E/B$ to a relative difference
+below `{python} result["drift-tolerance"]`, and points along $x$ for both,
+though the proton turns clockwise and the electron counterclockwise, as the
+figure shows. The electron turns faster and on smaller arcs, yet in the same
+time it covers the same distance along $x$: the drift depends on the fields
+alone, not on the charge or the mass. The data are simulated, and the check is the drift
+formula.
+
+## Limits {#limits}
+
+- **Non-relativistic.** The lesson integrates $m\,\mathrm{d}\mathbf{v}/\mathrm{d}t$
+  with a constant mass. At a speed close to light the cyclotron frequency
+  falls by the Lorentz factor and the pusher has to advance the momentum
+  instead; the relativistic Boris pusher does that.
+- **Given, uniform fields.** A non-uniform field adds drifts of the gradient
+  and of the curvature of the field, and a field that changes in time can
+  heat or trap the particle. None is computed here.
+- **One particle, no radiation.** Nothing here makes a field: there is no
+  interaction between particles and no loss to radiation.
+- **The measured frequency is a fit.** It is the slope of the angle of the
+  velocity over the whole run, and the radius is a least-squares circle. For
+  an orbit that is not a circle, as Euler's is not, neither is a property of
+  the orbit, which is why the first table uses the Boris runs alone.
+
+::: {.exercise .self-check}
+A proton circles in a uniform magnetic field. The field is doubled. What
+happens to its speed, its radius, and the time of a turn?
+
+::: {.choices}
+::: {.choice}
+The speed doubles, because the force is twice as large.
+
+::: {.feedback}
+The magnetic force is at right angles to the velocity and does no work, so
+the speed cannot change, whatever the field.
+:::
+:::
+
+::: {.choice correct="true"}
+The speed stays, the radius halves, and a turn takes half the time.
+
+::: {.feedback}
+Correct: $r_L = mv/(qB)$ halves and $\omega_c = qB/m$ doubles, while the
+force does no work and the speed stays.
+:::
+:::
+
+::: {.choice}
+The speed and the radius stay, and only the time of a turn halves.
+
+::: {.feedback}
+With the same speed and twice the frequency, the circle must be half as
+large: the radius is the speed divided by the frequency.
+:::
+:::
+:::
+
+::: {.solution}
+The speed stays, because the magnetic force is at right angles to the velocity
+and does no work. The cyclotron frequency $qB/m$ doubles, so a turn takes half
+as long, and the radius $v/\omega_c$ halves.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+**A mass spectrometer.** Singly charged ions of carbon-12 and carbon-13
+(masses [12.000 u and 13.003 u]{.given}, with
+[1 u = 1.66054e-27 kg]{.given}) leave a source at [50 km/s]{.given} and are
+bent by a field of [0.5 T]{.given}. How far apart do they land after half a
+circle?
+
+::: {.hint}
+After half a circle an ion has moved by the diameter of its circle.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.mass_spectrometer)
+```
+
+The lighter ion lands `{python} result["light-cm"]` cm from the source and
+the heavier `{python} result["heavy-cm"]` cm, `{python} result["apart-mm"]` mm
+apart. At the same speed the radius is proportional to the mass, so the
+difference of the diameters is the difference of the masses in the same
+proportion: a spectrometer turns a mass into a distance.
+:::
+:::
+
+::: {.exercise}
+**An electron in the field of the Earth.** The field of the Earth is about
+[50 μT]{.given}. What is the cyclotron frequency of an electron in it, in
+hertz, and the radius of the circle at [1000 km/s]{.given}?
+
+::: {.hint}
+The frequency in hertz is the angular frequency divided by a full turn.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.electron_in_the_earths_field)
+```
+
+The electron turns `{python} result["electron-megahertz"]` million times a
+second, on a circle of `{python} result["electron-radius-cm"]` cm: the gyration of the
+electrons of the upper atmosphere is at a frequency of the radio band, and on a
+circle of the size of a hand.
+:::
+:::
+
+::: {.exercise}
+**A helix.** The proton of the first example gets a speed of
+[30 km/s]{.given} along the field as well. Simulate about ten turns and measure how
+far it advances along the field per turn. Compare with the speed along the
+field times the period.
+
+::: {.hint}
+The force has no component along the field, so the speed along it does not
+change.
+:::
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.helix)
+```
+
+The proton advances `{python} result["pitch-mm"]` mm along the field per turn, and
+the speed along the field times the period of the simulated turn gives
+`{python} result["expected-pitch-mm"]` mm. The motion along the field and the
+circle across it are independent, and together they make a helix: the path of
+the electrons that spiral down the field lines into an aurora.
+:::
+:::
+
+## Run this experiment {#reproduce-this}
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/electromagnetism/motion.py",
+        "src/pbc/electromagnetism/experiments/charged_particles_in_fields.py",
+        "src/pbc/verification/estimates.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_electromagnetism.py",
+        "tests/unit/test_charged_particles_in_fields_experiment.py",
+    ],
+)
+```

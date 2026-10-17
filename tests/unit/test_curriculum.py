@@ -296,6 +296,9 @@ def test_the_published_lessons_that_fill_a_slot_carry_it():
         "wave-equation": "W1",
         "interference-and-resonance": "W2",
         "sound-and-the-doppler-effect": "W9",
+        "electric-fields-and-potential": "EM1",
+        "charged-particles-in-fields": "EM2",
+        "faradays-law-and-induction": "EM3",
         # The gas lesson gets its slot with its course (F70), with T1 to T3.
         "particles-in-a-box": "T0",
         "random-walks-and-diffusion": "T1",
@@ -429,9 +432,13 @@ def test_a_course_without_a_lesson_is_named_in_one_sentence_and_shows_no_slot(
     page: str,
 ):
     path = LearningPath.read(SITE_SOURCE)
-    # Mechanics has lessons, thermodynamics since F70 and waves since F71; the
-    # others have none yet.
-    without = [course for course in COURSES[2:] if course.id != "waves"]
+    # Mechanics has lessons, thermodynamics since F70, waves since F71, and
+    # electromagnetism since F72; the others have none yet.
+    without = [
+        course
+        for course in COURSES[2:]
+        if course.id not in {"waves", "electromagnetism"}
+    ]
     assert [course.id for course in path.planned_courses] == [
         course.id for course in without
     ]
@@ -445,6 +452,7 @@ def test_a_course_without_a_lesson_is_named_in_one_sentence_and_shows_no_slot(
         assert course.title in sentences[0]
         assert f"{{#course-{course.id}}}" not in page
     assert "Waves and optics" not in sentences[0]
+    assert "Electromagnetism" not in sentences[0]
     assert f"{{#course-{COURSES[1].id}}}" in page
 
 
