@@ -645,6 +645,45 @@ runs; F120 (#196) covers the fail-closed cases in its evidence. No pull
 request without an accepted base, a fork pull request, and a cold-cache run
 were measured.
 
+### F117, measurement after the merge
+
+Measured on 2026-10-17, after the merge of F117 (#205). The first complete
+`main` run after the merge (39010505705, 06:35 UTC) failed on a statistical
+test of the lesson `agents-abm/01` that depends on the runner class, not on
+F117 (fixed by #209); it is not a duration measurement. The complete runs
+that followed, all with the experiment contract of F117 on `main`:
+
+| Run | After | Lessons | Total | Build job | `e2e (other)` |
+|---|---|---|---|---|---|
+| 39041682506 | #209 (the fix) | 32 | 34 min 12 s | 26 min 52 s | 6 min 49 s |
+| 39047093749 | #207 (F72) | 35 | 25 min 07 s | 18 min 14 s | 6 min 25 s |
+| 39049941041 | #208 (F66) | 38 | **35 min 18 s** | **27 min 16 s** | 7 min 35 s |
+
+The owner asked for the 38-lesson run to be the recorded figure: **35 min
+18 s for the complete `main` run and 27 min 16 s for the build job**, against
+the interim gate of 60 minutes approved for up to 45 lessons. The spread
+between the runs is larger than the growth with the lesson count: the build
+job took 18 min 14 s on one run of 35 lessons and 27 min 16 s on one of 38,
+which is the runner-class difference of F120
+(`docs/incremental-main-evidence.md`), not the six lessons. The growth with the
+lessons is therefore not separable from the runner spread in these three
+runs; read the 60-minute gate against the upper figure. The number of
+executions of each lesson in the build was not measured separately here.
+
+**Capacity of the temporary 45-lesson gate.** At 38 lessons the slowest
+measured complete run (35 min 18 s) leaves 24 min 42 s of the 60 minutes.
+The owner's rule of 2026-10-17 stands: re-measure at 42 lessons, decide the
+capacity at 44 lessons at the latest, or earlier if a complete run exceeds
+45 minutes (Issue #150).
+
+**Learner walkthrough (criterion 7).** A fresh subagent that did not write
+the pages followed the published instructions on a clean clone of the merged
+content for a simulation lesson (mechanics/01), an agent-replay lesson
+(agents-llm/01) and a Lean lesson (lean/01), without building the website:
+every command worked as written, no blocker and no substantive discrepancy,
+six minor points (recorded on pull request #205). It was agent-run; the owner
+accepted it as the independent walkthrough on 2026-10-17.
+
 ## Release (human)
 
 After the items above: tag the merge commit (`git tag -a mvp-v1.0.0`) and
