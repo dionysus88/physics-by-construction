@@ -71,8 +71,12 @@ def test_the_verdicts_of_the_table_follow_from_its_numbers(results):
         assert float(difference) == pytest.approx(
             float(mean) - float(theory), abs=1.5e-3
         )
+        # The page shows the standard error and the tolerance to three
+        # decimals, so recomputing the tolerance from the shown error is off by
+        # at most t times half a unit of the last digit, plus half a unit of
+        # the tolerance's own last digit.
         assert float(tolerance) == pytest.approx(
-            allowances[name] + t * float(error), abs=1.5e-3
+            allowances[name] + t * float(error), abs=t * 5e-4 + 5e-4 + 1e-9
         )
         assert within == ("yes" if abs(float(difference)) <= float(tolerance) else "no")
 
