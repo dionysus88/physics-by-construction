@@ -8,14 +8,18 @@ final curriculum adds, and the boundaries every feature must respect.
 
 - Source of product scope: `docs/PROJECT_REQUIREMENTS.md` (approved
   2026-10-06, re-approved with the change cycle `physics-next-phase` on
-  2026-10-09, with the change cycle `final-curriculum` on 2026-10-12, and
+  2026-10-09, with the change cycle `final-curriculum` on 2026-10-12,
   with the change cycle `pbc-planning-change-four-workstreams` on
-  2026-10-15).
+  2026-10-15, and with the change cycle `scientific-atelier-atlas` on
+  2026-10-17).
   Where this document and the requirements disagree, the requirements win
   and the disagreement is a defect in this document.
-- Decisions with a durable record: `docs/decisions/001` to `017`; ADR 017
+- Decisions with a durable record: `docs/decisions/001` to `019`; ADR 017
   is proposed and not accepted (see "Verification simplification under
-  review").
+  review"); ADR 018 (the atelier, the asset classes, and the atlas) and
+  ADR 019 (the agent skills) are proposed with the change cycle
+  `scientific-atelier-atlas` and accepted when its planning is approved
+  (see "The scientific atelier").
 - Planning base commits: `502ced0` for the bootstrap planning, when the
   repository held only the workflow template; `2f011ea` for the change cycle
   `physics-next-phase` (`docs/changes/physics-next-phase.md`), when F01 to
@@ -26,15 +30,21 @@ final curriculum adds, and the boundaries every feature must respect.
   `0c958c8` for the change cycle `pbc-planning-change-four-workstreams`
   (`docs/changes/pbc-planning-change-four-workstreams.md`), when the site
   published thirty-two lessons in six strands, F61 was delivered and
-  measured, and F113 had been paused. `docs/roadmap.md` orders the
-  remaining work.
+  measured, and F113 had been paused; `b4baed1` for the change cycle
+  `scientific-atelier-atlas` (`docs/changes/scientific-atelier-atlas.md`),
+  when the site still published thirty-two lessons, F117 had just merged
+  (pull request #205, 2026-10-17), and the first run on `main` after it
+  had failed on a stochastic unit test (Issue #206). `docs/roadmap.md`
+  orders the remaining work.
 
 Sections marked **(next phase)** describe what the change cycle
 `physics-next-phase` added; most of it is delivered, and the marker names
 the feature that built it. Sections marked **(final curriculum)** describe
 what the change cycle `final-curriculum` adds; sections marked **(four
 workstreams)** describe what the change cycle
-`pbc-planning-change-four-workstreams` adds. Each names the roadmap
+`pbc-planning-change-four-workstreams` adds; sections marked
+**(scientific atelier)** describe what the change cycle
+`scientific-atelier-atlas` adds. Each names the roadmap
 feature that builds it; until that feature is delivered the section is a
 target, not a description of the repository.
 
@@ -46,7 +56,7 @@ target, not a description of the repository.
 |---|---|
 | Learner (anonymous, advanced) | Reads the published site; clones the repository to run and modify a lesson's experiment with Git and the pinned Python environment alone, to replay an agent lesson or run it live with their own API key, to check proofs with the optional Lean toolchain, and, in the labs, to re-run a measured-data analysis from a committed sample or a documented download. Never instructed to rebuild or preview the website (ADR 016, F117). |
 | University educator (next phase) | Downloads a published lesson's instructor pack, adapts it under the content licence, cites the project, and reports improvements through Issues. Never a mailing list. |
-| Maintainer/author (with AI agents) | Writes lessons, code, proofs, and dataset cards in the repository; researches external references at edit time; merges through pull requests gated by CI. |
+| Maintainer/author (with AI agents) | Writes lessons, code, proofs, and dataset cards in the repository; researches external references at edit time; merges through pull requests gated by CI. For visual and scientific-illustration work the agents follow the audited, pinned skills of ADR 019 (scientific atelier): guidance, never evidence. |
 | Outside contributor | Proposes content, corrections, and datasets through GitHub Issues and reviewed pull requests (F12, extended by F57). |
 
 There are no signed-in or administrator roles and no server that could hold
@@ -106,6 +116,7 @@ Outside the boundary, with the direction of dependency:
 | JIDAI website (`jidai.nl`) (next phase) | Learner's browser | One outbound attribution link. The JIDAI portfolio page is a separate company-site task outside this repository. |
 | Lean web editor (live.lean-lang.org) | Learner's browser | Outbound link only. |
 | External notebook services | Learner's browser | Optional outbound links only; none are planned. |
+| Upstream repositories of the agent skills (Impeccable, Anthropic Frontend Design, Diagram Design) (scientific atelier, ADR 019) | The maintainer, at audit time | Read once per audit; the approved copy is pinned in the repository at its upstream revision. Never contacted by the site, the build, CI, or a running agent. |
 
 The published site itself depends on nothing at runtime except GitHub Pages
 serving its files.
@@ -123,8 +134,13 @@ site/                    Quarto project: the website source
   _filters/              Pandoc Lua filters of the lesson constructs
   index.qmd              Home page
   about.qmd              About: how the site is built, licences, identity (F57)
-  path/                  Learning path page (generated from lesson metadata and the curriculum file)
+  path/                  Learning path page (generated from lesson metadata and the curriculum file); since the
+                         scientific atelier the course atlas at the same address, generated also from the map
+                         manifest (F125, F126, ADR 018)
   curriculum.yaml        The reference curriculum: courses, method paths, slots (final curriculum, F62, ADR 013)
+  atlas.yaml             The map manifest of the course atlas (scientific atelier, F125, ADR 018): concept
+                         identifiers, display placement, concept-to-slot associations, curated conceptual
+                         connections with their rationale; nothing the curriculum file or front matter holds
   lessons/<strand>/<nn>-<slug>/index.qmd   One directory per lesson; a strand per course
                          (mechanics, thermodynamics, waves, electromagnetism, fluids, quantum,
                          astrophysics, materials) and the three method strands (ADR 013)
@@ -133,7 +149,12 @@ site/                    Quarto project: the website source
   evidence.qmd           Evidence map: every claim with its evidence, generated from the lesson sources (F19)
   references.yaml        Reference register of curated external links (next phase, F28, ADR 009)
   widgets/               Self-hosted JavaScript widgets (ES modules)
-  assets/                Styles, fonts, vendored Lean syntax definition
+  learner/               The learner-state, recommendation, and path scripts (F13, F14, F64); the
+                         dependency-free atlas modules (scientific atelier, F126)
+  assets/                Styles (the F44 tokens, extended by the atelier's tokens and components, F123),
+                         self-hosted fonts with their licence texts, vendored Lean syntax definition
+  (template partials)    The shared header, footer, and opening templates and includes of the atelier,
+                         where Quarto's template partials live (scientific atelier, F123)
 src/pbc/                 Importable Python package with all reusable lesson code
   mechanics/             Models and integrators used by the mechanics course, including the
                          double pendulum and Lyapunov estimate (`chaos`), the Euler-Lagrange
@@ -189,7 +210,9 @@ scripts/verify.sh        Existing single verification entry point; with a base, 
 scripts/verify.conf      Existing list of required checks; project checks are added here
 scripts/check-links.sh   On-demand link maintenance check, never a required check (next phase, F39, ADR 009)
 scripts/fetch-data.sh    Learner-side download of a full dataset by its card (F50)
-scripts/*.sh, .agents/   Existing agentic development workflow
+scripts/*.sh, .agents/   Existing agentic development workflow; .agents/skills/ holds the audited, pinned agent
+                         skills with a provenance record each and the project-owned scientific-visualization
+                         skill (scientific atelier, F122, ADR 019)
 .github/workflows/ci.yml Existing CI workflow; extended with setup, caching, deploy, and (F58) parallel verify jobs
 .github/actions/prepare  The preparation of a runner, shared by the jobs of the workflow (F58)
 CITATION.cff             Citation metadata: actual authors, project URL, no DOI (next phase, F57)
@@ -197,7 +220,9 @@ docs/                    Requirements, architecture, roadmap, ADRs, authoring gu
                          scientific validation contract (validation-contract.md, F46),
                          discovery evaluation protocol (discovery-protocol.md, final
                          curriculum, F65; docs/evaluation.md is the review-criteria
-                         document of the development workflow and stays separate)
+                         document of the development workflow and stays separate),
+                         the atelier design specification (atelier.md: the direction, the tokens,
+                         the components, the asset classes; scientific atelier, F123)
 pyproject.toml, uv.lock, .python-version   Python toolchain pins
 LICENSE, LICENSE-CONTENT MIT for code, CC BY 4.0 for lesson text and figures
 ```
@@ -209,18 +234,21 @@ LICENSE, LICENSE-CONTENT MIT for code, CC BY 4.0 for lesson text and figures
 | **Lesson pages** (`site/lessons/`) | Explanation, assumptions, worked examples, exercises with solutions, the last section, "Run this experiment", "Replay this experiment", or "Check this proof" by the kind of the lesson (ADR 016, F117; the identifier `reproduce-this` is kept), listing the commands from a clone to the lesson's tested experiment and never a render command; in the next phase also the physical question, outcomes, interpretation, limits, self-check, and optional "Go deeper" references. Display code, outputs, figures, proofs, and data only through the verified display forms below. | Contain hand-copied code, pasted figures, hand-typed results, image files, or a curated external link that is not in the reference register (the structural links helpers generate are named in I22). |
 | **Lesson code package** (`src/pbc/`) | All reusable simulation and analysis code: models, integrators, analysis helpers, data readers; in the final curriculum one package per course, the shared finite-element and finite-volume solvers, and the discovery environments. Unit-tested. The code learners import when they reproduce a lesson and the functions agents are allowed to call. | Depend on the site generator, on network access, or on an LLM provider SDK outside `pbc.agents`. Fetch data from a portal. Depend on an optional comparator (FEniCSx, Gmsh, REBOUND, QuTiP, GeoClaw, PySR, ...) in a required code path. |
 | **Curriculum file** (site/curriculum.yaml, final curriculum, ADR 013) | The reference curriculum as data: the eight courses, the four method paths, and every slot with its label, working title, home, position, and kind. Lessons fill slots through their `slot` field; the path page and the home page derive the planned structure from it and every published fact from front matter. | Hold anything front matter holds (titles of published lessons, descriptions, outcomes, prerequisites, difficulty, methods), or name a lesson that does not exist. |
+| **Map manifest** (site/atlas.yaml, scientific atelier, ADR 018) | The one addition the course atlas needs, in the requirements' words: concept identifiers (each with its short explanation), display placement, concept-to-slot associations (capstone membership among them, as an association whose slot is a capstone slot), and curated conceptual connections with their rationale. The short explanation of the concept that represents a capstone slot is the planned description the atlas reveals and the home page shows. Validated by `pbc.authoring`: every course, path, slot, and concept reference resolves (the schema defines course, path, slot, and concept references only, and rejects any other field; it admits no lesson reference, so the requirements' lesson-reference rule holds vacuously); a concept names at least one slot; every capstone slot of the curriculum file is represented by exactly one concept. | Hold a title, description, outcome, prerequisite, publication state, or count; hold an illustration reference (the course areas' illustrations are drawn by code, mapped from the curriculum file's courses by the generator) or a lesson reference; infer a concept from a lesson's title; list a prerequisite (those come from the front matter); be a second lesson catalogue. |
 | **Lean project** (`lean/`) | All formal proofs, built with `lake build` against pinned Lean 4 and Mathlib. | Contain `sorry`, `admit`, or project-declared `axiom`s. Claim anything about the Python code or about the physical accuracy of a measurement. |
 | **Widgets** (`site/widgets/`) | Optional interactive visualizations that enhance a static figure already present in the page; in the next phase a small set of science-first components (F43). | Load code or data from another origin, load data before the reader asks for it, store or transmit learner data, compute physics the page did not verify, alter claimed observed values, or be required to read a lesson. |
+| **Atlas modules** (`site/learner/`, scientific atelier, F126, ADR 018) | Small dependency-free ES modules that enhance the generated atlas: the switch between map and index, selection and the selected-concept panel, zoom, filters, and the phone's region selector. Without them the page is complete: every published lesson is reachable through native links and disclosures, and the textual equivalent of the map is in the page. | Make a request, set a cookie, use browser storage (`site/learner/progress.js` stays the only script that stores anything), compute physics, change which lessons exist or count as published, or be required to reach a lesson. |
 | **Dataset registry and samples** (`data/`, next phase, ADR 007) | One card per surveyed dataset with provenance, rights, artifact types, schema, units, cadence, uncertainty, checksums, and the feasibility decision; small rights-cleared samples under the size cap, each parsed by a test. | Hold a file above the cap, a restricted or unlicensed sample, a file without a card, or anything a build could regenerate. |
 | **Reference register** (`site/references.yaml`, next phase, ADR 009) | The selection evidence of every curated external link: concept, URL, author or publisher, section, pedagogical role, statement checked, alternatives, last-checked date, licence note. Pages render links from it. | Be required by the build to be reachable; hold a paywalled or sign-in-only core reference. |
 | **Site generator** (Quarto, ADR 001) | Executes lesson pages, renders equations to MathML, highlights code at build time, emits static HTML. | Add third-party runtime resources (CDN scripts, web fonts, analytics). |
+| **Visual system** (`site/assets/site.css`, `src/pbc/authoring/design.py`, the shared templates and includes, `site/assets/fonts/`, scientific atelier, F123, ADR 018) | The atelier as scoped CSS: tokens (warm paper-white backgrounds, nearly black text, cobalt blue and vermilion accents, the type scale of serif headings, readable body text, and monospaced annotations, thin rules, generous spacing), component styles, the shared header with the project mark, the footer, the openings, and the lesson reading column; the self-hosted fonts with their licences; the colours defined once in the design module with the contrast test. The design specification in `docs/` says how to apply it. | Load a font or style from another origin, introduce a framework, a bundler, or a theme switch, change the meaning of a label, a figure, or a claim, or make a page unreadable without the fonts or the styles. |
 | **Content checks** (`tests/lessons`, `tests/integration`, `tests/e2e`) | Enforce the invariants in this document on lesson sources, dataset cards, the reference register, and the built site. | Depend on network access or credentials. |
 | **Verification entry point** (`scripts/verify.sh`, `scripts/verify.conf`, `scripts/verify-workflow.conf`) | Run every required check with one command. Every product check runs identically on a laptop and in CI (ADR 003); the workflow self-tests run in CI always and locally when a workflow file changed (ADR 005). With a base (final curriculum, ADR 014) it computes the input digest of every lesson and the identity of the checks, names the lessons whose digest changed, and the lesson checks run for those; a lesson without a digest, a changed shared input, a check identity that differs from the base's, or no base makes the run a full run that executes every lesson. It assigns the lessons to the same-machine lesson shards of a full run and derives their number (ADR 014 decision 11, F113, paused since 2026-10-15; one `build` job today). | Have CI-only checks, or skip a product check locally. Select a lesson out by anything but its digest, reuse a check whose implementation changed, or run selectively on `main`. |
 | **Link maintenance check** (`scripts/check-links.sh`, next phase, ADR 009) | On demand, open every URL in the reference register and report what no longer resolves to its section. | Be listed in `scripts/verify.conf`, block a merge, or run in the build. |
 | **CI/CD workflow** (`.github/workflows/ci.yml`) | Install pinned toolchains, restore caches, run groups of the checks of `verify.conf` in parallel jobs through `./scripts/verify.sh --only`, behind one aggregate required check named `verify` (ADR 012), publish the verified artifact from `main`. In the final curriculum (ADR 014): on a pull request, retrieve the base (the executed results, the digests, and the check identity of the latest successful run on `main`) read-only and pass it to the script; on `main`, run without a base and publish the base for the next pull requests after `verify` passed; run the group `build` in the lesson shards the script derives and assemble their results into the one built site (ADR 014 decision 11, F113, paused since 2026-10-15; one `build` job today). | Rebuild the site in the deploy job, hold LLM keys, fetch a dataset, grant write permissions to pull request runs, declare a check that is not in `verify.conf`, or pass a base to a run on `main`. |
 | **Agent harness** (`src/pbc/agents/`, ADR 004) | Run an LLM-driven experiment loop over an explicit allowlist of simulation and analysis functions, live on the learner's machine or as a deterministic replay in CI. Serves the experiment, counterexample, and review agent lessons. | Execute model-generated code, shell commands, or network calls; print or log credentials. |
 | **Coding-agent exercises** (documented local workflows, next phase, ADR 010) | Let a learner drive a coding agent on their own machine, with their own account, under a sandbox profile, from an approved specification to tested code or a checked proof; the site shows the specification, the verified reference solution, the tests, and a review rubric. | Run in CI or in the build; replay agent-written code; show an agent transcript as verified. |
-| **Agentic development workflow** (`scripts/`, `.agents/`, existing) | Plan, implement, review, and triage repository changes. Development tooling, not part of the product. In the next phase its content agents may research references and log evidence (F12 extension) but never accept a link or rewrite a citation without human review. | Be confused with the "AI agents" lesson strands. |
+| **Agentic development workflow** (`scripts/`, `.agents/`, existing) | Plan, implement, review, and triage repository changes. Development tooling, not part of the product. In the next phase its content agents may research references and log evidence (F12 extension) but never accept a link or rewrite a citation without human review. Since the scientific atelier its roles use the audited, pinned skills of `.agents/skills/` (ADR 019): the planner selects them per visual deliverable, the implementer evidences their use, the reviewer verifies the rendered or generated artifact against its sources. | Be confused with the "AI agents" lesson strands. Treat a skill as a build or CI dependency, or as evidence that a figure, a page, or a claim is correct. |
 
 ### Lesson model
 
@@ -366,6 +394,35 @@ bottom of the page.
 Every existing link, bookmark, and graph node address stays valid. A test
 compares the page with the front matter and the curriculum file.
 
+**The course atlas (scientific atelier, ADR 018, F125, F126).** The same
+page, at the same address, gains a physics map before the index ("the
+atlas" may be its display label; the label and the navigation wording are
+settled in the owner's review of the first preview): a breadcrumb, the
+title, and a short explanation; a switch between the map and the course
+index of F64, with search and filter integration where it adds value; a
+large illustrated concept map of the eight courses, limited to the
+approved curriculum, with the four method paths as a connected research
+layer that keeps their distinctions and with the Lean and method views
+kept as part of the map (every published lesson listed by its method tags
+from the front matter, the lessons without a slot included); a
+selected-concept panel with a short explanation and canonical
+lesson links; then the complete course, module, and lesson index of F64,
+below the map, with its metadata, progress marks, recommendations,
+filters, and search;
+capstone links or explicitly labelled planned projects; the shared footer.
+The map's data are the curriculum file, the front matter, and the map
+manifest (the component table): concepts, their placement, their slots,
+and the curated conceptual connections with a rationale come from the
+manifest; prerequisite edges from the front matter; publication from the
+lessons that exist. The three edge types (conceptual connection,
+prerequisite, capstone membership) are explicit in the drawing and in the
+words of the textual equivalent, and may be shown in separate modes. The
+generator writes semantic HTML, inline SVG with real links and text, and a
+visually hidden textual equivalent at build time; the atlas modules add
+selection, zoom, filters, the switch, and the phone's region selector,
+and store and request nothing. A planned concept or slot is labelled,
+distinguishable without colour alone, never a link, never counted.
+
 ### Verified display forms
 
 Everything a lesson shows as code, output, figure, proof, data, or claim must
@@ -377,7 +434,9 @@ ADR 009):
 | Python code | (a) An executable cell that the build runs, or (b) an excerpt included by reference from `src/pbc/` at build time, optionally a named region with line annotations (F35). |
 | Program output and numbers | Output of an executed cell, including values computed inline. Tabular results are rendered as semantic tables with units and a caption by a helper, not as console dumps (F36). |
 | Figures | Produced by an executed cell during the build, with alt text, explicit dimensions, labelled axes with units, a legend where there is more than one series, and a status label. A measured-versus-model figure shows residuals or uncertainties where relevant. Since ADR 016 and F117 the cell draws the figure by calling the lesson's figure-writing function, the one the experiment entry point calls, and shows the file it wrote, so that one encoder produces the page's figure and the learner's. |
-| Conceptual diagrams (next phase, F32 to F34) | Drawn by code in an executed cell (`pbc.authoring.diagrams` or Matplotlib), labelled `conceptual`. Image files are never committed; a third-party diagram is cited and linked, not rehosted. |
+| Conceptual diagrams (next phase, F32 to F34; the conceptual-illustration class of ADR 018) | Drawn by code in an executed cell (`pbc.authoring.diagrams` or Matplotlib), labelled `conceptual`, never presented as a numerical or experimental result. Image files are never committed; a third-party diagram is cited and linked, not rehosted. Since the scientific atelier the approved Diagram Design guidance of ADR 019 informs the drawing; its science and semantics are checked independently of any skill. Requirements decision 37 also permits an authored committed SVG for this class; ADR 018 decision 2 keeps lessons code-drawn as a planning choice within that permission, because every check of a lesson's figure (the figure-status label, the figure-writing pattern with the experiment and reproduction checks, the lesson-directory layout) acts on executed cells. An authored conceptual SVG in a lesson is a later decision, in an ADR that would add this display form, a layout rule, and a wider committed-artifact exemption; until then this row governs. |
+| Interface artwork (scientific atelier, ADR 018) | Visual identity and navigation only: the project mark, the course areas and small illustrations of the atlas, the openings of courses, modules, and capstones. Produced by code in the repository at build time, or an SVG source authored for this project under `site/assets/` with its author and licence recorded; never a raster, never stock, copied, or externally hosted. The authored SVG is the third committed input a build cannot regenerate (I6): the committed-artifact check exempts a tracked `.svg` under `site/assets/` only when the provenance register of the asset-source rule names it with an author and a licence, and keeps rejecting an unregistered SVG, every raster, and every other image type everywhere (ADR 018 amending ADR 002; F123). Carries no caption of a result and no number; its alternative text names what it is or marks it decorative. Never inside a lesson's body as if it were a figure. |
+| Animations (scientific atelier, ADR 018) | Allowed in any class when pedagogically justified: generated by the build or driven by data the build computed, with a meaningful static alternative in the page, starting paused or respecting the reduced-motion preference, with play, pause, and reset controls and with units and sensible parameter limits where it has parameters; mandatory in no lesson; never rendered in CI as a routine step. A widget that computes in the browser (the validated interactive pendulum, F128, if decided) is tested against reference values from `src/pbc`, as the row above says. |
 | Lean code | An excerpt included by reference from a file in `lean/` that `lake build` compiled. |
 | Agent run transcripts | Produced by the replay run during the build (ADR 004). Recorded model messages come from the committed replay fixture and are labelled as recorded; tool results are the recomputed ones, never the recorded ones. |
 | Coding-agent sessions (next phase, ADR 010) | Never replayed. The page shows the specification, the verified reference code and tests, and the review rubric; an example transcript, if shown, carries the "not verified" marker and the model and date. |
@@ -900,6 +959,180 @@ Delivered by F13 (progress and self-checks) and F14 (recommendations):
   cookie, on a request that is not a plain read, or on stored state in any
   request (I16).
 
+### The scientific atelier: pages, asset classes, and the atlas (scientific atelier, ADR 018, ADR 019, F122 to F129)
+
+The change cycle `scientific-atelier-atlas` (requirements decisions 36 to
+38) changes how the site looks, how it is navigated, what kinds of visual
+material it may show, and how the agents of the workflow are guided when
+they make visual material. Nothing of the lesson model, the verified
+display forms for scientific results, the curriculum file, the selection,
+or the learner-state contract changes. Until the named features deliver
+it, this section is a target.
+
+**Pages.** The home page: the shared header with a small project mark,
+concise primary navigation, and a clear start link; the opening "Build a
+world. See if it obeys physics." with a static figure from an existing
+verified implementation (below); the introduction of Part A and Part B
+derived from the course structure, with links into the atlas; capstone
+highlights grounded in the current delivery state, their planned text the
+short explanation of each capstone's concept in the map manifest (below),
+read by `pbc.authoring.home` through the same validated reader and typed
+into no page; a short invitation;
+the shared footer with attribution, source, licences, and secondary
+navigation; no section "From a question to a working model" and no
+renamed three-step formula in its place; no fake metrics, testimonials,
+or inferred progress (F124). The course atlas at the path address (the
+lesson model above; F125, F126). Course and module openings with one
+relevant scientific illustration, an introduction, prerequisites, and a
+compact lesson list, reusing the existing course sections and adding a
+route only for a clear purpose named in the migration plan; lessons with
+a calm reading column of appropriate line length, a table of contents,
+legible code and MathML, larger figures where useful, the current
+prerequisites, and previous and next, preserving section identifiers,
+claims, calculations, results, references, and the experiment section
+with its anchor (ADR 016); capstones with a strong opening and a spacious
+model and results presentation, where dark navy may frame visualizations
+while instructions stay readable; About and the supporting pages in the
+same language with the glossary, the evidence map, the setup page,
+contribution, search, and the licences preserved (F123, F127). The
+foundations (tokens, fonts, header, footer) reach every page at once, so
+the site never shows two chromes; the reading-column template is applied
+to one existing lesson in the preview and to every lesson in the rollout.
+An experiment gallery is deferred until enough real browser experiments
+exist.
+
+**Asset classes** (ADR 018 decision 2). Every visual belongs to one class
+and is identifiable as such:
+
+| Class | Where | Source | Checked by |
+|---|---|---|---|
+| Interface artwork | The chrome, the home page, the atlas, the course, module, and capstone openings | Code in the repository at build time, or an authored SVG source under `site/assets/` with author and licence recorded in the provenance register (the third committed input a build cannot regenerate, I6) | The other-origin and raster rules of the built-site checks; the committed-artifact check, which exempts a registered `.svg` under `site/assets/` and nothing else (ADR 018 amending ADR 002); the asset-source rule (F123); review |
+| Conceptual illustration | Inside a lesson, when it genuinely improves understanding | An executed cell drawing with `pbc.authoring.diagrams` or Matplotlib, labelled `conceptual`. The requirements also permit an authored committed SVG; ADR 018 decision 2 keeps lessons code-drawn as a planning choice, because the lesson checks act on executed cells, and leaves the authored form to a later ADR | The figure-status check (F28, F32); independent review of the science; the Diagram Design guidance of ADR 019 where approved |
+| Scientific result | Lessons, previews, the home figure | The verified display forms, unchanged; the figure-writing pattern of ADR 016 | Everything that checks a figure today; the F63 preview contract |
+| Animation (any class) | Where pedagogically justified | Generated by the build or driven by build-computed data; a static alternative in the page | Reduced motion, controls, keyboard, the static alternative, the on-demand budget (F43's rules); never a routine CI render |
+
+Nothing visual is added for decoration's own sake, as an evidence claim it
+cannot support, or as a mandatory element of every lesson; stock, copied,
+and externally hosted imagery stay prohibited; map artwork never replaces
+an F63 preview.
+
+**The atlas at build time** (ADR 018 decision 3):
+
+1. `pbc.authoring` reads the curriculum file, the front matter of every
+   lesson, and the map manifest, and validates the manifest: every
+   course, path, slot, and concept reference resolves (the schema defines
+   course, path, slot, and concept references only, and rejects any
+   field it does not define: no illustration reference, no lesson
+   reference, so the requirements' lesson-reference rule holds
+   vacuously); every concept names at least one slot; every capstone
+   slot of the curriculum file is represented by exactly one concept; no
+   field that the curriculum file or the front matter holds; no
+   prerequisite written in it. A violation fails the build.
+2. It derives the state of every concept from the slots it names (a
+   concept is published to the extent that lessons fill its slots; the
+   counts come from the lessons), the prerequisite edges from the lessons'
+   prerequisites (an edge between two concepts when a lesson of one
+   requires a lesson of the other; a planned lesson has none), the
+   capstone memberships from the manifest's concept-to-slot associations
+   whose slot is a capstone slot, linked only when the capstone is
+   published, and the conceptual connections with their rationale from
+   the manifest. Every capstone slot (T11, EM9, FL10) is represented by a
+   concept, and that concept's short explanation, kept consistent with
+   the roadmap's description of the capstone, is the planned description
+   the atlas reveals and the home page's capstone highlights show; the
+   same validated reader serves `pbc.authoring.home`.
+3. It lays the map out in Python, as the prerequisite graph of F26 is
+   laid out: course areas with subtle boundaries and their small
+   illustrations (interface artwork drawn by code, one drawing per course
+   of the curriculum file, mapped by the generator and referenced nowhere
+   in the manifest), concept positions from the manifest's placement, the
+   three edge types with distinct marks, the method paths as a connected
+   layer, the Lean and method views, and the planned concepts and slots
+   labelled and distinguishable without colour. The Lean and method views
+   are part of the map: they list every published lesson by its method
+   tags from the front matter, the lessons without a slot included (the
+   Lean lessons beyond the baseline), as links in the SVG's view layer,
+   derived from the front matter with no manifest entry; a concept's
+   lessons still come only from its slots.
+4. It writes the switch, the inline SVG with real links, the
+   selected-concept panels as native disclosures reachable by links, the
+   visually hidden textual equivalent (every concept with its course, its
+   slots, their state, and its edges as sentences; every lesson of the
+   Lean and method views as a sentence), and the F64 index unchanged in
+   content, into the page the post-render steps already process (the
+   search index, the previews, the learning path export).
+5. The atlas modules enhance the page when scripts run; with scripts
+   disabled every published lesson is reachable through the map's links
+   (a lesson without a slot through the Lean and method views), the
+   panels, and the index.
+6. The checks: the manifest rules; every published lesson reachable
+   without scripts through the map and through the index; every previous
+   address, anchor, and graph node address resolving; the published counts
+   equal to the lessons; the prerequisite edges equal to the front matter;
+   every conceptual edge with its type and rationale; no planned slot
+   linked or counted; the accessibility scan, the keyboard pass, the
+   screen-reader reading order in the manual pass, the reflow at 320 CSS
+   px; the payload of the page and of the map enhancement; no request,
+   cookie, or storage from the modules; the search index unchanged in
+   meaning; byte-stable rebuilds.
+
+**The home figure.** A figure-writing function in `src/pbc` (the pattern
+of ADR 016 decision 2), called by an executed cell of the home page,
+draws the opening figure from an existing verified implementation (the
+double pendulum of `pbc.mechanics.chaos`, validated in its lesson against
+its small-oscillation modes and its energy, if the feature judges that
+sufficient; otherwise another verified mechanics figure) in the atelier
+language, with its status label and its provenance (the module, the
+commit) stated on the page; the home page's existing tests of truthful
+counts and links keep running. No JavaScript physics and no illustrative
+motion until the validated interactive pendulum (F128): its browser
+implementation is tested against reference values from `src/pbc` as the
+verified display forms require for a widget that computes, and the owner
+decides the feature (requirements, unresolved question 14).
+
+**Rendered review** (ADR 018 decision 6). Three parts for every feature
+that changes a user-facing visual surface: the implementer records
+screenshots at desktop, tablet, and phone widths as evidence artifacts of
+the feature, never as committed site assets; the independent reviewer
+assesses them with the built HTML and the sources, and with the selected
+skills' guidance in hand; the owner's manual pass on the preview is the
+final visual acceptance. The first preview (home, atlas, one existing
+lesson) is inspected before any broad rollout.
+
+**Verification cost.** `site/assets/site.css`, the templates and
+includes, the fonts, `_quarto.yml`, and `src/pbc/authoring` are shared
+inputs of ADR 014 decision 4: a pull request that changes them executes
+every lesson, and a feature of the atelier is never promised a
+targeted-only tier. The roadmap cuts the slices so that a feature changes
+the shared inputs in as few pull requests as it can, and the lesson
+features of the day proceed in parallel worktrees under the interim
+full-run gate.
+
+**Agent skills in the workflow** (ADR 019). `.agents/skills/` holds the
+audited, pinned skills (Impeccable, Anthropic Frontend Design, Diagram
+Design, as the audit of F122 decides each: vendored, adapted, or dropped)
+and the project-owned PBC Scientific Visualization skill, each with a
+provenance record. A feature plan classifies every new visual deliverable
+and names the skills it selects or why none applies; the implementer's
+completion evidence links the artifact to its source and names the skill
+and revision; the reviewer verifies the rendered or generated artifact
+and that the guidance was followed or an exception approved. The skills
+are development tooling: the site, the build, the lesson and built-site
+checks, the deployment, and every CI job never invoke, install, fetch, or
+depend on a skill, and a skill is never evidence that physics is correct.
+One check reads the directory, as data to validate: the skills
+configuration check of F122, an ungrouped entry of `scripts/verify.conf`
+(the group `default`, beside the other structural checks: template
+structure, shell syntax, the documentation checks), run by the `workflow`
+job in CI and by the targeted run locally with no new group and no change
+to the CI workflow, fails visibly when a directory under
+`.agents/skills/` lacks its `SKILL.md` or provenance record, when a digest
+does not match, or when a skill a committed plan names is missing or at
+another revision. The build and every other check pass with the
+directory absent. Manim is not scheduled; a pilot starts only when
+the owner names one explanation where a static figure is inadequate, with
+its dependencies outside the pinned learner and CI environments.
+
 ## Invariants and boundaries
 
 Agents and reviewers must preserve these. Each names how it is enforced; an
@@ -913,7 +1146,7 @@ shown.
 | I3 | No analytics, tracking, cookies, or third-party runtime resources. All scripts, styles, fonts, and images are served from the site's own origin. Outbound links are the only contact with other sites. | Built-site check (F01). |
 | I4 | All text, code, equations, diagrams, proof explanations, and static figures are readable with JavaScript disabled. Interactives enhance a static fallback. | Built-site check with scripting disabled (F01, F07). |
 | I5 | Code, outputs, figures, proofs, data, and claims on the site come only through the verified display forms. Unverified material is visibly marked. | Lesson source check (F02, F28); ADR 002, 007, 009, 010. |
-| I6 | Generated artifacts are never committed. Figures, outputs, and rendered pages are regenerated by every build. The only committed inputs a build cannot regenerate are the replay fixture of an agent lesson and the dataset samples under `data/samples/`, including the reference artifacts of optional tools declared as `modelled-reference` (final curriculum), each at its declared location, free of credentials and restricted material, and checked on every build (recorded tool results against recomputed ones; sample checksums against their cards). An execution cache restored from a verified artifact of `main` is a build input of a pull request run, never a committed file (ADR 014). | Lesson source check and `.gitignore` (F02); replay (F09); dataset checks (F50); ADR 002, 004, 007, 014. |
+| I6 | Generated artifacts are never committed. Figures, outputs, and rendered pages are regenerated by every build. The only committed inputs a build cannot regenerate are the replay fixture of an agent lesson, the dataset samples under `data/samples/`, including the reference artifacts of optional tools declared as `modelled-reference` (final curriculum), and the authored interface-artwork SVGs under `site/assets/` that the provenance register names with an author and a licence (scientific atelier), each at its declared location, free of credentials and restricted material, and checked on every build (recorded tool results against recomputed ones; sample checksums against their cards; every registered SVG present and every tracked SVG registered). No raster and no other image type is committed anywhere. An execution cache restored from a verified artifact of `main` is a build input of a pull request run, never a committed file (ADR 014). | Lesson source check and `.gitignore` (F02); replay (F09); dataset checks (F50); the committed-artifact check narrowed to the registered-SVG exemption, with the asset-source rule (F123); ADR 002, 004, 007, 014, 018. |
 | I7 | A lesson whose code fails, whose proof does not compile, whose sample does not parse, or whose page does not build cannot be merged. | Required status check on `main` (F01, F58). |
 | I8 | CI and local verification run the same product checks through `./scripts/verify.sh`. CI also runs the workflow self-tests on every run; a local run includes them when a workflow file changed. A local run is one of three tiers (ADR 017 decision 7, F119): the full run runs every product check; the targeted run and the run with a base run the checks of their tier against the selection and are recorded with their tier, and CI runs every check on every pull request and push. Parallel CI jobs run groups of the same `verify.conf` checks behind one aggregate required check; every group runs in exactly one job, or, for the group that executes the lessons, in one lesson-shard matrix whose lesson shards the script derives (ADR 014 decision 11, paused with F113 since 2026-10-15: one job today). | Workflow calls only that script, and a test compares the declared groups with the groups the jobs run (F01, F58); ADR 003, ADR 005, ADR 012. |
 | I9 | The deployed site is the artifact the CI run built for that `main` commit, and the one its jobs checked. The deploy job does not build, and runs only after the required check passed. | Workflow structure (F01); the comparison of the downloaded site with its recorded checksums (F58); ADR 003, ADR 012. |
@@ -931,20 +1164,25 @@ shown.
 | I21 | Every figure states its source status; every scientific claim is typed and scoped; measurements stay distinct from modelled references, fitted curves, reconstructed signals, and agent conclusions, with filtering, interpolation, and selection disclosed. | Lesson source check for format 2 (F28); review of real-data lessons (F51 onward). |
 | I22 | A curated external reference is an optional depth path at the relevant concept, never a substitute for a core explanation, and comes from the reference register with its selection evidence. The structural links helpers generate are not references and are outside the register: the repository file at the built commit behind an excerpt, the Lean web editor link of a proof, the original data record a dataset card names (ADR 007), licence texts, and the attribution link (F57). The F28 check rejects a URL typed in lesson source, not a helper-generated link. Builds and reading never depend on an external page; link validity is a maintenance check, not a merge gate. | Register check on URLs typed in lesson source (F28); `scripts/check-links.sh` outside `verify.conf` (F39); ADR 009. |
 | I23 | One canonical project description and attribution, discreet, truthful, and consistent across home, footer, About, README, instructor packs, and citation metadata; no marketing surface, lead form, mailing list, analytics, or endorsement claim. | Built-site check that the canonical text appears where required and nowhere else (F57); review. |
-| I24 | Coding agents and Lean generation run only on the learner's machine under a sandbox profile with an allowlist, a budget, and human review. The site and CI verify the produced code, tests, and proofs and never run an agent. | Authoring rule and workflow test (F45); ADR 010. |
+| I24 | Coding agents and Lean generation run only on the learner's machine under a sandbox profile with an allowlist, a budget, and human review. The site and CI verify the produced code, tests, and proofs and never run an agent. | Authoring rule and workflow test (F45); the boundary test F122 creates for the agent skills (I32), which F45 extends to coding agents; ADR 010. |
 | I25 | Every page stays within the payload budget below; heavy interactive data loads only on demand from the site's own origin. | Built-site check (F44, F43). |
 | I26 | A run on `main` executes and checks every lesson. A pull request run executes and checks every lesson whose inputs changed and every page whose bytes differ from the verified base; when the inputs of a lesson cannot be followed, when a shared input changed, or when the checks differ from those that produced the base, every lesson is executed; a page's navigation and the commit it names are never taken from the base; a comparison of bytes is made only against a result the run computed on the machine of the comparison; the selection is made by `./scripts/verify.sh` from content digests, never by a path filter in the workflow; no check is dropped; and every job of a full run fits the job timeout at 110 lessons (final curriculum). The first sentence stands until the owner accepts ADR 017 (four workstreams, requirements decision 35, unresolved question 9); the last clause is not established: at thirty-two lessons the one `build` job fits the timeout (measured), and the bound at 110 lessons is re-established by the owner's interim timeout (question 10), by F121, or by F113 resumed. | The verification script and its tests; the workflow passes a base only on pull requests (F61); the lesson shards and the assembly (F113, paused); ADR 014; ADR 017 (proposed); F118, F120, F121. |
 | I27 | The hidden truth of a discovery environment (the law, the parameters, the invariant, the held-out worlds) is never reachable by the agent's tools, the prompt, or the displayed data; a benchmark score shown on the site is recomputed by the build from a frozen trace, with its non-agent baselines (final curriculum). | Allowlist tests of `pbc.discovery` and replay (F65); ADR 004. |
 | I28 | The reference curriculum has one declared source, lessons fill its slots by front matter, no slot is filled twice, and a planned slot is never shown as published or counted; the site's course-first path and its method paths are views over the canonical lesson pages (final curriculum). | Lesson source check and path page test (F62, F64); ADR 013. |
 | I29 | An applied capstone is labelled with its credibility boundary (teaching prototype, array-factor model, teaching-scale propagation model), compares with a stated reference, shows refinement and failure modes, and says which aspects are physically validated; its required path runs on the pinned stack, and any heavy tool is optional and its output a declared `modelled-reference` input (final curriculum). | Lesson source check for the required claim and figure labels; review (F76, F80, F87, F88); ADR 007. |
+| I30 | Every visual on the site belongs to one of three asset classes and is identifiable as such: interface artwork makes no scientific evidence claim and appears only in the chrome, on the home page, on the atlas, and in course, module, and capstone openings; a conceptual illustration is labelled `conceptual` and is never presented as a result; a scientific result keeps the verified display forms and the F63 preview contract. An animation has a static alternative, accessible controls, and respects reduced motion, and is mandatory nowhere. Every asset of the first two classes has its generating or authored source in the repository; no stock, copied, or externally hosted image and no committed raster exists anywhere (scientific atelier). | Built-site checks for other-origin resources and image files (F01, F63); the figure-status check (F28); the asset-source rule (F123); review; ADR 018. |
+| I31 | The course atlas has one source of truth: course, path, and slot structure from the curriculum file; publication, titles, prerequisites, and addresses from the front matter; and from the map manifest only concept identifiers, display placement, concept-to-slot associations, and curated conceptual connections with their rationale (capstone membership is a concept-to-slot association whose slot is a capstone slot; the manifest holds no illustration reference and no lesson reference, and the Lean and method views come from the front matter). Every reference in the manifest resolves, concept membership is never inferred from a title, the three edge types are explicit, a planned concept or slot is never a lesson link and never counted, every published lesson is reachable from the atlas without scripts, the atlas's controls store nothing, and the path address and every earlier anchor stay valid (scientific atelier). | The manifest check and the atlas page tests (F125, F126); the F64 tests; the scan of I16 extended to the atlas modules; ADR 018, ADR 013. |
+| I32 | An agent skill is development guidance read from `.agents/skills/` at its recorded revision: never a dependency of the site, the build, the lesson and built-site checks, the deployment, or any CI job, none of which invokes, installs, fetches, or depends on a skill; the skills configuration check is the one check that reads the directory, as data to validate; a skill is never evidence that a figure, a page, or a claim is correct; a required skill that is missing fails a feature's configuration visibly (scientific atelier). | The skills configuration check and the provenance records (F122); the boundary test F122 creates (no workflow, script, check, build step, or CI job invokes, installs, or fetches a skill; the build and every other check pass with the directory absent), which F45 later extends to coding agents (I24); review; ADR 019. |
 
 Boundaries for agents working in this repository, in addition to `AGENTS.md`:
 
 - Do not add a runtime dependency on any external service to the site.
 - Do not introduce a JavaScript build toolchain, a second site generator, or
-  committed generated outputs without a new ADR. Replay fixtures (ADR 002)
-  and dataset samples (ADR 007) are the only committed inputs a build cannot
-  regenerate.
+  committed generated outputs without a new ADR. Replay fixtures (ADR 002),
+  dataset samples (ADR 007), and authored interface-artwork SVGs under
+  `site/assets/` with their provenance entry (ADR 018) are the only
+  committed inputs a build cannot regenerate; no raster and no other image
+  type is committed anywhere.
 - Do not weaken or skip a check in `scripts/verify.conf` to make a lesson
   pass. Fix the lesson or mark the material "not verified".
 - Do not change repository settings, Pages configuration, workflow
@@ -955,6 +1193,15 @@ Boundaries for agents working in this repository, in addition to `AGENTS.md`:
 - Do not add a curated external link outside the reference register (the
   structural links of I22 come from helpers, never typed into a lesson), and
   do not add a register entry without having opened and read the target.
+- Do not add an image, illustration, or animation outside the three asset
+  classes of ADR 018, one whose source is not in the repository, or one
+  that presents artwork or a mockup as a scientific result; do not shrink
+  a desktop map until its labels are unreadable, and do not store the
+  atlas's controls in the browser.
+- Do not use an agent skill that is not in `.agents/skills/` at its
+  recorded revision, do not fetch one at run time, and do not present a
+  skill's guidance as evidence; record the skill and its revision in the
+  completion evidence where one was used (ADR 019).
 
 ## Runtime and deployment
 
@@ -981,8 +1228,10 @@ There is no application runtime. The only executing code is:
 | Browser system libraries (Linux only) | Not pinned; provided by the distribution | Playwright's dependency installer or the system package manager, during the one-time setup |
 | jq | Not pinned; any current release | System package manager, during the one-time setup |
 | GitHub Actions | Full commit SHA per action | Dependabot proposes updates |
-| JavaScript | No package manager. Widgets are dependency-free ES modules. A third-party library, if ever needed, is vendored with version, licence, and checksum. Self-hosted search (F41) uses only what Quarto ships from the site's own origin. | None |
+| JavaScript | No package manager. Widgets are dependency-free ES modules, and so are the atlas modules of the scientific atelier (F126). A third-party library, if ever needed, is vendored with version, licence, and checksum. Self-hosted search (F41) uses only what Quarto ships from the site's own origin. | None |
+| Fonts | Self-hosted under `site/assets/fonts/`, each with its licence text beside it (the math font today; the serif, body, and monospace faces of the atelier, F123, ADR 018), counted in every page's initial payload; never a web-font service. | The repository |
 | Coding agents, Lean web editor, data portals | Not pinned; never a dependency of the build. The dataset card pins the data by version, URL, and checksum. | The learner, locally |
+| Agent skills (scientific atelier, ADR 019) | Pinned by upstream revision in the provenance record of each skill under `.agents/skills/`, moved only by a re-audited pull request; the project-owned skill is versioned with the repository. Never a dependency of the build, the deployment, or any CI job; read by no check except the skills configuration check, which validates the directory. | The repository; read by the agent CLIs of `.agents/agents.conf` |
 
 Upgrades are ordinary pull requests that must pass verification. Python and
 Actions updates are proposed by Dependabot; Lean and Mathlib are bumped
@@ -1167,7 +1416,13 @@ job is derived from the reproduction time (about 11 min 13 s for
 thirty-two lessons in one fast run, execution and render together; the
 check repeats the execution, not the render) and not measured; its
 preconditions (the owner's interim timeout, F119's consolidation) hold,
-and the first full run after it is measured (F117 criterion 8).
+and the first full run after it is measured (F117 criterion 8). The first
+run on `main` after the merge of F117 (39010505705, 2026-10-17; cache
+state not read) had a `build` job of 17 min 11 s with the experiment check
+in it and failed in the `code` job on a stochastic unit test of the gas
+lesson (Issue #206), so it published no base and deployed nothing; the
+record of F117's criterion 8 is the first passing full run after the
+switch.
 
 ### Verification simplification under review (four workstreams, requirements decision 35, ADR 017 proposed)
 
@@ -1257,6 +1512,8 @@ Per-page and per-lesson budgets that the next phase adds:
 | Optional data a page loads on demand (animation frames, field data, the short motion clips of the video-reasoning lesson) | 3 MB per page, from the site's own origin, only after a user action, never required to read the page | Built-site check (F43) |
 | Reference artifact of an optional tool (a mesh, a reference solution, a reference waveform), as a `modelled-reference` sample | The sample caps above | Dataset check (F50, ADR 007) |
 | Everything a page can load | 5 MB | Built-site check (F43) |
+| The self-hosted fonts of the atelier, counted in the initial payload of every page (scientific atelier, ADR 018) | Within the 3 MB above, with the sizes of the complete initial page recorded; a face that does not fit is subset or dropped | Built-site check (F123) |
+| The map enhancement of the atlas: its modules and anything it loads after a user action, measured apart from the page's initial payload (scientific atelier, ADR 018) | What loads with the page within the initial budget; on-demand data within the on-demand budget, from the site's own origin | Built-site check (F126) |
 
 ### Deployment and recovery
 
@@ -1279,6 +1536,10 @@ Per-page and per-lesson budgets that the next phase adds:
 | Full datasets | The portal of record, never the repository | Not retained here; the card pins version, URL, and checksum. |
 | Published site | GitHub Pages artifact | Replaced by each deployment. |
 | Learner state (F13) | Learner's browser local storage | Until the learner clears it. No recovery. |
+| The map manifest of the atlas (scientific atelier, ADR 018) | Git repository, beside the curriculum file | Git history. A reviewed input: every reference in it must resolve, and every conceptual connection carries its rationale. |
+| Authored interface-artwork SVGs (scientific atelier, ADR 018 amending ADR 002) | Git repository, under `site/assets/`, each named in the provenance register with its author and licence (F123) | Git history. The third committed input a build cannot regenerate; the committed-artifact check exempts a registered SVG there and nothing else. |
+| Agent skills with their provenance records (scientific atelier, ADR 019) | Git repository, `.agents/skills/` | Git history; a pin moves only by a re-audited pull request. Development tooling, never read by the build. |
+| The state of the atlas's controls (selection, zoom, filters, the switch between map and index) | Nowhere: in the page while it is open | Lost on navigation, by design; no browser storage (ADR 018). |
 
 Nothing else is stored anywhere.
 
@@ -1291,7 +1552,13 @@ Nothing else is stored anywhere.
   deploy job, actions pinned by SHA, fork pull requests unprivileged, no
   Issue-triggered workflow.
 - **Supply chain**: lock files for Python and Lean, frozen installs,
-  Dependabot alerts and updates, self-hosted site assets.
+  Dependabot alerts and updates, self-hosted site assets. The agent skills
+  of `.agents/skills/` are part of it (ADR 019): each third-party skill is
+  audited (upstream source, scripts and what they would execute, licence,
+  security assumptions, dependencies), pinned by revision with a
+  provenance record, never fetched at run time, and never installed by a
+  third-party installer in CI; a missing required skill fails a feature's
+  configuration visibly.
 - **Agent safety**: allowlisted tools with bounded arguments and a step limit
   in the harness; the model's text is data, never code to run. Coding-agent
   exercises are learner-operated, sandboxed, budgeted, and reviewed, and
@@ -1299,7 +1566,10 @@ Nothing else is stored anywhere.
 - **Untrusted inputs**: Issue text, retrieved web pages, and downloaded
   datasets are data, never instructions. Content and research agents may
   propose and log sources but never rewrite scientific citations or accept
-  links without human review.
+  links without human review. An upstream skill is untrusted until its
+  audit; the pinned, audited copy is guidance for an agent of the
+  workflow, and what the agent produced with it is reviewed as any other
+  change (ADR 019).
 - **Rights of data and figures**: before any sample, photograph, figure, or
   animation derived from a third-party dataset is published, its applicable
   terms are checked and recorded in the card; restricted assets are never
@@ -1323,7 +1593,7 @@ Choices the requirements left to planning, and where they are settled:
 | Open choice in the requirements | Decision | Record |
 |---|---|---|
 | Site technology | Quarto, build-time execution, MathML equations | ADR 001 |
-| Generated artifacts: regenerate or commit | Regenerate on every build, never commit. Agent replay fixtures and dataset samples are committed verification inputs, checked on every build | ADR 002, 004, 007 |
+| Generated artifacts: regenerate or commit | Regenerate on every build, never commit. Agent replay fixtures, dataset samples, and provenance-registered authored interface-artwork SVGs are committed inputs, checked on every build | ADR 002, 004, 007, 018 |
 | CI time budget | 20 minutes typical for the wall clock of a pull request run with warm caches, 15 minutes as a non-blocking target (12 minutes until the owner's decision of 2026-10-14), 25 minutes with cold caches, 45 minute timeout per job (30 in ADR 003, raised on 2026-10-11); parallel jobs behind one aggregate check | This document; ADR 003; ADR 012; ADR 015; F58, F61 |
 | Python packages | NumPy, SciPy, Matplotlib, PyYAML, pytest, Ruff; minimal data readers of F50 in `pbc.data` (no new dependency), extended by F51 | Toolchains table |
 | Exact mechanics lesson list | Eight lessons in the MVP; 17 slots in the reference curriculum (final curriculum) | `docs/roadmap.md`, "MVP lesson list" and "Slot mapping" |
@@ -1348,6 +1618,10 @@ Choices the requirements left to planning, and where they are settled:
 | Heavy solvers and discovery tools (candidates of the requirements) | Optional comparators; their outputs are declared `modelled-reference` inputs under ADR 007; the required path runs on the pinned stack | This document; ADR 007 |
 | Coding-agent exercises | Learner-operated local workflows under a sandbox profile; the site verifies only the produced code and proofs | ADR 010 |
 | First measured-data lab | Decided by the feasibility gate of F50; the planner's recommendation is the gravitational-wave strain lab (F60) with the microwave S-parameter lab (F54) as the compact fallback once F15 has given it a course, because every lesson needs a primary course (ADR 008, I18) | `docs/roadmap.md`, "Experimental data choice" |
+| The scientific atelier and the course atlas (decision 36) | Scoped CSS, shared templates and includes, and self-hosted fonts on the Quarto baseline; the home page with a static verified opening figure and without the rejected section; the atlas at the path address generated from the curriculum file, the front matter, and one validated map manifest, as semantic HTML and SVG with a textual equivalent, enhanced by dependency-free modules that store nothing; one end-to-end preview (home, atlas, one lesson) before the rollout; the interactive pendulum as its own gated feature | ADR 018; F123 to F128 |
+| Visual asset classes (decision 37) | Interface artwork, conceptual illustration, scientific result, with animation allowed in any class under conditions; sources in the repository; the blanket exclusion of decorative imagery and animation superseded where ADR 018 says, the exclusion of stock, copied, and external imagery kept. Of the two sources decision 37 permits, interface artwork may be authored (a provenance-registered SVG under `site/assets/`, the one committed-artifact exemption ADR 018 adds to ADR 002), and conceptual illustrations in lessons stay code-drawn as a planning choice, the authored form left to a later ADR | ADR 018; I6; I30; the notes on F25, F44, and F64 in `docs/roadmap.md` |
+| Governed visual agent skills (decision 38) | Audited, pinned, project-local skills at `.agents/skills/`, a project-owned scientific-visualization skill, the planner, implementer, reviewer, and verification contract, bounded pilots, no mandatory review agent | ADR 019; I32; F122, F129 |
+| Fonts of the atelier | Self-hosted with their licences, counted in the initial payload, subset or dropped when they do not fit | This document; ADR 018; F123 |
 
 Unresolved questions of the requirements that stay open, with the feature
 that must settle them:
@@ -1362,6 +1636,9 @@ that must settle them:
 | 10. Timeout of an exceptional full run | By the owner on F118's record of the measured full runs | The interim full-run gate of the roadmap; the one `build` job's timeout for full runs. |
 | 11. Scheduled full audits | Not authorised; the owner decides on ADR 017's analysis if ever | None unless approved. |
 | 12. Closing F113 | By the owner once question 9 is decided; F120 proposes it on Issue #150 | None: the branch and the closed pull request stay as a record either way. |
+| 13. Which third-party skills pass the audit | Per candidate, by the audit of F122 and the owner's approval of each outcome (vendored, adapted, or dropped) | None for the site; the skills directory and the skills configuration check of ADR 019 hold whatever passes. |
+| 14. The validated interactive pendulum | By the owner, as its own feature (F128) after the numerical validation and the cross-language reference check exist | The home opening stays a static verified figure until then; if decided, a widget that computes in the browser under the verified display forms. |
+| 15. A Manim pilot | Not scheduled; starts only when the owner names one explanation where a static figure is inadequate | None; a pilot's dependencies stay outside the pinned learner and CI environments and its rendering out of normal CI. |
 
 ## Assumptions and risks
 
@@ -1420,11 +1697,14 @@ that must settle them:
   that was not reproduced, and the fallback is an explicit revision of
   the timeout, never a tolerance. Since 2026-10-15 F113 is paused at
   exactly thirty-two lessons, with the `build` job measured at 21 to 31
-  minutes; the roadmap starts no further lesson feature until the owner
-  sets the interim timeout on F118's record (unresolved question 10),
-  accepts ADR 017, or resumes F113. The 80 minutes at 110 lessons remain a
-  projection from the 2026-10-12 cost; F118 restates it from the measured
-  runs.
+  minutes, and the owner has set the interim gate (ADR 014 status,
+  2026-10-15): the one `build` job is allowed 60 minutes for up to 45
+  lessons, lesson features proceed within it (two are in open pull
+  requests, "Repository state"), and the gate is reassessed before the
+  count reaches 45 lessons. The routes past it are F121 (inherited
+  results on `main`, if the owner accepts ADR 017) or F113 resumed. The
+  80 minutes at 110 lessons remain a projection from the 2026-10-12 cost;
+  F118 restates it from the measured runs.
 - **Inherited results are a weaker guarantee than execution on the
   published commit.** If the owner accepts ADR 017, an input the digest
   does not follow or an environment difference the identity does not
@@ -1502,15 +1782,95 @@ that must settle them:
 - **Coding agents differ by vendor and month.** Exercises specify outcomes,
   sandbox profiles, and rubrics, not the agent's behaviour; the site never
   claims an agent will succeed.
+- **The redesign makes every shared change a full run.** The tokens, the
+  templates, the fonts, and the generators are shared inputs of ADR 014
+  decision 4, so each pull request of the atelier executes every lesson
+  (the `build` job of a full run took 21 to 31 minutes at thirty-two
+  lessons before the experiment check of F117 joined it, and 17 min 11 s
+  with it in the one run measured, 39010505705). The slices are cut to
+  change the shared inputs in few pull requests; a feature never claims a
+  targeted-only tier for a shared change.
+- **Fonts could break the payload budget.** The initial payload of the
+  heaviest page was 2.4 MB against 3 MB before any font of the atelier;
+  F123 measures the complete initial page with the fonts, subsets them,
+  and drops a face that does not fit; the built-site check guards it.
+- **The map could suggest relationships it cannot support.** Placement
+  and course areas are curated, and a reader may read proximity as a
+  relationship. The manifest gives every conceptual connection a type and
+  a rationale shown on selection, the prerequisite edges come only from
+  the front matter, and an independent review reads the manifest as a set
+  of scientific claims about the curriculum before it is merged.
+- **Browser physics could drift from the verified Python.** The home
+  opening stays a static figure drawn by the verified implementation; the
+  interactive pendulum, if decided, is a widget whose browser computation
+  is tested against reference values from `src/pbc`, as the verified
+  display forms require, and the owner decides it as its own feature.
+- **The runners may not discover the skills the same way.** The
+  documented behaviour of Claude Code and Codex at the versions in use is
+  to read `.agents/skills`, observed on the owner's machine but not yet
+  per role, profile, and worktree; the read-only profiles run without the
+  user's configuration and a version may change the rule. ADR 019
+  decision 3 does not rest on discovery: F122 records what each role,
+  profile, and provider discovers from a worktree, the role instructions
+  name the skill files to read in every case, and the skills
+  configuration check fails visibly on a missing skill.
+- **A skill could steer an agent wrong.** A skill's guidance is adapted
+  to this stack and reviewed as any change; the reviewer checks the
+  rendered or generated artifact and its sources, never a self-report,
+  and the scientific checks are not weakened for a visual match.
 
 ## Repository state compared with the requirements
 
-Checked at the change-cycle base commit `0c958c8` (2026-10-15) against the
-requirements re-approved with `pbc-planning-change-four-workstreams`. No
-material conflict was found; the reconciliation of lessons, features,
-measured runs, and ADRs is in `docs/roadmap.md`, "State at the change
-cycle `pbc-planning-change-four-workstreams`". The gaps are the work of
-the features named:
+Checked at the change-cycle base commit `b4baed1` (2026-10-17) against the
+requirements re-approved with `scientific-atelier-atlas`. No material
+conflict was found; the reconciliation of lessons, features, runs, Issues,
+and ADRs is in `docs/roadmap.md`, "State at the change cycle
+`scientific-atelier-atlas`". The gaps are the work of the features named:
+
+- The site publishes thirty-two lessons in six strands, as at `0c958c8`;
+  F117 (pull request #205, merged 2026-10-17) added no lesson and gave
+  every lesson a tested experiment entry point and the "Run this
+  experiment" footer. The first run on `main` after that merge
+  (39010505705) failed in the `code` job on a stochastic unit test of the
+  gas lesson (Issue #206), so it published no base and deployed nothing;
+  the previous run (38930410769, at `0aedaac`) is the latest successful
+  one. F117's criteria 7 and 8 (a reviewer's clean-machine walkthrough, the
+  measured first full run after the switch) follow the merge, and Issue
+  #202 is open with the follow-ups #203 and #204.
+- The site runs on Quarto's default theme with the F44 tokens and one
+  self-hosted font (the math font): no project mark, no shared header
+  template beyond Quarto's navbar, no atelier typography, no course,
+  module, or capstone opening, no reading-column lesson template, and the
+  home page of F25 with its three activities, the "One result, constructed
+  and proved" section, and the generated published and planned lists
+  (F123, F124, F127).
+- The Learning Path page is the course-first page of F64 (course panels,
+  disclosures, previews, the method paths and methods as views, the
+  prerequisite graph with its text alternative, filters, progress marks,
+  recommendations) with no map, no concept, no map manifest, and no
+  selected-concept panel; `site/learner/path.js` opens disclosures and
+  filters rows and stores nothing (F125, F126).
+- No visual on the site belongs to the interface-artwork class; conceptual
+  diagrams exist in the lessons of F32 to F34 under the `conceptual`
+  status; the two widgets (the integrator explorer, the waveform
+  comparator) animate nothing (ADR 018 applies with F123).
+- `.agents/skills/` does not exist; no skill is pinned, audited, or named
+  by a plan, prompt, or check; the agent CLIs on the owner's machine find
+  only user-level skills, which ADR 019 rules out (F122).
+- The verification capacity of the day: the owner's interim full-run gate
+  (ADR 014 status, 2026-10-15) allows the one `build` job 60 minutes for
+  up to 45 lessons; two lesson features have open pull requests (F66,
+  #208; F72, #207) that would take the count to 38; F120's evidence is
+  on Issue #196 and ADR 017 decisions 1 to 6 and 9 stay proposed; F113
+  stays paused.
+
+The gaps recorded at the change-cycle base commit `0c958c8` (2026-10-15)
+against the requirements re-approved with
+`pbc-planning-change-four-workstreams`, kept for the history of that
+phase. No material conflict was found; the reconciliation of lessons,
+features, measured runs, and ADRs is in `docs/roadmap.md`, "State at the
+change cycle `pbc-planning-change-four-workstreams`". The gaps were the
+work of the features named:
 
 - Thirty-two lessons are published in six strands (mechanics 16,
   agents-llm 4, agents-abm 1, lean 5, thermodynamics 3, waves 3); the gas

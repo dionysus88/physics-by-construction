@@ -4,7 +4,13 @@
 
 Accepted with the approval of the planning of the change cycle
 `physics-next-phase` (2026-10-09). Extends ADR 002 (a second kind of
-committed input a build cannot regenerate).
+committed input a build cannot regenerate). Since
+[ADR 018](018-scientific-atelier-asset-classes-and-the-course-atlas.md)
+(2026-10-17), decision 1 below is read with a third such input: an
+authored interface-artwork SVG under `site/assets/` whose provenance
+entry records its author and licence, which the architecture's invariant
+I6 names beside replay fixtures and dataset samples. The decisions of
+this record are unchanged.
 
 Date: 2026-10-09
 
