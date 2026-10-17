@@ -73,8 +73,9 @@ a failed seed stays in the table.
 ## Scoring
 
 `score_transcript` takes the tool calls of a transcript and executes them
-again on a fresh environment of the same seed and budget. It counts the
-accepted probes and the refused calls, takes the last accepted `submit` as the
+again on a fresh environment of the same seed and budget, applying the loop's
+limit of calls per message (a call beyond it is refused unrun, as the loop
+refused it). It counts the accepted probes and the refused calls, takes the last accepted `submit` as the
 claim, and computes the **held-out error**: the root-mean-square difference
 between the claim's prediction and the noise-free law on the held-out
 settings, relative to the size of the observation there (to the amplitude for
@@ -116,11 +117,17 @@ labels the model's messages as recorded output of that model on that date; the
 scores, the tool results, and the comparison with the baselines are recomputed.
 The replay needs no credential and no network.
 
+A lesson commits only the fixture next to its page, because a lesson directory
+holds nothing else (ADR 002): its `TraceInfo` is kept in the lesson's module
+beside the protocol (for D1 to D3, `pbc.discovery.force_lab`), and a test
+checks the two against each other.
+
 ## Cost
 
 The **cost record** (model calls, tool calls, input and output tokens, money)
 is written from the run that produced the trace, as that run measured it. A
-build never measures a cost and never shows one as its own.
+count the run did not report is recorded as none, not as zero. A build never
+measures a cost and never shows one as its own.
 
 ## Where a benchmark runs
 

@@ -1,6 +1,6 @@
 """Reading the claims of a lesson for the evidence map."""
 
-from pbc.authoring.evidence import COMPUTED, cell_labels, read_claims
+from pbc.authoring.evidence import COMPUTED, Evidence, cell_labels, read_claims
 
 PAGE = "lessons/mechanics/01-sample/index.qmd"
 
@@ -60,3 +60,20 @@ def test_only_labelled_executed_python_cells_are_evidence():
     )
 
     assert cell_labels(text) == {"ran"}
+
+
+def test_a_replay_is_linked_at_its_repository_path_also_from_a_copy_of_the_site(
+    tmp_path,
+):
+    # The determinism check builds a copy of the site outside the repository.
+    copy = tmp_path / "copy"
+    lesson = copy / "lessons" / "agents-llm" / "01-sample"
+    lesson.mkdir(parents=True)
+    (lesson / "index.qmd").write_text(SOURCE)
+    (lesson / "replay-full.json").write_text("{}")
+    evidence = Evidence(site=copy)
+    page = "lessons/agents-llm/01-sample/index.qmd"
+    found = evidence.resolve(page, "replay-full")
+    assert found is not None and found.kind == "replay"
+    assert found.href.endswith("/site/lessons/agents-llm/01-sample/replay-full.json")
+    assert evidence.resolve(page, "replay") is None

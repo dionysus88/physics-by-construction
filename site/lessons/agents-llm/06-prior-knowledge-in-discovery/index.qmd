@@ -1,0 +1,467 @@
+---
+title: "Full, partial, and no prior knowledge under one protocol"
+description: >-
+  The same language model probes the same hidden spring three times, told the
+  form of the law, only the names of its parameters, or nothing; the build
+  scores the three claims on the same held-out settings and shows what the
+  agent's own readings would have supported.
+lesson:
+  id: prior-knowledge-in-discovery
+  strand: agents-llm
+  order: 6
+  difficulty: 3
+  course: mechanics
+  slot: D2
+  experiment: pbc.mechanics.experiments.prior_knowledge_in_discovery
+  methods: [simulation, llm-agents]
+  outcomes:
+    - Set up a comparison of conditions in which only the prior knowledge differs, and check that it does
+    - Infer a spring's force law from the motion it causes, and say why late times constrain it most
+    - Separate what a run's readings support from what the agent concluded from them
+    - Explain why one run per condition cannot rank the conditions
+  related: []
+  format: 2
+  preview: fig-condition-errors
+  prerequisites:
+    lessons: [black-box-force-law, harmonic-oscillator]
+    outside:
+      - "Trigonometry: the cosine and its period"
+      - "Statistics: least squares and the chi-square of residuals"
+---
+
+```{python}
+#| echo: false
+from pbc.authoring import excerpt, lesson_header, reproduce_this
+from pbc.mechanics.experiments import prior_knowledge_in_discovery as experiment
+
+result = experiment.run()
+lesson_header()
+```
+
+Does it help an agent to be told what kind of law it is looking for? The
+question sounds easy and is easy to answer badly. Give one run the form of the
+law and another nothing, and let the first also have more probes, a different
+model, or easier settings to be judged on, and the comparison measures all of
+those at once. A fair comparison changes **one** thing.
+
+This lesson asks the question of a spring. A mass on a spring of hidden
+stiffness is released at rest, and the agent can only read where the mass is
+at a time of its choosing. The force law, $F = -kx$, is never seen directly; it
+shows in the motion it causes. The same model probes the same spring three
+times under the Discovery evaluation protocol: told the form of the motion
+(**full**), told only the name of the parameter to report (**partial**), or
+told nothing beyond the controls and the reading (**none**). Everything else is
+held equal, and the build checks that it is.
+
+The build then scores the three claims on the same held-out settings, sets
+them beside baselines that use no model, and asks a second question the
+scores alone cannot answer: did the readings each run collected contain the
+answer, whatever the agent concluded from them?
+
+## Assumptions
+
+1. **The spring is simulated and linear.** The mass of one kilogram moves
+   under $F = -kx$ with no friction (`pbc.mechanics.oscillator`), so a release
+   at rest from amplitude $A$ gives $x(t) = A\cos\omega t$ with
+   $\omega = \sqrt{k/m}$. A claim is an angular frequency $\omega$; the
+   stiffness follows as $k = m\omega^2$. A spring with friction or a stiffening
+   force would be outside the family, and no claim could be right.
+2. **The readings are noisy, the noise is known and repeatable.** Each reading
+   has Gaussian noise; the same setting gives the same reading, so the replay
+   is exact.
+3. **Only the task text differs between conditions.** The model, the system
+   prompt, the tools and their bounds, the budget of probes, the step limit,
+   the seed, the tolerance, and the held-out settings are those of one
+   protocol object. The owner of the project set this as a condition of the
+   lesson, and a cell below checks it.
+4. **The tools are part of every condition.** The tool that takes the claim
+   names its parameter "omega, angular frequency" in all three conditions,
+   because the claims must be comparable. Even under **none** the agent learns
+   that an angular frequency is wanted, which is a hint at an oscillation.
+5. **One run per condition.** Each condition was run once, on one seed. That is
+   enough to show the protocol and to read three runs carefully; it is not
+   enough to say which condition is better.
+
+## A force law seen through its motion {#explanation}
+
+For a mass $m$ on a spring of stiffness $k$, Newton's second law and Hooke's
+law give
+
+$$
+m\ddot x = -kx, \qquad x(0) = A,\ \dot x(0) = 0
+\quad\Longrightarrow\quad x(t) = A\cos(\omega t),\quad \omega = \sqrt{k/m}.
+$$
+
+The motion does not depend on the amplitude except through the factor $A$:
+the period is the same for a small swing and a large one. That is the signature
+of a linear force, and an agent can test it by releasing from two amplitudes
+and comparing $x/A$ at the same time.
+
+**Where to probe.** A reading at time $t$ constrains the phase $\omega t$. An
+error $\delta\omega$ in the frequency shifts the phase by $t\,\delta\omega$,
+which grows with time. So a reading at a late time constrains $\omega$ more
+than an early one with the same noise, as long as the time is known: from
+$x/A = \cos(\omega t)$ one gets $\omega t$ only up to the branches of the
+arccosine, and the early readings tell which branch a late one is on. A large
+amplitude makes the relative noise small. The probes allowed run up to a few
+seconds; the claim is scored at later times, where a small error in $\omega$
+has grown into a large error in the position.
+
+**The score.** As in the force-law lesson, the held-out error is the
+root-mean-square difference between the claim's prediction and the noise-free
+motion at the held-out settings, here relative to the amplitude (the
+displacement passes through zero). The law is recovered when the error is at
+most `{python} result["tolerance"]` and the run ended on its own.
+
+### Three conditions, one protocol
+
+```{python}
+#| echo: false
+excerpt(experiment.tasks)
+```
+
+```{python}
+#| label: d2-tasks
+#| echo: false
+result.table("d2-tasks")
+```
+
+```{python}
+#| echo: false
+excerpt(experiment.fairness)
+```
+
+```{python}
+#| label: d2-fairness
+#| echo: false
+result.table("d2-fairness")
+```
+
+[Across the three conditions the model, the system prompt, the tools, the
+budget, the step limit, the seed, the tolerance, and the held-out settings are
+the same, and only the task text differs.]{.claim type="numerically-verified"
+scope="the protocol and the run records of this lesson" evidence="d2-fairness"}
+The held-out settings are compared by the build and not printed: they are the
+judge's, and this page does not show them.
+
+```{python}
+#| echo: false
+result.display("allowlist")
+```
+
+In every condition the agent may call `measure` at most `{python} result["budget"]`
+times and `submit` once to state its claim, in at most `{python} result["max-steps"]`
+messages of at most `{python} result["max-calls"]` tool calls each. Calls
+beyond that number in one message are refused unrun and cost no probe. It may
+not run code, read a file, reach the network, or call the judge.
+
+## Code
+
+The fit of a run's own readings uses the fitting helper of the inverse-physics
+lesson on the readings the replay recomputed. It answers what the probes
+support, separately from what the agent said.
+
+```{python}
+#| echo: false
+from pbc.discovery import score_transcript
+from pbc.discovery.force_lab import fit_probes, probes
+
+excerpt(probes)
+```
+
+```{python}
+#| echo: false
+excerpt(fit_probes)
+```
+
+```{python}
+#| echo: false
+excerpt(score_transcript)
+```
+
+## Worked examples
+
+### The three recorded runs
+
+All three were recorded on the same day by the same Claude model working in a
+Claude Code session, each as a fresh sub-agent that was given the system
+prompt, its task, and the tool descriptions, and nothing else. It chose every
+call after reading the readings the harness computed. None of them knew of
+the other two.
+
+```{python}
+#| echo: false
+excerpt(experiment.run, region="replay")
+```
+
+```{python}
+#| echo: false
+result.display("run-full")
+```
+
+```{python}
+#| echo: false
+result.display("run-partial")
+```
+
+```{python}
+#| echo: false
+result.display("run-none")
+```
+
+Each run sent more calls in its first message than the harness runs, and the
+extra calls were refused without a reading; the agents adapted.
+
+### The scores on the same held-out settings
+
+```{python}
+#| echo: false
+excerpt(experiment.score_table)
+```
+
+```{python}
+#| label: d2-scores
+#| echo: false
+result.table("d2-scores")
+```
+
+[Scored on the same held-out settings, the claim of the **full** condition
+recovers the law and the claims of **partial** and **none** do not.]{.claim
+type="numerically-verified" scope="one recorded run per condition, one seed,
+the simulated spring of this protocol"
+evidence="d2-scores replay-full replay-partial replay-none"} The three claims
+differ in the second decimal of the frequency. That is enough: the held-out
+times are late, and a small error in $\omega$ has grown into a phase error
+there.
+
+### What the readings supported
+
+Each run spent `{python} result["probes"]` probes. Fit the motion to the
+readings of each run, exactly those its agent saw:
+
+```{python}
+#| echo: false
+excerpt(experiment.probe_fits)
+```
+
+```{python}
+#| label: d2-probe-fits
+#| echo: false
+result.table("d2-probe-fits")
+```
+
+[The readings of every one of the three runs determine the frequency well
+enough to recover the law: a least-squares fit to each run's own readings has a
+held-out error within the tolerance.]{.claim type="numerically-verified"
+scope="the readings of the three recorded runs" evidence="d2-probe-fits"} The
+difference between the conditions is therefore not in the information the
+agents collected. It is in what each agent concluded from it. The **full**
+agent read the frequency off its late readings and said why. The **partial**
+agent averaged estimates from early and late times with equal weight, and the
+early ones, whose phase is least sensitive to the frequency, pulled the mean
+away. The last column says how far each claim is from what its data support,
+in units of the fit's standard error.
+
+### Beside the baselines
+
+```{python}
+#| echo: false
+excerpt(experiment.beside_the_baselines)
+```
+
+```{python}
+#| label: d2-baselines
+#| echo: false
+result.table("d2-baselines")
+```
+
+Least squares recovers the law from the full budget on a grid and at random.
+Sparse identification has no library of terms for an oscillation and reports
+that it cannot run, a failure that is shown rather than dropped.
+
+### The comparison in one picture
+
+```{python}
+#| echo: false
+excerpt(experiment.draw_condition_errors)
+```
+
+```{python}
+#| label: fig-condition-errors
+#| echo: false
+#| fig-status: simulated
+#| fig-cap: "Held-out error for each condition: the agent's claim against the least-squares fit to the same run's readings, with the tolerance as a dashed line. Every fit is below the tolerance; only the claim of the full condition is."
+#| fig-alt: "A grouped bar chart with three groups, full, partial and none. In each group a dark bar shows the held-out error of the agent's claim and a light bar the error of the fit to the run's own readings. A dashed horizontal line marks the tolerance. All light bars are below it. The dark bar of full is below it; the dark bars of partial and none are above it, partial the highest."
+result.show("fig-condition-errors")
+```
+
+The figure shows errors of simulated runs that this build scored again. The
+gap between a dark bar and the light bar beside it is the cost of the agent's
+own reasoning, measured against what its readings supported. Its size is not a
+property of the condition: with one run each, it could be the luck of one
+estimate.
+
+### Run the agents yourself
+
+This needs your own key and costs a few cents per run. The build does not run
+it, so the commands are marked.
+
+::: {.not-verified}
+```bash
+uv sync --locked --no-dev --extra openai
+export OPENAI_API_KEY="..."
+cd site/lessons/agents-llm/06-prior-knowledge-in-discovery
+uv run --locked --no-dev --extra openai python -m pbc.discovery.force_lab prior-full prior-partial prior-none
+```
+:::
+
+With `--record` the command writes the fixture of each condition in the
+current directory. A comparison worth stating needs many runs per condition,
+on several seeds; such a benchmark runs outside the build and would be marked
+"not verified" here.
+
+## Limits {#limits}
+
+- **One run per condition cannot rank the conditions.** The full condition
+  recovered and the others did not, but a second run of each could reverse
+  that. The page shows a protocol and three runs, not an effect of prior
+  knowledge.
+- **The conditions leak through the tools.** The claim's parameter is named
+  and described in every condition. Under **none** the agent still learns that
+  an angular frequency is wanted.
+- **The family is fixed.** A claim is one frequency of an undamped linear
+  spring. An agent that suspected friction or a non-linear force could not say
+  so in its claim, only in its words, which are not scored.
+- **The agents computed without code.** They estimated the frequency in their
+  heads from the readings; the harness gives no calculator. A fit is what a
+  calculator would have given, and the gap is partly arithmetic.
+- **Simulated, not measured.** Nothing here is a reading of a real spring.
+- **The recordings are not API runs.** They are Claude Code sessions, told by
+  the session to answer in the harness's format and to use no tool of their
+  own. A run through the provider API may differ, and the sessions reported
+  no token count or price.
+
+::: {.exercise .self-check}
+The full condition recovered the law and the other two did not, on the same
+held-out settings. What does this comparison support?
+
+::: {.choices}
+::: {.choice}
+That telling an agent the form of the law makes it recover the law.
+
+::: {.feedback}
+There is one run per condition. A single success and two failures are
+consistent with no effect at all, and the fits show that every run had the
+information it needed.
+:::
+:::
+
+::: {.choice correct="true"}
+That on these three runs the agents' conclusions, not the readings they
+collected, decided the outcome, and that more runs are needed to say anything
+about the conditions.
+
+::: {.feedback}
+Right. The fits to each run's own readings all recover the law; the claims
+differ because of how each agent estimated the frequency.
+:::
+:::
+
+::: {.choice}
+That the none condition is better than the partial one, because its error is
+smaller.
+
+::: {.feedback}
+Both failed, and with one run each the order of two failures says nothing.
+:::
+:::
+:::
+
+::: {.solution}
+It supports a statement about three runs: under one protocol, with everything
+but the task equal, the full run's claim predicts the held-out settings within
+the tolerance and the other two do not, while the readings of all three runs
+would have supported a recovery. The difference lies in each agent's estimate,
+not in its data. It does not support a statement about the conditions: that
+needs many runs per condition and seed, and a test of whether the difference in
+recovery rates is larger than chance.
+:::
+:::
+
+## Exercises
+
+::: {.exercise}
+The agents spent `{python} result["probes"]` probes each; the baselines spent `{python} result["budget"]`. Give the grid and
+random baselines the same 8 probes on the same spring, and say whether they
+still recover the law.
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.the_agents_budget)
+```
+
+```{python}
+#| echo: false
+result.table("small-budget")
+```
+
+With the agents' number of probes the grid fails and the random settings
+recover the law here. The grid's fit is consistent with the noise and still
+wrong: with so few distinct times, another frequency, an alias whose cosine
+passes through the same few readings, fits them as well as the right one. The
+chi-square cannot tell the two apart; the held-out settings can. A few
+well-chosen probes, as the agents' fits show, do better than a few regular ones
+placed without regard to the phase.
+:::
+:::
+
+::: {.exercise}
+An error $\delta\omega$ in the frequency shifts the phase at time $t$ by
+$t\,\delta\omega$. For the claim of the partial condition, take the difference
+from the fit of its own readings as $\delta\omega$, and compute the phase shift
+at 3 s, the latest time the tools accept, and at 9 s. Why does a claim that
+looks close at the probed times fail later?
+
+::: {.solution}
+```{python}
+#| echo: false
+excerpt(experiment.phase_shift)
+```
+
+```{python}
+#| echo: false
+result.table("phase-shift")
+```
+
+The phase shift grows in proportion to the time. At the latest probed time it
+is small, so the claim's prediction differs from the readings by about the
+noise, and the agent could not see its error there. At three times that time the same
+error is three times larger in phase, and the predicted position, which is the
+amplitude times the cosine of the phase, is off by a fraction of the amplitude
+that exceeds the tolerance. Scoring at settings beyond the probed range is what
+exposes it.
+:::
+:::
+
+## Replay this experiment {#reproduce-this}
+
+```{python}
+#| echo: false
+reproduce_this(
+    code=[
+        "src/pbc/discovery/force_lab.py",
+        "src/pbc/discovery/environment.py",
+        "src/pbc/discovery/protocol.py",
+        "src/pbc/discovery/baselines.py",
+        "src/pbc/data/fit.py",
+        "src/pbc/mechanics/experiments/prior_knowledge_in_discovery.py",
+        "src/pbc/experiment.py",
+    ],
+    tests=[
+        "tests/unit/test_force_lab.py",
+        "tests/unit/test_discovery.py",
+        "tests/unit/test_prior_knowledge_in_discovery_experiment.py",
+    ],
+)
+```

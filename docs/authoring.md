@@ -1363,14 +1363,28 @@ does not build its own environment, baselines, or scoring. The rules are in
   held-out settings are hidden from the agent. Never print them on the page.
 - **Condition and prompt.** State the condition of prior knowledge (`full`,
   `partial`, `none`) and take the prompt from `pbc.discovery.prompts`.
-- **Frozen trace.** Commit the trace of `save_trace` (`replay.json` and
-  `trace.json`) next to `index.qmd`, and replay it with `replay()` as in "Agent
-  lessons". Label the model's messages as recorded, with the model and the date.
+- **Frozen trace.** Commit the replay fixture next to `index.qmd`:
+  `replay.json`, or `replay-<condition>.json` for a lesson with several runs.
+  A lesson directory holds nothing else (ADR 002; "What is committed"), so the
+  record that versions the run, the `TraceInfo` with the protocol, the
+  condition, the seed, the prompt version and SHA-256, the model, the date,
+  and the cost, lives in the lesson's module beside the protocol, and a test
+  checks it against the fixture. `save_trace` writes both files for a
+  benchmark kept outside `site/`. Replay the fixture with `replay()` as in
+  "Agent lessons", in the lesson's experiment (see "The experiment of a
+  lesson"), whose `LIVE` names the live run with its arguments, and label the
+  model's messages as recorded, with the model and the date. The lessons D1
+  to D3 (`site/lessons/agents-llm/05-discovering-a-force-law/index.qmd` and
+  the two after it, module `pbc.discovery.force_lab`, experiment
+  `pbc.mechanics.experiments.black_box_force_law` and the two beside it) are
+  the example to copy.
 - **Recomputed score and baselines.** Show the held-out error from
   `score_transcript` and the table of `comparison` with `run_baselines`, failures
   included. State a claim about a law only as far as that evidence supports it.
 - **Cost.** Quote the cost record of the trace as recorded by the run that
-  produced it, never as measured by the build.
+  produced it, never as measured by the build. A count the run did not report
+  (a Claude Code session reports no tokens or price) is `None`, and the page
+  says it was not reported.
 - **Not verified.** A full benchmark run stays outside `scripts/verify.conf` and
   is marked "not verified" where shown; the page replays one small trace.
 

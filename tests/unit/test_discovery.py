@@ -353,6 +353,41 @@ def test_an_unfinished_run_is_never_a_recovery():
     assert stopped.outcome == "not recovered"
 
 
+def test_calls_beyond_the_limit_of_a_message_are_refused_as_the_loop_refused_them():
+    """The loop runs at most MAX_CALLS_PER_MESSAGE calls of a message; the
+    score must count what the loop ran, not every call the model wrote."""
+    from dataclasses import replace
+
+    from pbc.agents.loop import MAX_CALLS_PER_MESSAGE, Step
+
+    t = transcript(GOOD)
+    first = t.steps[0]
+    extra = ToolCall("x", "measure", {"distance": 2.5, "mass": 1.0})
+    crowded = Step(
+        replace(first.message, tool_calls=(*first.message.tool_calls, extra)),
+        first.results,
+    )
+    assert len(crowded.message.tool_calls) == MAX_CALLS_PER_MESSAGE + 1
+    before = score_transcript(PROTOCOL, t, 0)
+    after = score_transcript(PROTOCOL, replace(t, steps=(crowded, *t.steps[1:])), 0)
+    assert (after.probes, after.refused) == (before.probes, before.refused + 1)
+    late_claim = Step(
+        ModelMessage(
+            "claim", (*first.message.tool_calls, ToolCall("s", "submit", BAD))
+        ),
+        (),
+    )
+    assert score_transcript(PROTOCOL, replace(t, steps=(late_claim,)), 0).claim is None
+
+
+def test_a_cost_record_without_token_counts_round_trips(tmp_path):
+    from dataclasses import replace
+
+    unknown = replace(info(), cost=CostRecord(3, 5, None, None, None))
+    save_trace(tmp_path, transcript(GOOD), unknown)
+    assert load_trace(tmp_path)[1] == unknown
+
+
 def test_the_grid_spends_the_whole_budget_on_distinct_points():
     env = make("central-force", budget=30)
     data = grid_probe(env)

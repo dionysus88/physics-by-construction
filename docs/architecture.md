@@ -152,7 +152,8 @@ src/pbc/                 Importable Python package with all reusable lesson code
                          and FL10 (F73)
   discovery/             Physics environments for law discovery with the hidden truth kept
                          apart from the agent, non-LLM baselines, and the evaluation protocol
-                         (final curriculum, F65)
+                         (final curriculum, F65); the protocols and frozen runs of the
+                         black-box force-law lessons D1 to D3 (`force_lab`, F66)
   verification/          Order estimation, invariant checks, the named checks of the validation
                          contract, and a gallery of deliberately faulty steppers (F46)
   abm/                   Agent-based models
