@@ -29,7 +29,7 @@ lesson:
 
 ```{python}
 #| echo: false
-from pbc.abm import gas
+from pbc.abm import acceptance, gas
 from pbc.authoring import excerpt, lesson_header, reproduce_this
 from pbc.thermodynamics.experiments import particles_in_a_box as experiment
 
@@ -77,7 +77,8 @@ numerical checks of a model against a theory. No real gas is measured here.
    discs at a time, and the first correction to the ideal gas law, the area
    the discs exclude, is enough. This is the first term of a series in
    $\varphi$; the test of the code compares the pressure with this one term
-   at the packing fraction used, within the statistical error. A dense gas needs more of
+   at the packing fraction used, within a stated allowance for what the
+   term leaves out and the statistical error. A dense gas needs more of
    the series, and a collision of three discs at once is outside the model.
 4. **The time step resolves a collision.** The program moves all discs by
    $\Delta t$, then collides the pairs that overlap and approach each other,
@@ -86,6 +87,8 @@ numerical checks of a model against a theory. No real gas is measured here.
    step, not at the moment of contact. The step must be small against the
    diameter, or two discs pass through each other. The first worked example
    prints the distance a disc moves in a step as a fraction of the diameter.
+   A collision placed late also lowers the pressure a little, and the
+   comparison with theory allows for it.
 5. **The gas has relaxed before it is measured.** The start is not a Maxwell
    distribution. Every disc is first given the same speed in a random
    direction; the mean velocity is then removed, so that the gas has no
@@ -101,9 +104,12 @@ numerical checks of a model against a theory. No real gas is measured here.
    different seeds, never from the number of discs or snapshots.
 7. **Randomness is seeded.** A random number generator created from a seed
    makes the start of a run, so a run is a function of its inputs and the
-   page is the same at every build. A reader on another machine gets the same
-   digits as the page up to the rounding of the floating-point libraries,
-   which the displayed precision is chosen to hide.
+   page is the same at every build on one machine. The collisions amplify
+   every difference, so on another machine, whose floating-point libraries
+   round differently, a run of the same seed soon follows another path: it
+   is, in effect, another sample of the same gas. The digits can then
+   differ, and the check is built so that its verdict does not (see "What
+   the tolerance means").
 
 ## Explanation
 
@@ -210,20 +216,63 @@ which is where the model starts.
 
 A run gives one value of each quantity, and another seed gives another. With
 $k$ independent runs, the mean of the values estimates the quantity and the
-standard error $s/\sqrt{k}$, with $s$ the sample standard deviation, says how
-far the mean is likely to be from the value the model would give for
-unlimited runs. A result agrees with theory within $4$ standard errors if
-$\lvert \text{mean} - \text{theory}\rvert \le 4\,\text{standard error}$.
-Four is a chosen tolerance, not a law. Because $s$ is itself estimated from
-only $k = 6$ runs, the discrepancy in standard errors follows Student's $t$
-distribution with $k - 1 = 5$ degrees of freedom, whose tails are much wider
-than a Gaussian's: chance alone exceeds four standard errors in about one
-case in a hundred, where a Gaussian error would do so in one case in fifteen
-thousand. A failure is therefore a strong reason to look at the model or the
-program, not a proof against them; a repeat with other seeds tells the two
-apart. The tests use the same tolerance. It is also a statement about what
-the check can see: a model that is wrong by more than four standard errors
-is caught, and one that is wrong by less is not.
+standard error $e = s/\sqrt{k}$, with $s$ the sample standard deviation, says
+how far the mean is likely to be from the value the model would give for
+unlimited runs. Because $s$ is itself estimated from the $k$ runs, the
+difference between the mean and the model's value, in standard errors,
+follows Student's $t$ distribution with $k - 1$ degrees of freedom, whose
+tails are wider than a Gaussian's.
+
+The rule of this lesson is fixed before the runs are made. It takes
+`{python} result["n-runs"]` runs, one for each of the first
+`{python} result["n-runs"]` seeds, and a result agrees with theory if
+
+$$
+\lvert \text{mean} - \text{theory} \rvert \le \delta + t\,e ,
+$$
+
+where $t$, here `{python} result["t-factor"]`, is the number of standard
+errors that chance alone exceeds once in `{python} result["false-failure"]`
+cases for $k - 1$ degrees of freedom, and $\delta$ is an *allowance*: a conservative,
+stated allowance for the difference between the model and the theory that more
+runs would not remove. It is not a proved bound; it rests on the estimates
+reported below. If the model's value is within $\delta$ of the theory, the rule
+fails it by chance in at most one case in `{python} result["false-failure"]`,
+whatever the seeds, so a machine that draws other samples (the seventh
+assumption) reaches the same verdict.
+
+Two allowances are stated. The moment ratio of a gas of $N$ discs whose
+energy is fixed is $2N/(N+1)$, not two, because no disc can hold more than
+the energy of all of them; its allowance is the difference, $2/(N+1)$, here
+`{python} result["ratio-allowance"]`. The pressure has the allowance
+`{python} result["pressure-allowance"]`, which covers three
+effects the formula $1 + 2\varphi$ does not contain: the time step, which
+places a collision late and lowers the pressure by about
+`{python} result["time-step-shift"]` here; the next term of the series,
+$4\left(\tfrac43 - \tfrac{\sqrt3}{\pi}\right)\varphi^2$, which adds
+`{python} result["virial-term"]`; and the walls of a small box, along which
+hard discs crowd so that the middle is a little thinner than $N/A$, about
+`{python} result["wall-shift"]`. The time step and the walls were measured
+and estimated once, with many more seeds and smaller steps than the lesson
+runs, and are recorded with the code. They are estimates, each with an
+uncertainty of its own, and the allowance is chosen above their sum; the
+statement about false failures holds only as far as that choice is right.
+Without the allowance, the mean lies
+about one run's spread below $1 + 2\varphi$, mostly because of the time step,
+and a check of a few standard errors fails or passes with the sample, not with
+the physics.
+
+A simpler tolerance, the one the later lessons of the thermodynamics course
+use, is four standard errors of six runs: chance alone exceeds it in about one
+case in a hundred for one comparison, where a Gaussian error would do so in one
+case in fifteen thousand. It treats the theory as the model's exact value and
+needs no allowance, which suits a quantity the model has no reason to miss;
+the pressure here has such a reason, so this lesson states the allowance and
+uses more runs.
+
+A failure is a strong reason to look at the model or the program. It is also
+a statement about what the check can see: a model that is wrong by more than
+the tolerance is caught, and one that is wrong by less is not.
 
 ### Not the LLM agents strand
 
@@ -263,6 +312,14 @@ compare with the same code.
 excerpt(gas.virial_correction)
 ```
 
+The rule of "What the tolerance means" is one function as well, used by the
+page and by the tests.
+
+```{python}
+#| echo: false
+excerpt(acceptance.agreement)
+```
+
 ## Worked examples
 
 ### Many collisions turn one speed into a distribution
@@ -275,7 +332,7 @@ The gas has `{python} result["n-discs"]` discs of radius
 moves `{python} result["diameters-per-step"]` of its diameter in
 one step and the packing fraction is
 `{python} result["packing-fraction"]`. A first run records the ratio
-$\langle v^4\rangle / \langle v^2\rangle^2$ over time, averaged over six
+$\langle v^4\rangle / \langle v^2\rangle^2$ over time, averaged over twelve
 seeds.
 
 ```{python}
@@ -310,16 +367,16 @@ result.show("fig-relaxation")
 
 [Starting from one speed, the gas approaches the Maxwell value of the moment
 ratio, passing a ratio of `{python} result["threshold"]`, before the measurement begins.]{.claim type="numerically-verified"
-scope="this gas, six seeds, the stated time step" evidence="relaxation-history"}
+scope="this gas, twelve seeds, the stated time step" evidence="relaxation-history"}
 The ratio starts at `{python} result["first-ratio"]`, close to the one of
 equal speeds, and first exceeds `{python} result["threshold"]` after
 `{python} result["settled"]` s, before the measurement begins at
-`{python} result["relax"]` s. The data are six simulated runs and the check is the
+`{python} result["relax"]` s. The data are twelve simulated runs and the check is the
 Maxwell value, two.
 
 ### The relaxed gas against kinetic theory
 
-Now the measurement. Each of the six seeds runs a gas, relaxes it for
+Now the measurement. Each of the twelve seeds runs a gas, relaxes it for
 `{python} result["relax"]` s, and measures it for the next
 `{python} result["duration"]` s.
 
@@ -337,20 +394,25 @@ result.table("kinetic-theory-check")
 The kinetic energy is the same in every run, because the collisions and bounces
 conserve it and every run starts with the same.
 
-[The moment ratio of the relaxed gas agrees with the Maxwell value two within
-the tolerance of four standard errors, and the pressure agrees with the virial
-prediction that includes the area of the discs.]{.claim
+[The moment ratio of the relaxed gas agrees with the Maxwell value two, and
+the pressure with the virial prediction that includes the area of the discs,
+by the rule of the lesson; the ideal gas law alone does not.]{.claim
 type="numerically-verified" scope="a dilute gas of hard discs in two
-dimensions, six seeds, four standard errors" evidence="kinetic-theory-check"}
+dimensions, twelve seeds, the stated time step, the stated allowances, a
+false-failure probability of one in a thousand"
+evidence="kinetic-theory-check"}
 The ratio is `{python} result["ratio-mean"]` with a standard error of
-`{python} result["ratio-error"]` over the six runs, within
-`{python} result["ratio-distance"]` standard errors of two.
+`{python} result["ratio-error"]` over the twelve runs, within the tolerance
+of `{python} result["ratio-tolerance"]` of two.
 The pressure is `{python} result["pressure-mean"]` times that of ideal points, and
 the prediction with the area of the discs is `{python} result["predicted"]`, a
-difference of `{python} result["pressure-distance"]`
-standard errors. The ideal gas law alone is off by
-`{python} result["ideal-distance"]` standard errors, so the
-area of the discs matters and the check can tell the two apart.
+difference of `{python} result["pressure-difference"]` within the tolerance of
+`{python} result["pressure-tolerance"]`. The ideal gas law alone is off by
+`{python} result["ideal-difference"]`, outside the same tolerance of
+`{python} result["ideal-tolerance"]`, so the area of the discs matters and the
+check can tell the two apart. It cannot tell more: the measured pressure is
+somewhat below $1 + 2\varphi$ at this time step, and a difference of that size
+is inside the allowance.
 
 ```{python}
 #| echo: false
@@ -360,13 +422,13 @@ excerpt(experiment.draw_speeds)
 ```{python}
 #| label: fig-speeds
 #| echo: false
-#| fig-cap: "The pooled speeds of the six relaxed runs follow the Maxwell curve at the measured temperature; the agreement is judged by eye here, and by the moment ratio in the table."
+#| fig-cap: "The pooled speeds of the twelve relaxed runs follow the Maxwell curve at the measured temperature; the agreement is judged by eye here, and by the moment ratio in the table."
 #| fig-alt: "Histogram of disc speeds in metres per second. The bars rise from zero at zero speed to a single peak and fall off in a long tail, and a dashed curve of the Maxwell distribution follows the tops of the bars closely."
 #| fig-status: simulated
 result.show("fig-speeds")
 ```
 
-The histogram pools the speeds of all discs of the six runs, which is allowed
+The histogram pools the speeds of all discs of the twelve runs, which is allowed
 for a picture and not for the standard error: the discs of one run are not
 independent (the sixth assumption).
 
@@ -381,17 +443,23 @@ the runs, in a model that was computed.
   gas of real molecules: the discs are two-dimensional, smooth, and elastic.
   No experiment is involved, so no claim of this lesson is experimentally
   supported.
-- **What the tolerance can see.** A model wrong by more than four standard
-  errors is caught, and one wrong by less is not. One moment ratio does not fix
-  a distribution: it is a test of the shape, not a proof of it.
+- **What the tolerance can see.** A model wrong by more than the tolerance is
+  caught, and one wrong by less is not. The pressure check confirms the
+  correction for the area of the discs, not its exact size: a difference
+  from $1 + 2\varphi$ smaller than the allowance passes. One moment ratio does
+  not fix a distribution: it is a test of the shape, not a proof of it.
 - **The time step.** The step resolves a collision only to a fraction of a
-  diameter, and a collision is placed at the end of the step.
+  diameter, and a collision is placed at the end of the step, which lowers
+  the measured pressure by about `{python} result["time-step-shift"]`; the
+  allowance covers it, and a smaller step would shrink it.
 - **The first rule in isolation.** The checks do not test a single wall
   bounce or collision; unit tests of one bounce and one collision compare the
   outcome with the exact one.
-- **Few runs, one density.** Six runs give a standard error that is itself
-  uncertain. Only the density of the first example and that of the exercise are
-  tried, and a dense gas needs more of the series.
+- **Few runs, one density.** Twelve runs give a standard error that is itself
+  uncertain, which the $t$ factor allows for. The rule fails a correct model
+  in one case in a thousand, not never. Only the density of the first example
+  and that of the exercise are tried, and a dense gas needs more of the
+  series.
 
 ::: {.exercise .self-check}
 The moment ratio of the relaxed gas is within the tolerance of two. Does that
@@ -400,12 +468,11 @@ show that the speeds follow the Maxwell distribution? What would a failure show?
 ::: {.solution}
 No. The ratio tests one property of the shape, the same for any distribution
 whose fourth moment is twice the squared second moment, and it is compared with
-two only to within four standard errors of six runs, so a distribution that
+two only to within the tolerance of twelve runs, so a distribution that
 differs a little is not caught. The histogram against the curve is a second,
 looser look. A failure would be a strong reason to look at the model or the
-program, not a proof against them: the discrepancy follows a $t$ distribution
-with five degrees of freedom, whose tails are wider than a Gaussian's, and a
-repeat with other seeds tells chance and error apart.
+program, not a proof against them: the rule fails a correct model in one case
+in a thousand, and a repeat with other seeds tells chance and error apart.
 :::
 :::
 
@@ -470,12 +537,14 @@ result.table("same-seed")
 reproduce_this(
     code=[
         "src/pbc/abm/gas.py",
+        "src/pbc/abm/acceptance.py",
         "src/pbc/mechanics/particles.py",
         "src/pbc/thermodynamics/experiments/particles_in_a_box.py",
         "src/pbc/experiment.py",
     ],
     tests=[
         "tests/unit/test_gas.py",
+        "tests/unit/test_acceptance.py",
         "tests/unit/test_particles.py",
         "tests/unit/test_particles_in_a_box_experiment.py",
     ],

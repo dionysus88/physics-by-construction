@@ -3,10 +3,6 @@ import pytest
 
 import pbc.abm.gas as gas_module
 from pbc.abm.gas import (
-    N_DISCS,
-    RADIUS,
-    SIDE,
-    SPEED,
     Gas,
     ideal_gas_pressure,
     initial_gas,
@@ -194,48 +190,22 @@ def test_mean_and_error():
         mean_and_error(np.array([1.0]))
 
 
-# Emergent behaviour of the relaxed gas against kinetic theory. Six
-# independent seeded runs of the default gas; the tolerance is four standard
-# errors of the mean over the runs, the heuristic the lesson states. The
-# standard error is itself estimated from the six runs, so the discrepancy in
-# standard errors follows Student's t with five degrees of freedom, and chance
-# alone exceeds four in about one case in a hundred (not the Gaussian one in
-# fifteen thousand). With the seeds fixed the outcome is the same on every
-# run, so a failure is a strong reason to suspect the model, not a proof.
-SEEDS = range(6)
-SIGMAS = 4.0
+# The pressure estimator is kinetic theory's momentum flux, exactly: one disc
+# that meets no other disc gives the walls, over whole periods of its
+# bounces, the pressure N k_B T / A of an ideal gas of one particle. The
+# statistical checks of the gas against kinetic theory are those of the
+# lesson, in tests/unit/test_particles_in_a_box_experiment.py.
+def test_one_free_disc_gives_the_ideal_gas_pressure_exactly():
+    # Radius 0.05 in a box of side 1: the centre moves on a free square of
+    # side 0.9. From the middle, at (0.9, 0.45) m/s, it meets the left and
+    # right walls four times and the top and bottom twice in 4 s.
+    lone = Gas(np.array([[0.5, 0.5]]), np.array([[0.9, 0.45]]), 0.05, 1.0, 1.0)
 
+    recorded = run(lone, 4.0, 0.001, every=4000)
 
-@pytest.fixture(scope="module")
-def measurements():
-    return [measure(seed) for seed in SEEDS]
-
-
-def test_collisions_turn_equal_speeds_into_the_maxwell_distribution(measurements):
-    start = initial_gas(N_DISCS, RADIUS, SIDE, SPEED, np.random.default_rng(0))
-    assert speed_ratio(np.hypot(*start.velocities.T)) < 1.2  # nearly one speed
-
-    ratios = np.array([speed_ratio(m.speeds) for m in measurements])
-    mean, error = mean_and_error(ratios)
-
-    assert abs(mean - 2.0) <= SIGMAS * error
-    assert error < 0.1  # the test can tell 2 from 1.2, the start, by a wide margin
-
-
-# The prediction 1 + 2 phi stops at the second virial coefficient, and the
-# fixed time step resolves collisions late, which lowers the measured
-# pressure a little (1.056 at dt = 0.002 s, 1.0605 at 0.001 s and below, for
-# a prediction of 1.063). Both are systematic and about 0.01 at most, so
-# more runs or other seeds do not make them go away; the tolerance allows
-# for them besides the statistical error of the runs.
-PRESSURE_MODEL_ERROR = 0.01
-
-
-def test_pressure_follows_the_gas_law_with_the_excluded_area(measurements):
-    ratios = np.array([m.pressure / m.ideal_pressure for m in measurements])
-    mean, error = mean_and_error(ratios)
-    predicted = virial_correction(measurements[0].packing_fraction)
-
-    assert abs(mean - predicted) <= SIGMAS * error + PRESSURE_MODEL_ERROR
-    # The correction is real: ideal points would be outside the tolerance.
-    assert abs(mean - 1.0) > SIGMAS * error + PRESSURE_MODEL_ERROR
+    impulse = recorded.wall_impulse.sum()
+    assert impulse == pytest.approx(4 * 2 * 0.9 + 2 * 2 * 0.45)
+    kt = temperature(np.hypot(*lone.velocities.T), lone.mass)
+    assert wall_pressure(impulse, 4.0, lone.free_side) == pytest.approx(
+        ideal_gas_pressure(1, kt, lone.free_side)
+    )
