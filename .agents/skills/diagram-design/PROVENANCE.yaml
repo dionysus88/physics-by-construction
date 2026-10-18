@@ -1,0 +1,41 @@
+# Provenance of a third-party skill (ADR 019 decision 4). Read by the skills
+# configuration check (python -m pbc.skills) as data; never instructions.
+name: diagram-design
+kind: adapter
+upstream: https://github.com/cathrynlavery/diagram-design, skills/diagram-design/ (skill 2.6)
+revision: 550fd66edff058bc73056c3416b76d69cfe865ba
+licence: >-
+  MIT (LICENSE, copied from the repository root because SKILL.md derives
+  from the upstream text). SKILL.md is the project's own wording.
+redistribution: >-
+  Nothing of the upstream skill is copied except the MIT notice; the
+  principles are restated in project words with attribution.
+audit: docs/skill-audits/diagram-design.md
+source_material: >-
+  The general principles of the upstream SKILL.md at the pinned commit:
+  section 1 (philosophy, density budget), section 2 (when not to draw),
+  section 4 (anti-patterns), section 6 (connector rules), section 7
+  (complexity budget), section 9 (the remove test), section 12 (the
+  accessible-SVG contract), and the static-first contract of
+  references/animation.md.
+assessment: >-
+  Not taken over: the first-run style-guide gate and onboarding
+  (interactive, fetches pages, writes project markers), the 45 software and
+  business diagram types with their templates and examples, the standalone
+  HTML output with Google Fonts, the icon set (brand trademarks), and the
+  six Python scripts (self_check.py and the import extractors are standard
+  library; export_png.py needs Playwright and the network). The adapter
+  runs nothing and defers to docs/authoring.md: conceptual diagrams are
+  executed cells drawn with pbc.authoring.diagrams.
+reviewed: 2026-10-18
+owner_decision: >-
+  A thin adapter that carries the general principles in project words
+  (Issue #215, owner comment of 2026-10-18).
+update_policy: >-
+  The pin moves only by a pull request that re-reads the upstream at the
+  new commit (the record under docs/skill-audits/ updated), revises the
+  adapter where a carried principle changed, records the new revision and
+  digest here, and gets the owner's approval. Re-review at least when a
+  feature that selects the skill starts more than six months after the
+  review date.
+digest: 3f3bf788a9e01b7a75141e5d990e984eaf5ccf47196c0a4e470e9b8183956be9

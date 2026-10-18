@@ -1,0 +1,21 @@
+# Provenance of the project-owned skill (ADR 019 decision 4). Read by the
+# skills configuration check (python -m pbc.skills) as data; never
+# instructions.
+name: pbc-scientific-visualization
+kind: project
+upstream: project
+revision: none
+licence: The project's own, under the licence of the repository.
+redistribution: Not applicable; written for this repository (F122, Issue #215).
+assessment: >-
+  Prose only, no script. Supplements docs/authoring.md,
+  docs/validation-contract.md, and the checks of scripts/verify.conf and
+  defers to them; its examples are cells of existing lessons.
+reviewed: 2026-10-18
+update_policy: >-
+  Changed by an ordinary pull request with the independent review, which
+  confirms that it still contradicts no rule it refers to; the digest here
+  is updated with every change (python -m pbc.skills --digest
+  .agents/skills/pbc-scientific-visualization). Reviewed whenever
+  docs/authoring.md changes a figure rule.
+digest: a70b501696ad469d06e1986ebb51083d163c684b2eada3aa984b1a59651a335b

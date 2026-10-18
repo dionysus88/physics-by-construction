@@ -680,6 +680,36 @@ to another origin, a cookie, or a write to browser storage.
 **Payload.** Every page, opened on its own, loads at most 3 MB (`test_every_page_loads_within_the_payload_budget`
 prints the sizes; run it with `-s`).
 
+## Visual deliverables and skills
+
+A feature that produces a page or layout, a conceptual diagram, a scientific
+figure, or an animation uses the agent skills of `.agents/skills/` that its
+plan selects (ADR 019; the README there lists the set and when each is
+required). The rules of this document, `docs/validation-contract.md`, and
+the checks come first: a skill supplements them and never overrides them,
+and following a skill is no evidence that a figure or a page is correct.
+
+- **The plan** classifies each new visual deliverable, names the skills on a
+  line `Skills: <name>[@<revision>], ...` or says `Skills: none (<reason>)`,
+  and states the expected artifact, how its science is validated, and its
+  accessible fallback (alt text, a static equivalent of anything that moves).
+- **The work** reads `.agents/skills/<name>/SKILL.md` of each selected skill
+  before drawing or styling; the completion evidence names the skill and its
+  revision beside the figure cell or page it shaped and that artifact's
+  source, and explains any deliberate exception.
+- **The review** looks at the rendered page at desktop and phone width, or at
+  the generated figure and the code and data behind it, checks the physics
+  against independent computations and tests, and checks that the guidance
+  was followed.
+
+A scientific figure follows the PBC Scientific Visualization skill (the
+choice of visual, axes and units, uncertainty, captions, accessible
+encodings, reproducible generation, and no invented result); a conceptual
+diagram also follows Diagram Design. Nothing is imposed on an existing
+lesson that a feature does not change. The skills configuration check
+(`skills-config`) fails when a selected skill is missing or at another
+revision.
+
 ## Not verified
 
 Material that the build neither ran nor checked must say so. Wrap a block in

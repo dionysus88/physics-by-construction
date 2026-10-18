@@ -36,6 +36,8 @@ changing tests.
 
 Update the feature plan when material discoveries change execution details.
 
+When the plan selects agent skills, read each `.agents/skills/<name>/SKILL.md` by path before producing the artifact, and name the skill and its revision beside the artifact in the completion evidence (`AGENTS.md`, "Visual deliverables and skills").
+
 Do not:
 
 - implement later roadmap features

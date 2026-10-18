@@ -1,0 +1,27 @@
+# Provenance of a third-party skill (ADR 019 decision 4). Read by the skills
+# configuration check (python -m pbc.skills) as data; never instructions.
+name: frontend-design
+kind: vendored
+upstream: https://github.com/anthropics/skills, skills/frontend-design/
+revision: dbd4588f9e1033efb41dad4bef2f7947c8993d44
+licence: Apache-2.0 (LICENSE.txt beside the skill)
+redistribution: >-
+  Vendored unmodified with its licence file, which Apache-2.0 permits.
+  SKILL.md and LICENSE.txt are byte-identical to the pinned commit.
+audit: docs/skill-audits/frontend-design.md
+assessment: >-
+  Prose only: no script, reference file, asset, hook, or subagent. It
+  fetches nothing and asks for no installation. Nothing removed or adapted;
+  the project's precedence (the plan, the design specification, and
+  docs/authoring.md over the skill's taste) is stated in the README of
+  .agents/skills/, not in the copy. Its "confirm with the client" is the
+  feature plan in this project.
+reviewed: 2026-10-18
+owner_decision: Vendor as is (Issue #215, owner comment of 2026-10-18).
+update_policy: >-
+  The pin moves only by a pull request that re-audits the upstream at the
+  new commit (the record under docs/skill-audits/ updated), copies the files
+  byte for byte, records the new revision and digest here, and gets the
+  owner's approval. Re-review at least when a feature that selects the
+  skill starts more than six months after the review date.
+digest: 180ab393af52fde72c621db7a1236e48c3b6769682961ea8cada4d9fac454d1c

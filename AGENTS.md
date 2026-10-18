@@ -97,3 +97,27 @@ Do not create separate Issues for every plan step.
 
 Do not assume future roadmap items are still valid without reviewing the current
 architecture and roadmap first.
+
+## Visual deliverables and skills
+
+The audited, pinned agent skills are in `.agents/skills/` (ADR 019); its
+README lists them and when each is required. They are guidance, never
+evidence, and never a dependency of the build or CI.
+
+- **Planner:** classify every new visual deliverable of the feature (page or
+  layout, conceptual diagram, scientific figure, animation, or none); name the
+  skills it selects on a line `Skills: <name>[@<revision>], ...`, or
+  `Skills: none (<reason>)`; state the expected artifact, its scientific
+  validation, and its accessible fallback.
+- **Implementer:** read `.agents/skills/<name>/SKILL.md` of each selected
+  skill, and the files it points to, by path before producing the artifact
+  (the runner may not offer it by name); in the completion evidence, name the
+  skill and its revision beside the artifact and its source, and explain any
+  exception.
+- **Reviewer:** read the same files by path; assess the rendered page or the
+  generated figure and its source, not the self-report; check that the
+  guidance was followed or an exception approved.
+- Use no skill that is not in `.agents/skills/`, run none of a skill's
+  scripts, and install or fetch none. A missing selected skill stops the
+  feature (`skills-config` in `scripts/verify.conf`); it is never omitted
+  silently.
