@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Browser, Page
 from support import lesson_checks, site_checks
+from support.budgets import budget_seconds
 from support.experiments import compare_with_page, split_footer_commands
 from support.paths import REPO_ROOT, SITE_SOURCE
 from support.site_checks import DESKTOP, PHONE, describe
@@ -23,8 +24,8 @@ from support.site_server import SiteServer, configured_repository_url
 from pbc.authoring.reproduce import HEADINGS, LEAN_EXPERIMENT, kind_of
 
 # A lesson page may take this long to execute and render (architecture, "CI
-# pipeline and time budget").
-LESSON_BUDGET_SECONDS = 30
+# pipeline and time budget"), unless scripts/lesson-budgets.conf gives the
+# lesson its own budget.
 
 # Every lesson of the repository, as the path of its built page.
 LESSONS = [
@@ -466,7 +467,7 @@ def test_reproduce_commands_regenerate_the_page_within_the_time_budget(
         regenerated = clone / "site" / "_site" / figure
         assert regenerated.read_bytes() == (site_dir / figure).read_bytes(), figure
 
-    assert seconds < LESSON_BUDGET_SECONDS
+    assert seconds < budget_seconds(lesson)
 
 
 @dataclass(frozen=True)
@@ -516,7 +517,7 @@ def test_the_experiment_regenerates_the_figures_and_numbers_of_the_page(
         seconds = _run(experiment, learner.clone, learner.env)
         results = tmp_path / "results"
         shutil.move(learner.clone / "results", results)
-        assert seconds < LESSON_BUDGET_SECONDS
+        assert seconds < budget_seconds(lesson)
     # The proofs the page shows, with the reader's Lean commands; the cache
     # of Mathlib is shared, so 'lake exe cache get' has nothing to fetch.
     for command in lean:
