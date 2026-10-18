@@ -1854,9 +1854,18 @@ and ADRs is in `docs/roadmap.md`, "State at the change cycle
   diagrams exist in the lessons of F32 to F34 under the `conceptual`
   status; the two widgets (the integrator explorer, the waveform
   comparator) animate nothing (ADR 018 applies with F123).
-- `.agents/skills/` does not exist; no skill is pinned, audited, or named
-  by a plan, prompt, or check; the agent CLIs on the owner's machine find
-  only user-level skills, which ADR 019 rules out (F122).
+- `.agents/skills/` holds the set F122 delivered after the audit of
+  `docs/skill-audits/` and the owner's decision per candidate: Anthropic
+  Frontend Design vendored at its pin, project adapters for Impeccable (in
+  front of its unmodified reference files, without its launcher, binary,
+  hooks, or live mode) and Diagram Design, and the project-owned PBC
+  Scientific Visualization skill, each with a provenance record; the
+  skills configuration check (`skills-config`) validates them and the
+  plans' `Skills:` lines. Discovery, shown per provider and profile: Codex
+  lists the directory in every profile, Claude Code in none (its write and
+  unattended profiles offer only the user-level skills of the machine), so
+  `AGENTS.md` and the role prompts name the files to read by path. No plan
+  has selected a skill yet; the pilots are F123 to F129.
 - The verification capacity of the day: the owner's interim full-run gate
   (ADR 014 status, 2026-10-15) allows the one `build` job 60 minutes for
   up to 45 lessons; two lesson features have open pull requests (F66,

@@ -6,6 +6,8 @@ Read `AGENTS.md`, the active plan, relevant architecture/ADRs, and `docs/evaluat
 
 Check correctness, issue/plan compliance, architecture, security, edge cases, test coverage, reliability, and unnecessary complexity.
 
+When the plan selects agent skills (its `Skills:` lines), read each `.agents/skills/<name>/SKILL.md` by path and check the rendered or generated artifact and its sources against it; a skill named without an observable effect, or a self-report, is no evidence (`AGENTS.md`, "Visual deliverables and skills").
+
 ## Completion
 
 A review of the complete feature decides whether the Issue is done. The

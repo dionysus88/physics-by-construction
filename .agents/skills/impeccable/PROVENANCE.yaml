@@ -1,0 +1,44 @@
+# Provenance of a third-party skill (ADR 019 decision 4). Read by the skills
+# configuration check (python -m pbc.skills) as data; never instructions.
+name: impeccable
+kind: adapter
+upstream: https://github.com/pbakaus/impeccable, plugin/skills/impeccable/ (skill 4.6.0)
+revision: 08d5b470495d242ca0470f4aeae1956c3a074f83
+licence: >-
+  Apache-2.0 (LICENSE, the repository's licence); reference/ios.md and
+  reference/android.md derive from ehmo/platform-design-skills, MIT
+  (NOTICE.md). SKILL.md is the project's own.
+redistribution: >-
+  The reference files are redistributed unmodified with LICENSE and
+  NOTICE.md, which Apache-2.0 permits; the upstream SKILL.md is replaced by
+  the project's SKILL.md, which says so.
+audit: docs/skill-audits/impeccable.md
+source_material: >-
+  reference/*.md and reference/degraded/*.md of the upstream skill at the
+  pinned commit, byte for byte (44 files), except reference/hooks.md; LICENSE
+  and NOTICE.md of the repository root.
+assessment: >-
+  Left out: all of scripts/ (the launcher that downloads and executes a
+  native binary from GitHub releases, its Windows variant, the 550 KB live
+  browser bundles, a minified screenshot library, the font index), the
+  plugin's hooks and subagent manifests, the upstream SKILL.md (its first
+  step runs the launcher), and reference/hooks.md (it installs the hook into
+  the runners' configuration; nothing links to it). Fifteen kept reference
+  files mention launcher commands; the project's SKILL.md forbids running
+  any of them, writing PRODUCT.md, DESIGN.md, or .impeccable/, and the live
+  mode, and names the playbooks that apply (the modes Read and Persuade,
+  craft-floor, shape, critique, audit, polish, typeset, layout, colorize,
+  quieter, animate, adapt, clarify, distill, harden).
+reviewed: 2026-10-18
+owner_decision: >-
+  A project-owned SKILL.md in front of the unmodified reference/ files; no
+  scripts, launcher, binary, hooks, or live mode (Issue #215, owner comment
+  of 2026-10-18).
+update_policy: >-
+  The pin moves only by a pull request that re-audits the upstream at the
+  new commit (the record under docs/skill-audits/ updated), copies the
+  reference files byte for byte, reviews the project's SKILL.md against
+  them, records the new revision and digest here, and gets the owner's
+  approval. Re-review at least when a feature that selects the skill
+  starts more than six months after the review date.
+digest: d6a4996d2496669eff1cc1ed7ff468ccc29fb91ebfb88cfd3e1c9d09f7e58b27
