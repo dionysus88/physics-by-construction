@@ -20,15 +20,16 @@ set -euo pipefail
 # --locked`, so the page's package is the clone's and reads the clone's
 # files: the record of its Lean build, its data), with the Lean build first
 # in the clone when a selected lesson displays Lean modules, and `uv run
-# --locked quarto render <page>` there, within the 30-second budget of a
-# lesson page. A failing cell, an equation that cannot become MathML, or a
-# slow page fails the check. When a file under lean/ differs from the base
+# --locked quarto render <page>` there, within the budget of a lesson
+# page (30 seconds, or the one scripts/lesson-budgets.conf gives the lesson).
+# A failing cell, an equation that cannot become MathML, or a slow page fails
+# the check. When a file under lean/ differs from the base
 # branch, it also runs the Lean build of this checkout, so a changed proof
 # that no selected lesson displays is checked too. Then it runs the
 # experiment of each selected lesson with a reader's commands (ADR 016
 # decision 4): in one learner environment of the clone (`uv sync --locked
 # --no-dev`, apart from the environment the pages rendered with), within the
-# 30-second budget, and compares what the experiment wrote with the page it
+# budget of the lesson, and compares what the experiment wrote with the page it
 # rendered: the figure files byte for byte, the numbers at the precision the
 # page shows. It never builds the site.
 #
@@ -39,7 +40,8 @@ set -euo pipefail
 default_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 root="${1:-$default_root}"
 project="${UV_PROJECT:-$root}"
-budget_seconds=30
+default_budget_seconds=30
+budgets_file="$root/scripts/lesson-budgets.conf"
 
 fail() {
   echo "Error: $*" >&2
@@ -51,6 +53,18 @@ root="$(cd "$root" && pwd -P)"
 git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 ||
   fail "$root is not a Git working tree; the clone of the working tree needs one."
 selection_file="$root/.agents/verification/selection.json"
+
+# The budget of a lesson in seconds: the default of 30, or the one that
+# scripts/lesson-budgets.conf gives it with its reason.
+budget_of() {
+  local seconds
+  seconds="$(awk -F'|' -v lesson="${1#site/}" '
+    /^[[:space:]]*(#|$)/ { next }
+    { key = $1; gsub(/^[[:space:]]+|[[:space:]]+$/, "", key) }
+    key == lesson { gsub(/[[:space:]]/, "", $2); print $2; exit }
+  ' "$budgets_file")"
+  echo "${seconds:-$default_budget_seconds}"
+}
 
 # The tier of the selection and the lessons it executes, one per line.
 read_selection() {
@@ -168,6 +182,7 @@ fi
 
 for lesson in "${lessons[@]}"; do
   page="$lesson/index.qmd"
+  budget_seconds="$(budget_of "$lesson")"
   echo "-- Rendering $page alone"
   started="$(date +%s)"
   if ! (cd "$clone" && env -u UV_PROJECT uv run --locked quarto render "$page") >"$log" 2>&1; then
@@ -195,6 +210,7 @@ if ! (cd "$clone" && env -u UV_PROJECT -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$l
   fail "the learner environment could not be installed in the clone."
 fi
 for lesson in "${lessons[@]}"; do
+  budget_seconds="$(budget_of "$lesson")"
   module="$(read_experiment "$root/$lesson/index.qmd")" ||
     fail "$lesson declares no experiment ('lesson.experiment')."
   if [[ "$module" == "./scripts/check-lean.sh" ]]; then
