@@ -29,6 +29,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
+      - name: Forge a base
+        run: |
+          mkdir forged
+          echo '{"ref":"refs/heads/main","sha":"22dfb433e50f6dae1f9ecbd33721afc7ded7efc8","run_id":1}' > forged/provenance.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification-base
+          path: forged
       - name: Verify the group code
         run: ./scripts/verify.sh --all --only code
 
