@@ -10,6 +10,12 @@ lesson are computed from:
 - the dataset samples and cards it names (a string in a cell or in an
   imported module that holds the identifier of a dataset), or all of them
   when a cell reads a data directory without naming one;
+- the files of the repository that a path constant of a ``pbc`` module
+  names (``EXPECTED_DIR = Path(__file__).resolve().parents[3] / "reports" /
+  "expected"``), wherever a cell or an imported module uses it: the file or
+  the directory the use names with literal parts, or the whole directory of
+  the constant when a part is computed; a file that is missing counts as
+  missing, so that adding it changes the digest;
 - the Lean modules it displays (``lean-modules``), followed through their
   imports;
 - what every lesson depends on: ``pyproject.toml``, ``uv.lock``,
@@ -22,9 +28,12 @@ purpose: they feed the presentation that ADR 014 decision 9 regenerates.
 
 When the inputs cannot be followed with certainty (a dynamic import, a path
 that is put together from parts, a cell in another language, a read outside
-the known locations, a module or file that is missing), the lesson has no
-digest and the run is a full run. ``python -m pbc.authoring.digest`` writes
-the digests of every lesson.
+the known locations, a module or file that is missing, a use of ``__file__``
+that is not a path, a path constant that names the whole repository or leaves
+it, the use of a constant that may be a path and whose value cannot be
+followed, such as ``EXPECTED_DIR = make_expected_dir()``), the lesson has no
+digest and the run is a full run. ``python -m
+pbc.authoring.digest`` writes the digests of every lesson.
 """
 
 import argparse
@@ -49,6 +58,8 @@ _PINS = ("pyproject.toml", "uv.lock", ".python-version")
 _LEAN_ROOT = "lean"
 _LEAN_SHARED = ("lean-toolchain", "lake-manifest.json", "lakefile.toml")
 _DATA_DIRECTORY_NAMES = {"SAMPLES_DIR", "DOWNLOADS_DIR", "REGISTRY_DIR"}
+# The data directories, which the dataset analysis follows by name.
+_DATA_KINDS = {"samples", "downloads", "registry"}
 _DATA_PATH = re.compile(r"\bdata/(?:samples|downloads|registry)\b")
 
 # Names that load code or run text as code, as a module of an import path, a
@@ -151,6 +162,37 @@ class Unfollowable(Exception):
 
 
 @dataclass(frozen=True)
+class _Undecided:
+    """A constant that a module computes in a way this analysis cannot
+    follow and that may stand for a path (``EXPECTED_DIR =
+    make_expected_dir()``): a use of it cannot be followed."""
+
+    name: str
+
+
+# Names that a path constant usually has (``EXPECTED_DIR``, ``data_root``);
+# a class name such as a type alias ``Path`` is not one.
+_PATH_NAME = re.compile(
+    r"(?:^|_)(?:DIRS?|DIRECTORY|PATHS?|FILES?|ROOT|FOLDER"
+    r"|dirs?|directory|paths?|files?|root|folder)(?:$|_)"
+)
+# Names whose use in a computed value makes it a path.
+_PATH_MARKERS = {"__file__", "os", "pathlib", *_PATH_CLASSES}
+
+
+@dataclass
+class _Scope:
+    """What the names of a module or of the cells of a page stand for: path
+    constants (as the parts of the path below the repository) and string
+    constants, the modules of ``pbc`` they are bound to, and the file
+    ``__file__`` names, if any."""
+
+    paths: dict[str, tuple[str, ...] | str | _Undecided]
+    modules: dict[str, str]
+    file: tuple[str, ...] | None = None
+
+
+@dataclass(frozen=True)
 class LessonDigest:
     """The digest of a lesson, or the reason why it has none."""
 
@@ -181,6 +223,10 @@ def _files_under(directory: Path) -> list[Path]:
     )
 
 
+# What a module constant stands for (see ``_Scope``).
+_Value = tuple[str, ...] | str | _Undecided
+
+
 class Digester:
     """Computes the digests of the lessons of one repository."""
 
@@ -188,6 +234,9 @@ class Digester:
         self.root = root.resolve()
         self._trees: dict[Path, ast.AST | None] = {}
         self._shared: dict[str, str] | None = None
+        self._constants: dict[Path, dict[str, _Value]] = {}
+        self._used: dict[Path, list[tuple[str, ...]] | str] = {}
+        self._broken: dict[Path, str] = {}
 
     # -- files ---------------------------------------------------------------
 
@@ -288,15 +337,7 @@ class Digester:
             if isinstance(node, ast.Import):
                 found += [(a.name, []) for a in node.names if _in_package(a.name)]
             elif isinstance(node, ast.ImportFrom):
-                if node.level:
-                    if node.level > len(package):
-                        raise Unfollowable("a relative import leaves the package")
-                    prefix = package[: len(package) - node.level + 1]
-                    module = ".".join(
-                        [*prefix, *([node.module] if node.module else [])]
-                    )
-                else:
-                    module = node.module or ""
+                module = _from_module(node, package)
                 if _in_package(module):
                     found.append((module, [a.name for a in node.names]))
         return found
@@ -331,6 +372,281 @@ class Digester:
                         ).parent.parts
                         waiting.append((parsed, list(file_package)))
         return reached, trees
+
+    # -- paths that modules export ------------------------------------------------
+
+    def _package(self, file: Path) -> list[str]:
+        return list(file.relative_to(self.root / _PACKAGE_ROOT).parent.parts)
+
+    def _scope(
+        self, trees: list[ast.AST], package: list[str], file: Path | None = None
+    ) -> _Scope:
+        """The path constants and modules that ``trees`` import from ``pbc``."""
+        scope = _Scope({}, {}, file.relative_to(self.root).parts if file else None)
+        for tree in trees:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for a in node.names:
+                        if _in_package(a.name):
+                            if a.asname:
+                                scope.modules[a.asname] = a.name
+                            else:
+                                scope.modules["pbc"] = "pbc"
+                elif isinstance(node, ast.ImportFrom):
+                    module = _from_module(node, package)
+                    if not _in_package(module):
+                        continue
+                    files = self._module_path(module)
+                    constants = self._module_constants(files[-1]) if files else {}
+                    for a in node.names:
+                        name = a.asname or a.name
+                        if self._module_path(f"{module}.{a.name}"):
+                            scope.modules[name] = f"{module}.{a.name}"
+                        elif a.name in constants:
+                            scope.paths[name] = constants[a.name]
+        return scope
+
+    def _module_constants(self, file: Path) -> dict[str, _Value]:
+        """The path constants a module defines at its top level: names it
+        assigns a path made from ``__file__`` or from another path constant,
+        and the strings it assigns, which such a path can be joined with. A
+        name assigned a value that may be a path and cannot be followed, or
+        assigned inside a statement, is undecided."""
+        if file in self._broken:
+            raise Unfollowable(self._broken[file])
+        if file in self._constants:
+            return self._constants[file]
+        self._constants[file] = {}  # a module in an import cycle sees none yet
+        tree = self._tree(file)
+        if tree is None:
+            return {}
+        constants: dict[str, tuple[str, ...] | str] = {}
+        try:
+            scope = self._scope([tree], self._package(file), file)
+            functions = {
+                node.name: node
+                for node in getattr(tree, "body", [])
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+            }
+            for node, nested in _top_level_assignments(tree):
+                targets = [
+                    t.id
+                    for t in (
+                        node.targets if isinstance(node, ast.Assign) else [node.target]
+                    )
+                    if isinstance(t, ast.Name)
+                ]
+                path: _Value | None = self._evaluate(node.value, scope)
+                if path is None and not nested:
+                    path = self._text(node.value, scope)
+                if (nested and path is not None) or (
+                    path is None
+                    and self._may_be_path(node.value, targets, scope, functions)
+                ):
+                    path = _Undecided(targets[0] if targets else "?")
+                if path is None:
+                    continue
+                for target in targets:
+                    constants[target] = scope.paths[target] = path
+        except Unfollowable as error:
+            self._broken[file] = f"{self._label(file)}: {error}"
+            raise Unfollowable(self._broken[file]) from error
+        self._constants[file] = constants
+        return constants
+
+    def _may_be_path(
+        self,
+        value: ast.AST,
+        targets: list[str],
+        scope: _Scope,
+        functions: dict[str, ast.AST],
+    ) -> bool:
+        """Whether a value this analysis cannot follow may be a path: it is
+        computed from ``__file__``, ``Path``, ``os`` or a path constant,
+        directly or in a function of the module it calls, or it is computed
+        and assigned to a name a path usually has."""
+        if _is_data_literal(value):
+            return False
+        if any(_PATH_NAME.search(name) for name in targets):
+            return True
+        seen: set[str] = set()
+        waiting = [value]
+        while waiting:
+            for node in ast.walk(waiting.pop()):
+                if isinstance(node, ast.Name) and node.id in _PATH_MARKERS:
+                    return True
+                if (
+                    isinstance(node, ast.Name | ast.Attribute)
+                    and isinstance(node.ctx, ast.Load)
+                    and isinstance(self._constant(node, scope), tuple | _Undecided)
+                ):
+                    return True
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id in functions
+                    and node.func.id not in seen
+                ):
+                    seen.add(node.func.id)
+                    waiting.append(functions[node.func.id])
+        return False
+
+    def _constant(self, node: ast.AST, scope: _Scope) -> _Value | None:
+        """The constant a name or ``module.NAME`` stands for."""
+        if isinstance(node, ast.Name):
+            return scope.paths.get(node.id)
+        if isinstance(node, ast.Attribute):
+            module = _dotted(node.value, scope.modules)
+            files = self._module_path(module) if module else None
+            if files:
+                return self._module_constants(files[-1]).get(node.attr)
+        return None
+
+    def _text(self, node: ast.AST, scope: _Scope) -> str | None:
+        """The value of a string made of literals and string constants."""
+        folded = _folded(node)
+        if folded is not None:
+            return folded
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left, right = self._text(node.left, scope), self._text(node.right, scope)
+            return None if left is None or right is None else left + right
+        value = self._constant(node, scope)
+        return value if isinstance(value, str) else None
+
+    def _evaluate(self, node: ast.AST, scope: _Scope) -> tuple[str, ...] | None:
+        """The path below the repository that ``node`` stands for, if it is
+        made from ``__file__`` or a path constant with lexical steps only."""
+        if isinstance(node, ast.Name) and node.id == "__file__":
+            return scope.file
+        if isinstance(node, ast.Attribute) and node.attr == "parent":
+            base = self._evaluate(node.value, scope)
+            return None if base is None else _up(base, 1)
+        if isinstance(node, ast.Name | ast.Attribute):
+            value = self._constant(node, scope)
+            return value if isinstance(value, tuple) else None
+        if isinstance(node, ast.Subscript):
+            value, index = node.value, node.slice
+            if (
+                isinstance(value, ast.Attribute)
+                and value.attr == "parents"
+                and isinstance(index, ast.Constant)
+                and type(index.value) is int
+            ):
+                base = self._evaluate(value.value, scope)
+                return None if base is None else _up(base, index.value + 1)
+            return None
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            base, part = self._evaluate(node.left, scope), self._text(node.right, scope)
+            return None if base is None or part is None else _join(base, part)
+        if isinstance(node, ast.Call) and not node.keywords:
+            func = node.func
+            if isinstance(func, ast.Name) and func.id in _PATH_CLASSES:
+                if len(node.args) == 1:
+                    return self._evaluate(node.args[0], scope)
+                return None
+            if not isinstance(func, ast.Attribute):
+                return None
+            base = self._evaluate(func.value, scope)
+            if base is None:
+                return None
+            if func.attr in {"resolve", "absolute"} and not node.args:
+                return base
+            if func.attr == "joinpath":
+                parts = [self._text(a, scope) for a in node.args]
+                if None in parts:
+                    return None
+                for part in parts:
+                    base = _join(base, part)
+                return base
+        return None
+
+    def _used_paths(
+        self, trees: list[ast.AST], scope: _Scope, definitions: set[int]
+    ) -> list[tuple[str, ...]]:
+        """The paths below the repository that ``trees`` use: each use of
+        ``__file__`` or of a path constant, extended by the lexical steps
+        around it. The value of a constant in ``definitions`` is no use."""
+        found = []
+        for tree in trees:
+            parents = {
+                id(child): parent
+                for parent in ast.walk(tree)
+                for child in ast.iter_child_nodes(parent)
+            }
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Name | ast.Attribute):
+                    continue
+                if not isinstance(node.ctx, ast.Load):
+                    continue  # a name assigned, not used
+                value = self._constant(node, scope)
+                if isinstance(value, _Undecided):
+                    raise Unfollowable(
+                        f"{value.name} may be a path and cannot be followed"
+                    )
+                if self._evaluate(node, scope) is None:
+                    continue
+                if isinstance(node, ast.Attribute) and (
+                    self._evaluate(node.value, scope) is not None
+                ):
+                    continue  # a step of a use found from its start
+                top = node
+                while (parent := parents.get(id(top))) is not None:
+                    if self._evaluate(parent, scope) is not None:
+                        top = parent
+                        continue
+                    # A step through a method or ``parents``: ``p.resolve()``.
+                    outer = parents.get(id(parent))
+                    if not isinstance(parent, ast.Attribute) or outer is None:
+                        break
+                    if self._evaluate(outer, scope) is None:
+                        break
+                    top = outer
+                if id(top) in definitions:
+                    continue
+                if isinstance(top, ast.Name) and top.id == "__file__":
+                    raise Unfollowable(
+                        "a module uses __file__ in a way that cannot be followed"
+                    )
+                path = self._evaluate(top, scope)
+                if path is not None:
+                    found.append(path)
+        return found
+
+    def _module_uses(self, file: Path, tree: ast.AST) -> list[tuple[str, ...]]:
+        """The paths that a module of ``pbc`` uses, outside the definitions
+        of its own path constants."""
+        if file not in self._used:
+            scope = self._scope([tree], self._package(file), file)
+            scope.paths.update(self._module_constants(file))
+            definitions = {
+                id(node.value)
+                for node in getattr(tree, "body", [])
+                if isinstance(node, ast.Assign | ast.AnnAssign)
+                and node.value
+                and self._evaluate(node.value, scope) is not None
+            }
+            try:
+                self._used[file] = self._used_paths([tree], scope, definitions)
+            except Unfollowable as error:
+                self._used[file] = f"{self._label(file)}: {error}"
+        used = self._used[file]
+        if isinstance(used, str):
+            raise Unfollowable(used)
+        return used
+
+    def _path_entries(self, path: tuple[str, ...]) -> dict[str, str]:
+        """The files below a path that a lesson uses, with the hash of each;
+        a path that is missing is an entry of its own."""
+        if not path:
+            raise Unfollowable("a path constant names the whole repository")
+        if path[0] == "data" and len(path) > 1 and path[1] in _DATA_KINDS:
+            return {}  # the datasets are followed by name
+        target = self.root.joinpath(*path)
+        if target.is_file():
+            return dict([self._entry(target)])
+        if target.is_dir():
+            return dict(self._entry(p) for p in _files_under(target))
+        return {"/".join(path): "missing"}
 
     # -- datasets -----------------------------------------------------------------
 
@@ -412,6 +728,7 @@ class Digester:
             directory |= _names_directory(tree)
             sources |= self._source_names(tree)
         everything |= any(_calls_with_unknown(t, sources) for t in trees)
+        paths = self._used_paths(trees, self._scope(trees, []), set())
         for tree in trees:
             reached, reached_trees = self._closure(tree, [])
             files.update(reached)
@@ -420,6 +737,7 @@ class Digester:
             ):
                 if "authoring" in module_file.parts:
                     continue
+                paths += self._module_uses(module_file, module_tree)
                 strings = _strings(module_tree)
                 found = _named(ids, strings)
                 named |= found
@@ -441,6 +759,8 @@ class Digester:
             files.update(dict.fromkeys(self._dataset_files(identifier)))
         files.update(dict.fromkeys(self._lean_for(text)))
         entries = dict(self._entry(p) for p in files)
+        for path in dict.fromkeys(paths):
+            entries.update(self._path_entries(path))
         entries.update({f"shared:{k}": v for k, v in self.shared().items()})
         return entries
 
@@ -520,8 +840,92 @@ class Digester:
         return {self._label(d): self.digest(d) for d in self.lessons()}
 
 
+def _top_level_assignments(
+    tree: ast.AST,
+) -> list[tuple[ast.Assign | ast.AnnAssign, bool]]:
+    """The assignments a module makes when it is imported, in order, each
+    with whether it is inside a statement (``if``, ``try``, ``with``, a
+    loop) rather than in the body itself."""
+    found: list[tuple[ast.Assign | ast.AnnAssign, bool]] = []
+
+    def visit(statements: list[ast.stmt], nested: bool) -> None:
+        for node in statements:
+            if isinstance(node, ast.Assign | ast.AnnAssign):
+                if node.value:
+                    found.append((node, nested))
+            elif not isinstance(
+                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+            ):
+                for field in ("body", "orelse", "finalbody"):
+                    visit(getattr(node, field, []), True)
+                for handler in getattr(node, "handlers", []):
+                    visit(handler.body, True)
+
+    visit(getattr(tree, "body", []), False)
+    return found
+
+
+def _is_data_literal(node: ast.AST) -> bool:
+    """A value made of literals only: ``{"a": "x.txt"}``, ``2 * 1024``."""
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, ast.Tuple | ast.List | ast.Set):
+        return all(_is_data_literal(e) for e in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(k is not None and _is_data_literal(k) for k in node.keys) and all(
+            _is_data_literal(v) for v in node.values
+        )
+    if isinstance(node, ast.UnaryOp):
+        return _is_data_literal(node.operand)
+    if isinstance(node, ast.BinOp):
+        return _is_data_literal(node.left) and _is_data_literal(node.right)
+    return False
+
+
 def _in_package(dotted: str) -> bool:
     return dotted == "pbc" or dotted.startswith("pbc.")
+
+
+def _from_module(node: ast.ImportFrom, package: list[str]) -> str:
+    """The module a ``from`` import takes its names from."""
+    if not node.level:
+        return node.module or ""
+    if node.level > len(package):
+        raise Unfollowable("a relative import leaves the package")
+    prefix = package[: len(package) - node.level + 1]
+    return ".".join([*prefix, *([node.module] if node.module else [])])
+
+
+def _dotted(node: ast.AST, modules: dict[str, str]) -> str | None:
+    """The module of ``pbc`` that ``a.b.c`` names, with ``a`` bound in
+    ``modules``."""
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name) or node.id not in modules:
+        return None
+    return ".".join([modules[node.id], *reversed(parts)])
+
+
+def _up(path: tuple[str, ...], steps: int) -> tuple[str, ...]:
+    if steps > len(path):
+        raise Unfollowable("a path constant leaves the repository")
+    return path[: len(path) - steps]
+
+
+def _join(path: tuple[str, ...], text: str) -> tuple[str, ...]:
+    """``path / text``, lexically, staying in the repository."""
+    text = text.replace("\\", "/")
+    if text.startswith(("/", "~")) or (len(text) > 1 and text[1] == ":"):
+        raise Unfollowable(f"a path constant leaves the repository ({text[:40]})")
+    parts = list(path)
+    for part in text.split("/"):
+        if part == "..":
+            parts = list(_up(tuple(parts), 1))
+        elif part not in {"", "."}:
+            parts.append(part)
+    return tuple(parts)
 
 
 def _dynamic_names(tree: ast.AST) -> set[str]:
