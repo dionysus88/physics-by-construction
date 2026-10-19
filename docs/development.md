@@ -2,7 +2,7 @@
 
 ## One-time setup
 
-A supported machine runs macOS or Linux. The setup below runs once per
+A supported machine runs macOS or Linux. The setup below runs once for each
 machine and is the only step that may need administrator rights. Everything
 after it, including `./scripts/verify.sh`, runs as a normal user and installs
 no system packages.
