@@ -142,6 +142,13 @@ job timeout at 45 minutes until that record exists.
    its executed cells import, followed transitively through the imports of
    those modules; the dataset samples and cards its cells use, found by the
    name analysis of the dataset check (`tests/support/data_use.py`); the
+   files of the repository that a path constant of a `pbc` module names
+   wherever its cells or those modules use it (a constant made from
+   `__file__`, such as `EXPECTED_DIR` of `pbc.data.pipeline`, which names
+   `reports/expected`): the file or directory the use names with literal
+   parts, the whole directory of the constant when a part is computed,
+   and a missing file as missing, so that adding it changes the digest;
+   the data directories stay with the name analysis; the
    Lean modules it displays (`lean-modules`) and the Lean toolchain and
    manifest; `pyproject.toml`, `uv.lock`, and `.python-version`; and every
    shared file of the site project: `_quarto.yml`, the filters, the assets,
@@ -151,8 +158,12 @@ job timeout at 45 minutes until that record exists.
    lesson source checks also exercise. When the analysis cannot follow a
    lesson's inputs with certainty (a dynamic import, a path put together
    from parts, a cell in another language, a file read outside the known
-   locations), the lesson has no digest, and the run is a full run: every
-   lesson is executed and checked (decision 4), as the requirements say
+   locations, a use of `__file__` that is not a path, a path constant that
+   names the whole repository or leaves it, the use of a constant that may
+   be a path and whose value cannot be followed, such as `EXPECTED_DIR =
+   make_expected_dir()`), the lesson has no digest, and
+   the run is a full run: every lesson is executed and checked (decision
+   4), as the requirements say
    when the inputs cannot be determined with certainty. The digests of
    every lesson are written beside the built site. The digest covers
    what the scientific cells of a lesson compute from. It deliberately
