@@ -213,6 +213,16 @@ job timeout at 45 minutes until that record exists.
    recorded as computed by the pull request; the record of the run names
    the base it used.
 
+   *Amendment note (Issue #213, 2026-10-19).* The per-page checks are also
+   run for every page when any non-page file of the site record (a style
+   sheet, a script, a font, an image, or any other file that is not
+   HTML) differs from the base's, or is added or removed, because such a
+   file changes how every page is displayed even when no page's bytes
+   differ. This selects no lesson for execution: the lessons executed,
+   and the reproductions, are those of the changed lessons only. A page
+   selected only for this reason is recorded as such in the record of the
+   checked pages. The text of the decision is otherwise unchanged.
+
 4. **What stays unconditional, and what shared code means.** A full run
    executes and checks every lesson. It is: every run on `main`, which
    uses no base and verifies everything, so that the published site is the
