@@ -23,21 +23,24 @@ from urllib.parse import unquote, urljoin, urlsplit
 from axe_playwright_python.sync_playwright import Axe
 from playwright.sync_api import Browser, BrowserContext, Page, Response, Route
 
+from pbc.authoring import pages as page_selection
 from pbc.authoring import previews
 from pbc.authoring.design import CONTROL_CONTRAST, contrast_ratio
-from pbc.authoring.pages import selected as selected_pages
 from pbc.authoring.path import LearningPath
 from pbc.authoring.progress import EXPORT_FILE, STORAGE_KEY
 from pbc.data import REGISTRY_DIR
 from pbc.data.card import load_card
 from pbc.data.status import allowed_statuses, artifact_types, needs_artifact
-from support.paths import BUILT_SITE
+from support.paths import BUILT_SITE, REPO_ROOT
 from support.site_server import SiteServer
 
 DESKTOP = {"width": 1280, "height": 800}
 TABLET = {"width": 768, "height": 1024}
 # 320 CSS pixels is the width WCAG 2.1 uses for its reflow criterion.
 PHONE = {"width": 320, "height": 568}
+
+# The record of the checked pages of the run (pbc.authoring.pages).
+CHECKED_RECORD = REPO_ROOT / page_selection.CHECKED_FILE
 
 WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
 
@@ -439,16 +442,19 @@ def checked_pages(site_dir: Path) -> list[Path]:
     Without a base, every page. With one, the pages whose bytes differ from the
     base's with the build commit normalised, and the pages of the lessons the
     run executed; a page that is byte-identical to a page of ``main`` that was
-    checked is not checked again. Only the checks of one page use this."""
+    checked is not checked again; a difference in a file that is not a page
+    checks every page. What it chose, and why, is written to
+    ``CHECKED_RECORD``. Only the checks of one page use this."""
     pages = html_pages(site_dir)
     # The selection belongs to the site this repository built, not to a site
     # built from a fixture.
-    chosen = (
-        selected_pages(site_dir) if site_dir.resolve() == BUILT_SITE.resolve() else None
-    )
-    if chosen is None:
+    if site_dir.resolve() != BUILT_SITE.resolve():
         return pages
-    return [page for page in pages if _name(site_dir, page) in set(chosen)]
+    data = page_selection.checked(site_dir)
+    page_selection.write_checked(CHECKED_RECORD, data)
+    if data["mode"] == "every":
+        return pages
+    return [page for page in pages if _name(site_dir, page) in data["pages"]]
 
 
 def check_requests_and_cookies(

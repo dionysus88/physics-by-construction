@@ -341,7 +341,12 @@ What the selection controls (ADR 014 decision 3):
 - **The checks of one page** (reading without JavaScript, widths,
   accessibility, payload) run for the pages whose normalised bytes differ from
   the base's and for every page of an executed lesson
-  (`site_checks.checked_pages`); **the reproduction in a fresh clone** runs for
+  (`site_checks.checked_pages`). A page links the files that are not pages
+  (the style sheet, the scripts, the fonts, the images) without a checksum, so
+  a difference in any of them, or one added or removed, checks every page; it
+  executes no lesson. The checks write which pages they ran for, and why
+  (`differs`, `executed`, `asset`, or `every` when there is no usable base or
+  record), to `.agents/verification/checked-pages.json`. **The reproduction in a fresh clone** runs for
   the executed lessons, and compares bytes with the page this run built. Every
   other check runs as before.
 

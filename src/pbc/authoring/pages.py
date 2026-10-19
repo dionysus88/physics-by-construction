@@ -7,7 +7,14 @@ at two commits would otherwise differ on every lesson page. A run with a base
 compares its own record with the record of the base. The checks of one page
 (accessibility, reading without scripts, widths, payload) run for the pages
 whose normalised bytes differ, which includes every page of a lesson this run
-executed.
+executed. A page loads the files of the site that are not pages (the style
+sheet, the scripts, the fonts, the images) without a checksum in its link, so a
+difference in any of them, a file the base does not have, or a file the base
+has and the site lacks, selects every page; it selects no lesson for execution,
+which only the digests of the lessons decide (``pbc.authoring.selection``).
+
+The checks of one page write what they ran for, and why, to
+``CHECKED_FILE``: the record of the checked pages of the run.
 
 The record of a base is data; nothing in it is executed or read as
 configuration, and a record that cannot be read selects every page.
@@ -16,6 +23,7 @@ configuration, and a record that cannot be read selects every page.
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -26,6 +34,13 @@ PAGES = "pages.json"
 BUILT_PAGES = "_pages.json"
 FORMAT = 1
 PLACEHOLDER = b"PBC-BUILD-COMMIT"
+CHECKED_FILE = ".agents/verification/checked-pages.json"
+CHECKED_FORMAT = 1
+# Why a page is checked: its bytes differ from the base's, its lesson was
+# executed, or only a file that is not a page differs.
+DIFFERS = "differs"
+EXECUTED = "executed"
+ASSET = "asset"
 
 
 def _checksum(data: bytes, commit: str | None) -> str:
@@ -70,9 +85,30 @@ def differing(site_dir: Path, base: dict, commit: str | None) -> list[str]:
     """The pages of ``site_dir`` that are not byte-identical to the page of the
     base, with the build commit normalised in both, and the pages the base does
     not have."""
-    current = record(site_dir, commit)["files"]
-    known = base["files"]
-    return [page for page in pages(site_dir) if known.get(page) != current[page]]
+    return _pages_differing(record(site_dir, commit)["files"], base["files"])
+
+
+def differing_assets(site_dir: Path, base: dict, commit: str | None) -> list[str]:
+    """The files of ``site_dir`` that are not pages and are not byte-identical
+    to the file of the base, the ones the base does not have, and the ones the
+    base has and ``site_dir`` lacks."""
+    return _assets_differing(record(site_dir, commit)["files"], base["files"])
+
+
+def _pages_differing(current: dict, known: dict) -> list[str]:
+    return sorted(
+        name
+        for name in current
+        if name.endswith(".html") and known.get(name) != current[name]
+    )
+
+
+def _assets_differing(current: dict, known: dict) -> list[str]:
+    return sorted(
+        name
+        for name in set(current) | set(known)
+        if not name.endswith(".html") and current.get(name) != known.get(name)
+    )
 
 
 def _lesson_page(lesson: str) -> str:
@@ -80,25 +116,64 @@ def _lesson_page(lesson: str) -> str:
     return f"{Path(lesson).relative_to('site').as_posix()}/index.html"
 
 
-def selected(site_dir: Path, root: Path = REPOSITORY_ROOT) -> list[str] | None:
-    """The pages the per-page checks run for, or None for every page.
+def _every(site_dir: Path, reason: str) -> dict:
+    return {
+        "format": CHECKED_FORMAT,
+        "mode": "every",
+        "reason": reason,
+        "assets": [],
+        "pages": dict.fromkeys(pages(site_dir), "every"),
+    }
 
-    Every page whose bytes differ from the base's, and every page of a lesson
-    this run executed. A run without a base, a full run, or a base without a
-    usable record selects every page.
+
+def checked(site_dir: Path, root: Path = REPOSITORY_ROOT) -> dict:
+    """The pages the per-page checks run for, each with the reason.
+
+    A run without a base, a full run, or a base without a usable record checks
+    every page (mode ``every``). Otherwise (mode ``selective``) every page of
+    a lesson this run executed, every page whose bytes differ from the base's,
+    and, when a file that is not a page differs, every other page with the
+    reason ``asset``.
     """
     selection = selecting.read(root)
-    if selection is None or selection.get("mode") != "selective":
-        return None
+    if selection is None:
+        return _every(site_dir, "the run has no base")
+    if selection.get("mode") != "selective":
+        return _every(site_dir, f"a full run: {selection.get('reason', '')}")
     directory = selection.get("base_directory")
     if not isinstance(directory, str):
-        return None
+        return _every(site_dir, "the selection names no base directory")
     base = read(Path(directory) / PAGES)
     if base is None:
-        return None
-    chosen = set(differing(site_dir, base, build_commit().sha))
-    chosen |= {_lesson_page(lesson) for lesson in selection["execute"]}
-    return sorted(chosen & set(pages(site_dir)))
+        return _every(site_dir, f"the base has no usable {PAGES}")
+    current = record(site_dir, build_commit().sha)["files"]
+    every = pages(site_dir)
+    assets = _assets_differing(current, base["files"])
+    executed = {_lesson_page(lesson) for lesson in selection["execute"]}
+    chosen = dict.fromkeys(every if assets else [], ASSET)
+    chosen |= dict.fromkeys(_pages_differing(current, base["files"]), DIFFERS)
+    chosen |= dict.fromkeys(executed & set(every), EXECUTED)
+    return {
+        "format": CHECKED_FORMAT,
+        "mode": "selective",
+        "reason": "",
+        "assets": assets,
+        "pages": dict(sorted(chosen.items())),
+    }
+
+
+def selected(site_dir: Path, root: Path = REPOSITORY_ROOT) -> list[str] | None:
+    """The pages the per-page checks run for, or None for every page."""
+    data = checked(site_dir, root)
+    return None if data["mode"] == "every" else list(data["pages"])
+
+
+def write_checked(target: Path, data: dict) -> None:
+    """Write the record of the checked pages to ``target``, whole or not at all."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_name(f".{target.name}.{os.getpid()}")
+    partial.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    partial.replace(target)
 
 
 def main(argv: list[str] | None = None) -> int:

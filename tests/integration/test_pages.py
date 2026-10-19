@@ -170,6 +170,134 @@ def test_a_record_of_the_base_that_cannot_be_used_selects_every_page(
     assert pages.selected(built(tmp_path / "site", RUN_COMMIT)) is None
 
 
+ASSETS = {
+    "assets/site.css": "body { color: black; }",
+    "site_libs/quarto.js": "original();",
+    "assets/fonts/Math.woff2": "font",
+}
+EVERY_PAGE = sorted(["index.html", LESSON_ONE, LESSON_TWO])
+
+
+ASSET_CHANGES = {
+    "a style sheet": {"assets/site.css": "body { color: red; }"},
+    "a script": {"site_libs/quarto.js": "changed();"},
+    "a font": {"assets/fonts/Math.woff2": "changed"},
+    "an image": {"lessons/s/01-one/index_files/fig.png": "new"},
+}
+
+
+@pytest.fixture
+def base_with_assets(tmp_path: Path) -> Path:
+    """The record of a base whose site has a style sheet, a script, and a font."""
+    site = built(tmp_path / "base-site", BASE_COMMIT, ASSETS)
+    directory = tmp_path / "base"
+    directory.mkdir()
+    (directory / pages.PAGES).write_text(
+        json.dumps(pages.record(site, BASE_COMMIT)), encoding="utf-8"
+    )
+    return directory
+
+
+@pytest.mark.parametrize("change", ASSET_CHANGES.values(), ids=ASSET_CHANGES.keys())
+def test_a_file_that_is_not_a_page_checks_every_page_and_executes_no_lesson(
+    tmp_path: Path, base_with_assets: Path, chosen, conftest, change
+):
+    site = built(tmp_path / "site", RUN_COMMIT, {**ASSETS, **change})
+    selection = selective(base_with_assets, execute=[])
+    chosen(selection)
+    record = pages.read(base_with_assets / pages.PAGES)
+
+    checked = pages.checked(site)
+
+    # No page differs; only the file that is not a page does.
+    assert pages.differing(site, record, RUN_COMMIT) == []
+    assert checked["assets"] == list(change)
+    assert pages.selected(site) == EVERY_PAGE
+    assert checked["pages"] == dict.fromkeys(EVERY_PAGE, pages.ASSET)
+    # It executes no lesson: the reproduction of every lesson is left out.
+    items = [reproduction(LESSON_ONE), reproduction(LESSON_TWO)]
+    assert conftest._reproductions_of_unchanged_lessons(items) == items
+    assert selection["execute"] == []
+
+
+@pytest.mark.parametrize(
+    "difference",
+    [
+        lambda site: (site / "assets" / "new.js").write_text("new();"),
+        lambda site: (site / "assets" / "fonts" / "Math.woff2").unlink(),
+    ],
+    ids=["a file the base does not have", "a file the site no longer has"],
+)
+def test_a_file_that_is_added_or_removed_checks_every_page(
+    tmp_path: Path, base_with_assets: Path, chosen, difference
+):
+    site = built(tmp_path / "site", RUN_COMMIT, ASSETS)
+    difference(site)
+    chosen(selective(base_with_assets, execute=[]))
+
+    assert pages.selected(site) == EVERY_PAGE
+
+
+def test_the_record_says_which_pages_are_checked_only_for_a_file_that_is_not_a_page(
+    tmp_path: Path, base_with_assets: Path, chosen
+):
+    site = built(
+        tmp_path / "site",
+        RUN_COMMIT,
+        {
+            **ASSETS,
+            **ASSET_CHANGES["a style sheet"],
+            LESSON_TWO: f"<p>Two changed, built from {RUN_COMMIT}.</p>",
+        },
+    )
+    chosen(selective(base_with_assets, execute=["site/lessons/s/01-one"]))
+
+    assert pages.checked(site)["pages"] == {
+        "index.html": pages.ASSET,
+        LESSON_ONE: pages.EXECUTED,
+        LESSON_TWO: pages.DIFFERS,
+    }
+
+
+def test_the_checks_of_one_page_write_the_record_of_the_checked_pages(
+    tmp_path: Path, base_with_assets: Path, chosen, monkeypatch: pytest.MonkeyPatch
+):
+    site = built(
+        tmp_path / "site", RUN_COMMIT, {**ASSETS, **ASSET_CHANGES["a style sheet"]}
+    )
+    chosen(selective(base_with_assets, execute=[]))
+    monkeypatch.setattr(site_checks, "BUILT_SITE", site)
+    target = tmp_path / "verification" / "checked-pages.json"
+    monkeypatch.setattr(site_checks, "CHECKED_RECORD", target)
+
+    names = [
+        page.relative_to(site).as_posix() for page in site_checks.checked_pages(site)
+    ]
+
+    written = json.loads(target.read_text(encoding="utf-8"))
+    assert names == EVERY_PAGE
+    assert written["mode"] == "selective"
+    assert written["assets"] == ["assets/site.css"]
+    assert written["pages"] == dict.fromkeys(EVERY_PAGE, pages.ASSET)
+
+
+def test_a_run_that_checks_every_page_records_why(
+    tmp_path: Path, base: Path, chosen, monkeypatch: pytest.MonkeyPatch
+):
+    site = built(tmp_path / "site", RUN_COMMIT)
+    (base / pages.PAGES).write_text("[1")
+    chosen(selective(base, execute=[]))
+    monkeypatch.setattr(site_checks, "BUILT_SITE", site)
+    target = tmp_path / "checked-pages.json"
+    monkeypatch.setattr(site_checks, "CHECKED_RECORD", target)
+
+    assert len(site_checks.checked_pages(site)) == 3
+    written = json.loads(target.read_text(encoding="utf-8"))
+    assert written["mode"] == "every"
+    assert "pages.json" in written["reason"]
+    assert set(written["pages"]) == set(EVERY_PAGE)
+
+
 def test_the_checks_of_one_page_run_for_the_selected_pages_only(
     tmp_path: Path, base: Path, chosen, monkeypatch: pytest.MonkeyPatch
 ):
@@ -180,6 +308,7 @@ def test_the_checks_of_one_page_run_for_the_selected_pages_only(
     )
     chosen(selective(base, execute=[]))
     monkeypatch.setattr(site_checks, "BUILT_SITE", site)
+    monkeypatch.setattr(site_checks, "CHECKED_RECORD", tmp_path / "checked.json")
 
     names = [
         page.relative_to(site).as_posix() for page in site_checks.checked_pages(site)
