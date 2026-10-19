@@ -684,6 +684,23 @@ every command worked as written, no blocker and no substantive discrepancy,
 six minor points (recorded on pull request #205). It was agent-run; the owner
 accepted it as the independent walkthrough on 2026-10-17.
 
+### Incremental `main`: the staged evidence (F120), measured 2026-10-16
+
+The evidence for ADR 017 is in `docs/incremental-main-evidence.md`: the
+same-commit comparison of a full and a selective verification (run
+38876222290 on `main` against a local run with its base), the byte
+comparison of identical inputs across the runners of eleven push runs on
+`main` (two byte classes; 7 of 32 lessons differ across them), the costs,
+and the full-run fallback under the 60-minute timeout. One measurement
+there belongs to this record as well: the first one-lesson pull request
+after F119, run 38874606240 (pull request #195, 32 lessons, 1 executed and
+31 restored), took 14 min 05 s of wall clock with `build` at 7 min 15 s
+and `integration-other` the longest fixed job at 6 min 30 s, so the
+20-minute budget was met by 5 min 55 s and the 15-minute target by 55 s;
+the record of three consecutive runs that F119 owes is still not made.
+The full runs on `main` of the same day took 28 min 01 s and 34 min 14 s
+(`build` 20 min 50 s and 25 min 52 s).
+
 ## Release (human)
 
 After the items above: tag the merge commit (`git tag -a mvp-v1.0.0`) and

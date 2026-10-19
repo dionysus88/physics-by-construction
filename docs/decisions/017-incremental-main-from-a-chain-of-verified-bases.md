@@ -64,6 +64,62 @@ ADR 005, ADR 012, and ADR 014 record the amendments. The measurement after
 the change (three consecutive one-lesson pull requests, one full run) is
 owed to `docs/release-readiness.md`.
 
+**Evidence presented, 2026-10-16 (F120, Issue #196).** The staged evidence
+of requirements decision 35 for decisions 1 to 6 and 9 is recorded in
+`docs/incremental-main-evidence.md` and summarised under "Evidence (F120)"
+below, with the residual risks quantified, the mitigations proposed with
+values, and what is not shown; the chain's provenance format is specified
+and prototyped in `src/pbc/authoring/provenance.py` with its tests, and
+nothing of the workflow calls it. The owner decides question 9 on it; the
+decision is recorded here and in ADR 014's status, with the next step
+(F121; or F113 resumed; or the raised timeout as the standing gate). Until
+then decisions 1 to 6 and 9 stay proposed and every push to `main`
+executes and checks every lesson.
+
+**Owner's decision, 2026-10-16 (Issue #196): AMEND, NOT YET ACCEPTED.**
+The project owner supports incremental verification on `main` in principle,
+but the evidence of F120 does not yet justify accepting the proposed
+environment identity. **Decisions 1 to 6 and 9 stay proposed** pending their
+final acceptance, and the heading of this record stays "(proposed)";
+decisions 7 and 8 stay accepted. The owner requires these amendments:
+
+1. **Environment identity.** Enforce equality of the six pin files, the
+   runner image label and version, the locale, the time zone, the CPU model,
+   and the relevant instruction-set flags. Record the runner version and
+   every component of the identity in the provenance. (This replaces the
+   proposed scope of decision 3, which recorded the CPU model and flags only.)
+2. **Runner equivalence.** Before incremental `main` is activated, obtain
+   evidence that the enforced identity reliably distinguishes the two
+   observed byte classes. If identical enforced identities can still produce
+   different results, investigate and strengthen the identity. No result is
+   reused across an unexplained environment boundary.
+3. **Chain limits.** A maximum age of 30 days and a maximum depth of 10; both
+   fail closed.
+4. **Provenance.** Preserve the original execution run, commit, and
+   environment identity of every inherited result; record them in the site's
+   provenance and show a concise origin statement in the lesson's
+   reproduction section.
+5. **Full verification.** Fall back to a full run automatically whenever
+   reuse cannot be justified. The 60-minute timeout and the temporary
+   45-lesson limit stay; nothing goes beyond that limit without a measured
+   and approved full-run strategy.
+6. **Scheduled audit.** Require one complete verification weekly while the
+   approved full-run capacity permits. The audit recomputes results and does
+   not inherit them; it records differences, and material scientific drift
+   is investigated. A failed audit never silently establishes a new trusted
+   baseline.
+7. **Activation.** F121 may be planned and its implementation prepared, but
+   incremental verification on `main` is not activated until the
+   environment-equivalence evidence and an independent high-risk review are
+   accepted.
+
+**Next step:** further evidence for amendment 2 (record and enforce the CPU
+model and flags; show that the enforced identity separates the two byte
+classes, or strengthen it), then the owner's final decision on decisions 1
+to 6 and 9. Until then every push to `main` executes and checks every
+lesson. F113 (Issue #150) stays paused: it is neither closed nor superseded
+until the full-run fallback strategy is adequately covered.
+
 **What decision 7 amends on acceptance.** Decision 7 changes the accepted
 meaning of a local verification and of the finish and review gate of the
 agent workflow, and names what it amends:
@@ -354,6 +410,120 @@ event-driven check can detect because no recorded input changed; its cost
 is one complete execution per period; its residual risk is the interval
 between executions; this record does not recommend it and the owner
 decides).
+
+## Evidence (F120)
+
+The evidence that decision 35 of the requirements requires before this
+record is accepted, produced by F120 (Issue #196) on 2026-10-16 and
+recorded in `docs/incremental-main-evidence.md` (the sections named
+below). Nothing of `main` changed for it.
+
+1. **The same-commit comparison** (section 1). On commit `4894c4b` (32
+   lessons) the full verification is run 38876222290 on `main`; the
+   selective verification is `./scripts/verify.sh --base` against that
+   run's base on a developer's machine (31 lessons inherited, one executed
+   locally by a digest defect of macOS that is recorded). Of 178 files
+   98 are byte-identical and every differing file is classified: the
+   provenance region (the same commit, plus the true note that the local
+   checkout was not clean), and three cross-machine render differences
+   (the order of the stylesheet's rules, the PNG encoder's bytes with
+   identical pixels in all 36 images, the order of the search index and
+   the sitemap). No executed output, figure pixel, number, or page text
+   differs. One built-site check that recomputes a lesson's series on the
+   checking machine failed against the inherited data on the developer's
+   machine (25 of 14,748 values beyond its 6e-6 tolerance): the
+   cross-machine effect of item 5 reaching a check. It shows that the
+   selective site equals the full site up to the documented differences
+   when the inherited results are valid; it does not show that they are
+   valid.
+2. **Fail-closed** (section 2). Every case (a base that is missing,
+   expired, invalid, stale, or incompatible by the check identity or the
+   environment identity; a changed shared input; a changed check; a pull
+   request artifact or an unverified run offered as a base; a chain too
+   deep or too old) is demonstrated by a named test of the F61 suites or
+   of the prototype, or by a recorded run. The full-run fallback finished
+   under the approved 60-minute timeout in three recorded runs at 32
+   lessons (`build` 20 min 44 s to 25 min 52 s).
+3. **The chain's provenance** (section 3). `provenance.json`, a fourth
+   file of the base: the producing run as the API records it, the
+   environment identity (enforced and recorded parts), the derivation
+   link, the chain's depth and start, and per lesson the origin of its
+   results; the site's provenance record per lesson; acceptance only from
+   a verified push run on `main` of this repository with an equal enforced
+   identity within the chain's bounds. Prototyped with tests, including a
+   chain of three incremental bases in which the inherited result keeps
+   its origin.
+4. **One production build** (section 4): the F58 and F61 tests named.
+5. **The environment identity** (section 5). Across the named runs the
+   hosted runners varied the image version once and the runner version
+   not at all; the logs hold no CPU model, flags, locale, or time zone.
+   The byte comparison of identical inputs (eleven bases of `main`,
+   sixteen pairs with equal digests) finds **two byte classes of runners**:
+   within a class every stored result and every built file is identical;
+   across the classes 7 of 32 lessons differ in 10 stored files, and the
+   site in 14 of 178 files. For two stochastic lessons the page's stated
+   numerical conclusion differs, not only a digit. Four of seven
+   consecutive runs changed class.
+6. **Costs** (section 6). The first one-lesson pull request after F119
+   took 14 min 05 s (the 20-minute budget met by 5 min 55 s, the
+   15-minute target by 55 s); a one-lesson merge under this record is
+   projected at 14 to 15 minutes of wall clock against 28 to 34 measured
+   for a full run; the full run at 45 lessons is projected at 31 to 37
+   minutes, at 110 at 73 to 86 (beyond one job under 60 minutes).
+
+**Residual risks, quantified** (section 5). Under decisions 1 to 3 with
+the enforceable identity below, an inherited page may show the bytes the
+other runner class computed: on the measured runs 7 of 32 lessons, 14 of
+178 files, on about half of the incremental merges; for 5 of the 7
+lessons a last digit or a pixel, for 2 (stochastic simulations) a
+different stated conclusion. Today the same classes alternate between
+pushes, so the published site already changes its bytes between classes
+without a change of inputs; what this record changes is that one site
+can mix the classes, and that a page is checked on the class that
+rendered it while its results were executed and reproduced on the class
+that executed them. An input the digest does not follow stays the
+unquantified residual risk of the "weaker guarantee".
+
+**Mitigations proposed, with values** (for the owner's approval with this
+record; the owner may change any value):
+
+- *Scope of the environment identity (decision 3).* Enforced, required
+  equal: the content of the six pin files (`.python-version`,
+  `pyproject.toml`, `uv.lock`, `lean/lean-toolchain`,
+  `lean/lake-manifest.json`, `.github/actions/prepare/action.yml`), the
+  runner image label and image version, the locale, and the time zone.
+  Recorded with every origin, not required equal: the CPU model and
+  flags and the runner version, read on the runner by F121. The
+  alternative is to require the CPU model equal too, which on the
+  measured sequence turns about half of the incremental merges into
+  complete executions. F121 also pins uv's own version, the one
+  toolchain the pins leave open.
+- *The chain's maximum age and depth (decision 5).* 30 days (the artifact
+  retention, so a complete execution is forced at least once per
+  retention period by event) and depth 10; the measured history (71 of
+  102 merges changed an identity input and would start a new chain) makes
+  the depth bound a rarely reached ceiling.
+- *Provenance on the page or in the record (decision 2).* The site's
+  provenance record always; on the page, one line in the "Reproduce this"
+  region of an inherited lesson that names the run and commit that
+  executed its results, regenerated per run like the header (ADR 014
+  decision 9) at no measured cost. The owner may decline the page line.
+- *The exceptional full run (decision 6).* Triggered by a manual
+  dispatch, and automatically whenever acceptance fails (any row of
+  section 2) or the enforced identity differs; one `build` job under the
+  60-minute timeout approved for up to 45 lessons, restated as the count
+  grows (at 110 lessons the projection is beyond it).
+- *The scheduled audit (question 11).* Stated as this record states it,
+  without a recommendation, in section 8: the defect it detects is the
+  drift of section 5 and an input the digest misses; the cost one complete
+  execution per period (28 to 34 minutes of wall clock today); the
+  residual risk the interval.
+
+**What is not shown** (section 7): that inherited results are valid; the
+effect of the image version on bytes; what distinguishes the two runner
+classes (the CPU model is the candidate, unrecorded); a chain on `main`
+in CI; a comparison between two runners of a selective render; the full
+run at 45 or 110 lessons; the fork pull request.
 
 ## Alternatives considered
 
