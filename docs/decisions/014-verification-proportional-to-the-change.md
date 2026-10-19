@@ -27,6 +27,14 @@ interim full-run gate recorded below. The criterion of F61 that asks for
 this acceptance is its criterion 8; the other criteria of F61 are decided
 on Issue #147.
 
+**ADR 017, 2026-10-16:** the owner's decision on it is to amend, not yet
+accept ([ADR 017](017-incremental-main-from-a-chain-of-verified-bases.md),
+status): decisions 1 to 6 and 9 stay proposed, and decision 11 of this
+record stays paused and unaccepted. F113 (Issue #150) stays paused and is
+neither closed nor superseded until the full-run fallback strategy is
+adequately covered. Every push to `main` still executes and checks every
+lesson.
+
 Implementation of F61 (Issue #147) in stages: the input digest, the check
 identity, the selection, the store, the regenerated context, and the page
 checks by selection (decisions 1, 3, 5, 6, 9, 10) were merged with pull

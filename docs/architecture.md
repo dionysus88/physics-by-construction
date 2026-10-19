@@ -1434,7 +1434,10 @@ evidence of F118 and F120. Until then every push to `main` executes and
 checks every lesson (ADR 014 decision 4, invariant I26).
 
 - **Incremental `main` from a chain of verified bases** (ADR 017 decisions
-  1 to 5; F120 for the evidence, F121 for the delivery). A push to `main`
+  1 to 5; F120 for the evidence, F121 for the delivery; the evidence of
+  F120 is `docs/incremental-main-evidence.md`, and the chain's provenance
+  format is specified and prototyped in `src/pbc/authoring/provenance.py`,
+  which nothing calls). A push to `main`
   retrieves the previous verified base of `main` under the same provenance
   rule as a pull request and inherits a lesson's executed results only when
   its input digest, the check identity, and an execution-environment
