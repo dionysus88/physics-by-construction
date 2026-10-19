@@ -260,10 +260,9 @@ def test_search_control_is_replaced_by_the_learning_path_without_javascript(
 def test_the_search_index_is_part_of_the_site_and_within_the_payload_budget(
     site_dir: Path,
 ):
-    index = site_dir / "search.json"
-    assert index.is_file(), "the build wrote no search index"
     # A page fetches the index when it is searched, on top of what it loads.
-    assert index.stat().st_size < site_checks.SEARCH_INDEX_BUDGET
+    violations = site_checks.check_search_index(site_dir)
+    assert not violations, describe(violations)
 
 
 def test_the_search_index_holds_the_prose_of_a_page_and_not_its_code(

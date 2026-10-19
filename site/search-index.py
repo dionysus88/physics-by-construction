@@ -5,7 +5,9 @@ the code of every cell and what it printed. A reader searches for a concept,
 not for a line of code, and the code makes the index grow by tens of
 kilobytes per lesson, against a budget (``docs/architecture.md``, "Budgets").
 This script removes from each entry the text of the ``pre`` elements of its
-page. Runs after the site is rendered (``post-render``); idempotent; no
+page, and the entries of the Learning path page, which is navigation: it
+repeats the summaries of the lessons and would give a duplicate hit for each
+of them. Runs after the site is rendered (``post-render``); idempotent; no
 inputs but the built files.
 """
 
@@ -14,6 +16,9 @@ import json
 import os
 import re
 from pathlib import Path
+
+# Pages left out of the index, relative to the output directory.
+NOT_INDEXED = {"path/index.html"}
 
 PRE = re.compile(r"<pre\b[^>]*>(.*?)</pre>", re.DOTALL)
 TAG = re.compile(r"<[^>]+>")
@@ -54,6 +59,7 @@ def main() -> None:
     if not index.is_file():
         return
     entries = json.loads(index.read_text(encoding="utf-8"))
+    entries = [e for e in entries if e["href"].split("#")[0] not in NOT_INDEXED]
     code: dict[str, list[str]] = {}
     for entry in entries:
         page = entry["href"].split("#")[0]

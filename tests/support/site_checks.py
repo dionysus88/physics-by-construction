@@ -955,8 +955,36 @@ def check_keyboard_navigation(
 # The initial payload of a page: HTML, style sheets, fonts, static figures,
 # scripts, and the data of an embedded widget (docs/architecture.md, "Budgets").
 PAYLOAD_BUDGET = 3_000_000
-# The search index is fetched when a reader searches, on top of the page.
-SEARCH_INDEX_BUDGET = 1_000_000
+# The search index is fetched when a reader searches, on top of the page. One
+# budget for the planned curriculum of 119 lessons (docs/architecture.md,
+# "Budgets").
+SEARCH_INDEX_BUDGET = 3_500_000
+# Pages that site/search-index.py leaves out of the index.
+UNINDEXED_PAGES = ("path/index.html",)
+
+
+def check_search_index(site_dir: Path) -> list[Violation]:
+    """The index exists, is within its budget, and holds no entry of a page
+    that is navigation (the Learning path page)."""
+    index = site_dir / "search.json"
+    if not index.is_file():
+        return [Violation("search-index", "search.json", "the build wrote no index")]
+    violations = []
+    size = index.stat().st_size
+    if size >= SEARCH_INDEX_BUDGET:
+        violations.append(
+            Violation(
+                "search-index",
+                "search.json",
+                f"{size} bytes, budget {SEARCH_INDEX_BUDGET}",
+            )
+        )
+    for entry in json.loads(index.read_text(encoding="utf-8")):
+        if entry["href"].split("#")[0] in UNINDEXED_PAGES:
+            violations.append(
+                Violation("search-index", entry["href"], "a page that is not indexed")
+            )
+    return violations
 
 
 def measure_payloads(

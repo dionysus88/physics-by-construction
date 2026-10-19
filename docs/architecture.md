@@ -1513,12 +1513,35 @@ Per-page and per-lesson budgets that the next phase adds:
 | Executed time of a measured-data lesson page | 30 seconds, as any lesson; the sample size is chosen for it | Site build (F51) |
 | Committed dataset sample | 2 MB per file, 8 MB per dataset, 32 MB for all of `data/samples/` | Dataset check (F50, ADR 007) |
 | Initial payload of a page (HTML, CSS, fonts, static figures, embedded widget data), measured for the page opened on its own, so shared files count for every page | 3 MB transferred | Built-site check (F44) |
-| Search index (`search.json`), fetched when a reader searches | 1 MB | Built-site check (F41) |
+| Search index (`search.json`), fetched when a reader searches | 3.5 MB uncompressed, for the planned curriculum (derivation and checkpoints below) | Built-site check (F41) |
 | Optional data a page loads on demand (animation frames, field data, the short motion clips of the video-reasoning lesson) | 3 MB per page, from the site's own origin, only after a user action, never required to read the page | Built-site check (F43) |
 | Reference artifact of an optional tool (a mesh, a reference solution, a reference waveform), as a `modelled-reference` sample | The sample caps above | Dataset check (F50, ADR 007) |
 | Everything a page can load | 5 MB | Built-site check (F43) |
 | The self-hosted fonts of the atelier, counted in the initial payload of every page (scientific atelier, ADR 018) | Within the 3 MB above, with the sizes of the complete initial page recorded; a face that does not fit is subset or dropped | Built-site check (F123) |
 | The map enhancement of the atlas: its modules and anything it loads after a user action, measured apart from the page's initial payload (scientific atelier, ADR 018) | What loads with the page within the initial budget; on-demand data within the on-demand budget, from the site's own origin | Built-site check (F126) |
+
+Derivation of the search index budget (owner's decision of 2026-10-19,
+Issue #223). The index holds the prose of the pages, not their code (F41), and
+no longer the Learning path page, which is navigation and repeats the lesson
+summaries (`site/search-index.py`). A lesson adds 20.6 KB on average (mean of
+38 lessons; median 19.6, p90 33.1, maximum 38.7 KB). The planned 119 lessons
+at the mean are 2.79 MB with the Learning path page and about 2.53 MB without
+it, so the budget of 3.5 MB leaves a margin of 38 percent. The pessimistic
+case, every lesson as large as the p90, is 4.0 MB without the Learning path
+page and exceeds the budget, which is why the checkpoints below exist. Search
+time, measured with Quarto's Fuse options (`ignoreLocation: true`,
+`threshold: 0.1`) on arm64 Node 22, grows about 39 ms per MB: the median query
+takes 37 ms at 0.94 MB, 77 ms at 2.0 MB, 106 ms at 2.75 MB, 137 ms at 3.5 MB;
+that is 98 ms at the expected size and 137 ms at the budget. Parsing the JSON
+takes at most 6 ms, and the transfer is about a quarter of the file (gzip
+264 KB at 947 KB). A phone is assumed to be 4 to 6 times slower; that is not
+measured.
+
+Checkpoints: measure the index and the projection to 119 lessons again at 60
+lessons and at 90 lessons. If the projection exceeds the budget, the owner
+decides before it is reached between a summary index (titles, headings and the
+beginning of each section, which would change the F41 criterion that a query
+finds a lesson by a term in its body) and a further increase of the budget.
 
 ### Deployment and recovery
 
