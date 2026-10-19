@@ -246,6 +246,214 @@ def test_every_lesson_of_this_repository_has_a_digest():
     assert render(REPO_ROOT).startswith("{")
 
 
+PIPELINE = (
+    "from pathlib import Path\n\n"
+    'EXPECTED_DIR = Path(__file__).resolve().parents[3] / "reports" / "expected"\n'
+    'NAME = "r.txt"\n'
+)
+
+
+def _expectations(root: Path, use: str, cell: str = "from pbc.mech import report\n"):
+    """A module of ``pbc`` that exports a path below the repository, and a
+    lesson that reaches it through ``src/pbc/mech/report.py``."""
+    _write(root, "src/pbc/data/pipeline.py", PIPELINE)
+    _write(root, "reports/expected/r.txt", "range 1\n")
+    _write(root, "reports/expected/other.txt", "other 1\n")
+    _write(root, "src/pbc/mech/report.py", use)
+    _write(root, f"{LESSON}/index.qmd", _lesson(CELL + cell, LEAN))
+
+
+REPORT = "from pbc.data.pipeline import EXPECTED_DIR\n\n"
+
+
+@pytest.mark.parametrize(
+    "use",
+    [
+        REPORT + "def check():\n    return (EXPECTED_DIR / 'r.txt').read_text()\n",
+        REPORT + "def check():\n    return EXPECTED_DIR.joinpath('r.txt')\n",
+        "from pbc.data.pipeline import EXPECTED_DIR as E, NAME\n\n"
+        "def check():\n    return E / NAME\n",
+        "from pbc.data import pipeline\n\n"
+        "def check():\n    return pipeline.EXPECTED_DIR / pipeline.NAME\n",
+        "import pbc.data.pipeline\n\n"
+        "def check():\n    return pbc.data.pipeline.EXPECTED_DIR / 'r.txt'\n",
+        "from ..data.pipeline import EXPECTED_DIR\n\n"
+        "PATH = EXPECTED_DIR / 'r.txt'\nTEXT = PATH.read_text()\n",
+    ],
+)
+def test_a_file_that_an_exported_path_names_is_an_input(repository, use):
+    # F61 follow-up M2: a lesson that compares with a committed expectation
+    # in reports/expected depends on that file, not only on the module.
+    _expectations(repository, use)
+    before = digest(repository)
+    assert before is not None
+    _write(repository, "reports/expected/other.txt", "other 2\n")
+    assert digest(repository) == before
+    _write(repository, "reports/expected/r.txt", "range 2\n")
+    after = digest(repository)
+    assert after != before
+    (repository / "reports/expected/r.txt").unlink()
+    assert digest(repository) not in {before, after}
+
+
+def test_a_path_used_with_a_computed_part_is_its_whole_directory(repository):
+    _expectations(repository, REPORT + "def check(n):\n    return EXPECTED_DIR / n\n")
+    before = digest(repository)
+    _write(repository, "reports/expected/other.txt", "other 2\n")
+    after = digest(repository)
+    assert after != before
+    _write(repository, "reports/expected/new.txt", "new\n")
+    assert digest(repository) != after
+
+
+def test_an_exported_path_in_a_cell_is_followed(repository):
+    _expectations(
+        repository,
+        "VALUE = 1\n",
+        "from pbc.data.pipeline import EXPECTED_DIR\n"
+        "text = (EXPECTED_DIR / 'r.txt').read_text()\n",
+    )
+    before = digest(repository)
+    _write(repository, "reports/expected/other.txt", "other 2\n")
+    assert digest(repository) == before
+    _write(repository, "reports/expected/r.txt", "range 2\n")
+    assert digest(repository) != before
+
+
+def test_an_exported_path_that_is_not_used_is_no_input(repository):
+    # Defining a constant reads nothing: importing the module that defines
+    # it does not make its files inputs of the lesson.
+    _expectations(repository, "from pbc.data import pipeline\n\nVALUE = 1\n")
+    before = digest(repository)
+    _write(repository, "reports/expected/r.txt", "range 2\n")
+    assert digest(repository) == before
+
+
+@pytest.mark.parametrize(
+    ("use", "fragment"),
+    [
+        ("import os\n\nHERE = os.path.dirname(__file__)\n", "__file__"),
+        (
+            "from pathlib import Path\n\nROOT = Path(__file__).parents[3]\n\n"
+            "def files():\n    return ROOT\n",
+            "whole repository",
+        ),
+        (
+            "from pathlib import Path\n\nUP = Path(__file__).parents[9] / 'x'\n",
+            "leaves the repository",
+        ),
+        (
+            REPORT + "def check():\n    return EXPECTED_DIR / '/etc/passwd'\n",
+            "leaves the repository",
+        ),
+    ],
+)
+def test_a_path_the_digester_cannot_decide_gives_no_digest(repository, use, fragment):
+    # The lesson then counts as depending on everything: it is executed.
+    _expectations(repository, use)
+    assert fragment in reason(repository)
+    # A lesson that does not reach the module keeps its digest.
+    other = Digester(repository).digest(repository / "site/lessons/s/02-two")
+    assert other.value is not None
+
+
+COMPUTED = (
+    "from pathlib import Path\n\n"
+    "def make_expected_dir():\n"
+    "    return Path(__file__).resolve().parents[3] / 'reports' / 'expected'\n\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("pipeline", "use"),
+    [
+        (COMPUTED + "EXPECTED_DIR = make_expected_dir()\n", REPORT),
+        (
+            COMPUTED + "EXPECTED = make_expected_dir()\n",
+            "from pbc.data.pipeline import EXPECTED as EXPECTED_DIR\n\n",
+        ),
+        ("from somewhere import locate\n\nEXPECTED_DIR = locate()\n", REPORT),
+        (
+            "import os\n\nEXPECTED_DIR = os.environ['EXPECTED']\n",
+            "from pbc.data import pipeline\n\n",
+        ),
+        (
+            "from pathlib import Path\n\ntry:\n"
+            "    EXPECTED_DIR = Path(__file__).parents[3] / 'reports'\n"
+            "except OSError:\n    EXPECTED_DIR = None\n",
+            REPORT,
+        ),
+        (
+            COMPUTED + "BASE = make_expected_dir()\nEXPECTED_DIR = BASE / 'x'\n",
+            REPORT,
+        ),
+    ],
+)
+def test_an_exported_path_that_cannot_be_decided_gives_no_digest(
+    repository, pipeline, use
+):
+    # Triage M1: a path constant the digester cannot decide is no input it
+    # can name; the lesson that uses it counts as depending on everything.
+    _expectations(repository, use)
+    _write(repository, "src/pbc/data/pipeline.py", pipeline)
+    if "EXPECTED_DIR" not in use:
+        use += "def check():\n    return pipeline.EXPECTED_DIR / 'r.txt'\n"
+    else:
+        use += "def check():\n    return (EXPECTED_DIR / 'r.txt').read_text()\n"
+    _write(repository, "src/pbc/mech/report.py", use)
+    assert "cannot be followed" in reason(repository)
+    other = Digester(repository).digest(repository / "site/lessons/s/02-two")
+    assert other.value is not None
+
+
+def test_a_computed_exported_path_used_in_a_cell_gives_no_digest(repository):
+    _expectations(
+        repository,
+        "VALUE = 1\n",
+        "from pbc.data.pipeline import EXPECTED_DIR\n"
+        "text = (EXPECTED_DIR / 'r.txt').read_text()\n",
+    )
+    _write(
+        repository,
+        "src/pbc/data/pipeline.py",
+        COMPUTED + "EXPECTED_DIR = make_expected_dir()\n",
+    )
+    assert "EXPECTED_DIR may be a path" in reason(repository)
+
+
+@pytest.mark.parametrize(
+    "constant",
+    [
+        "FILES = {'a': 'a.txt'}\n",
+        "MAX_FILE = 2 * 1024 * 1024\n",
+        "from typing import Callable\n\nPath = Callable[[float], float]\n",
+        "SCALE = compute()\n\ndef compute():\n    return 2.0\n",
+    ],
+)
+def test_a_constant_that_is_no_path_keeps_the_digest(repository, constant):
+    _expectations(repository, REPORT + "def check():\n    return EXPECTED_DIR\n")
+    _write(repository, "src/pbc/data/extra.py", constant)
+    name = constant.split(" =")[0].split("\n")[-1]
+    _write(
+        repository,
+        "src/pbc/mech/report.py",
+        f"from pbc.data.extra import {name}\n\ndef check():\n    return {name}\n",
+    )
+    assert digest(repository) is not None
+
+
+def test_the_pipeline_lesson_of_this_repository_follows_its_expectations():
+    digester = Digester(REPO_ROOT)
+    lesson = REPO_ROOT / "site/lessons/mechanics/10-automated-analysis-pipelines"
+    files = digester.lesson_files(lesson)
+    assert "reports/expected/projectile-range.txt" in files
+    assert "reports/expected/flume-waves.txt" in files
+    unrelated = digester.lesson_files(
+        REPO_ROOT / "site/lessons/mechanics/01-kinematics-as-a-program"
+    )
+    assert not any(name.startswith("reports/") for name in unrelated)
+
+
 IDENTITY_FILES = [
     "scripts/verify.sh",
     "scripts/verify.conf",

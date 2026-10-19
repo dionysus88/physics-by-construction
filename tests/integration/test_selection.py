@@ -115,6 +115,55 @@ def test_retitling_a_lesson_does_not_select_the_others(repository, base):
     assert chosen(repository, base)["execute"] == [LESSON_TWO]
 
 
+def test_a_changed_expectation_selects_the_lesson_that_reads_it(repository, tmp_path):
+    # F61 follow-up M2: the expectation a module compares with is an input.
+    _write(
+        repository,
+        "src/pbc/data/pipeline.py",
+        "from pathlib import Path\n\n"
+        "EXPECTED = Path(__file__).resolve().parents[3] / 'reports' / 'expected'\n",
+    )
+    _write(
+        repository,
+        "src/pbc/mech/report.py",
+        "from pbc.data.pipeline import EXPECTED\n\n"
+        "def check():\n    return (EXPECTED / 'r.txt').read_text()\n",
+    )
+    _write(repository, "reports/expected/r.txt", "range 1\n")
+    _write(repository, f"{LESSON}/index.qmd", _lesson("from pbc.mech import report\n"))
+    base = make_base(repository, tmp_path / "base")
+    append(repository, "reports/expected/r.txt")
+    result = chosen(repository, base)
+    assert (result["execute"], result["reuse"]) == ([LESSON], [LESSON_TWO])
+
+
+def test_a_computed_exported_path_selects_the_lesson_that_uses_it(repository, tmp_path):
+    # Triage M1: an exported path the digester cannot decide gives no
+    # digest, so the run is a full run and the lesson is executed.
+    _write(
+        repository,
+        "src/pbc/data/pipeline.py",
+        "from pathlib import Path\n\n"
+        "def make_expected_dir():\n"
+        "    return Path(__file__).resolve().parents[3] / 'reports' / 'expected'\n\n"
+        "EXPECTED_DIR = make_expected_dir()\n",
+    )
+    _write(
+        repository,
+        "src/pbc/mech/report.py",
+        "from pbc.data.pipeline import EXPECTED_DIR\n\n"
+        "def check():\n    return (EXPECTED_DIR / 'r.txt').read_text()\n",
+    )
+    _write(repository, "reports/expected/r.txt", "range 1\n")
+    _write(repository, f"{LESSON}/index.qmd", _lesson("from pbc.mech import report\n"))
+    base = make_base(repository, tmp_path / "base")
+    append(repository, "reports/expected/r.txt")
+    result = chosen(repository, base)
+    assert result["mode"] == "full"
+    assert f"no input digest (first: {LESSON})" in result["reason"]
+    assert (result["execute"], result["reuse"]) == ([LESSON, LESSON_TWO], [])
+
+
 @pytest.mark.parametrize(
     "name",
     [

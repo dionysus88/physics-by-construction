@@ -533,7 +533,9 @@ pinning") with a fix hint.
 **Selection by what changed (final curriculum, ADR 014, F61).** A run with
 a base, which CI gives only to pull requests, computes the input digest of
 every lesson (its directory, the `src/pbc` modules its cells import
-transitively, the samples and cards its cells use, the Lean modules it
+transitively, the samples and cards its cells use, the files that a path
+constant of those modules names where they use it, such as the committed
+expectations in `reports/expected`, the Lean modules it
 displays with the toolchain and manifest, the Python pins, and every shared
 file of the site project including `src/pbc/authoring`) and compares it
 with the digests of the base, the executed results and digests that the
